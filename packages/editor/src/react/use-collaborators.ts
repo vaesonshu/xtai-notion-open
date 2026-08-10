@@ -1,0 +1,15 @@
+"use client"
+
+import { use } from "react"
+import type { CollaborationUser } from "../core/types"
+import { EditorContext } from "./editor-context"
+
+export function useCollaborators(): CollaborationUser[] {
+  const context = use(EditorContext)
+  if (!context || context.collaborationStatus === null) {
+    throw new Error(
+      "useCollaborators must be used inside @workspace/editor CollaborationEditorProvider",
+    )
+  }
+  return context.collaborators
+}

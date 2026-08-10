@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useEditorInstance } from "./use-editor-instance.js"
+import { useEditorInstance } from "./use-editor-instance"
 
 export function useEditorChange(): number {
   const editor = useEditorInstance()

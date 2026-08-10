@@ -2,12 +2,15 @@
 
 import { use } from "react"
 import type { Editor } from "@tiptap/core"
-import { EditorContext } from "./editor-context.js"
+import { EditorContext } from "./editor-context"
 
 export function useEditorInstance(): Editor {
-  const editor = use(EditorContext)
-  if (!editor) {
+  const context = use(EditorContext)
+  if (!context) {
     throw new Error("useEditorInstance must be used inside @workspace/editor EditorProvider")
   }
-  return editor
+  if (!context.editor) {
+    throw new Error("useEditorInstance: editor is not ready yet")
+  }
+  return context.editor
 }
