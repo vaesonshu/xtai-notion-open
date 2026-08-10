@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, expectTypeOf, it } from "vitest"
 import { BoldIcon, type Icon } from "@workspace/icons"
 
 describe("@workspace/icons exports", () => {
@@ -7,8 +7,9 @@ describe("@workspace/icons exports", () => {
     expect(typeof BoldIcon).toBe("function")
   })
 
-  it("exports Icon type alias for component props", () => {
-    const icon: Icon = BoldIcon
-    expect(icon).toBe(BoldIcon)
+  it("exports Icon type alias for Lucide components", () => {
+    expectTypeOf<Icon>().not.toBeAny()
+    expectTypeOf<Icon>().toBeFunction()
+    expectTypeOf<BoldIcon>().toMatchTypeOf<Icon>()
   })
 })
