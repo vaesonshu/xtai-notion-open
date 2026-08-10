@@ -1,4 +1,4 @@
-﻿import type { Editor } from "@tiptap/core"
+import type { Editor } from "@tiptap/core"
 
 export type SlashCommand = {
   id: string
@@ -18,28 +18,38 @@ const command = (
 ): SlashCommandDefinition => ({ id, label, keywords, execute })
 
 const DEFINITIONS: SlashCommandDefinition[] = [
-  command("heading", "标题", ["heading", "标题", "h1", "h2"], editor =>
+  command("heading-1", "\u4e00\u7ea7\u6807\u9898", ["heading-1", "heading", "\u6807\u9898", "h1", "\u4e00\u7ea7\u6807\u9898"], editor =>
     editor.chain().focus().setNode("heading", { level: 1 }).run(),
   ),
-  command("paragraph", "段落", ["paragraph", "段落", "text"], editor =>
+  command("heading-2", "\u4e8c\u7ea7\u6807\u9898", ["heading-2", "heading", "\u6807\u9898", "h2", "\u4e8c\u7ea7\u6807\u9898"], editor =>
+    editor.chain().focus().setNode("heading", { level: 2 }).run(),
+  ),
+  command("heading-3", "\u4e09\u7ea7\u6807\u9898", ["heading-3", "heading", "\u6807\u9898", "h3", "\u4e09\u7ea7\u6807\u9898"], editor =>
+    editor.chain().focus().setNode("heading", { level: 3 }).run(),
+  ),
+  // Keep the original id executable for callers that persisted the old command id.
+  command("heading", "\u6807\u9898", ["heading", "\u6807\u9898"], editor =>
+    editor.chain().focus().setNode("heading", { level: 1 }).run(),
+  ),
+  command("paragraph", "\u6bb5\u843d", ["paragraph", "\u6bb5\u843d", "text"], editor =>
     editor.chain().focus().setParagraph().run(),
   ),
-  command("bullet-list", "无序列表", ["bullet", "bullet-list", "列表", "无序"], editor =>
+  command("bullet-list", "\u65e0\u5e8f\u5217\u8868", ["bullet", "bullet-list", "\u5217\u8868", "\u65e0\u5e8f"], editor =>
     editor.chain().focus().toggleBulletList().run(),
   ),
-  command("ordered-list", "有序列表", ["ordered", "ordered-list", "编号", "有序"], editor =>
+  command("ordered-list", "\u6709\u5e8f\u5217\u8868", ["ordered", "ordered-list", "\u7f16\u53f7", "\u6709\u5e8f"], editor =>
     editor.chain().focus().toggleOrderedList().run(),
   ),
-  command("task-list", "任务列表", ["task", "task-list", "待办", "任务"], editor =>
+  command("task-list", "\u4efb\u52a1\u5217\u8868", ["task", "task-list", "\u5f85\u529e", "\u4efb\u52a1"], editor =>
     editor.chain().focus().toggleTaskList().run(),
   ),
-  command("blockquote", "引用", ["blockquote", "quote", "引用"], editor =>
+  command("blockquote", "\u5f15\u7528", ["blockquote", "quote", "\u5f15\u7528"], editor =>
     editor.chain().focus().toggleBlockquote().run(),
   ),
-  command("code-block", "代码块", ["code", "code-block", "代码", "代码块"], editor =>
+  command("code-block", "\u4ee3\u7801\u5757", ["code", "code-block", "\u4ee3\u7801", "\u4ee3\u7801\u5757"], editor =>
     editor.chain().focus().toggleCodeBlock().run(),
   ),
-  command("horizontal-rule", "分隔线", ["horizontal-rule", "divider", "分隔线"], editor =>
+  command("horizontal-rule", "\u5206\u9694\u7ebf", ["horizontal-rule", "divider", "\u5206\u9694\u7ebf"], editor =>
     editor.chain().focus().setHorizontalRule().run(),
   ),
 ]
@@ -67,4 +77,3 @@ export function filterSlashCommands(query: string): SlashCommand[] {
 export function executeSlashCommand(editor: Editor, id: string): boolean {
   return DEFINITIONS.find(item => item.id === id)?.execute(editor) ?? false
 }
-

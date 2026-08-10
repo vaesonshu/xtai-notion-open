@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import { Editor } from "@tiptap/core"
 import { createEditorExtensions } from "./extensions.js"
 import {
@@ -33,7 +33,7 @@ describe("filterSlashCommands", () => {
     expect(filterSlashCommands("code-block")).toEqual(expect.arrayContaining([
       expectedCodeCommand,
     ]))
-    expect(filterSlashCommands("代码块")).toEqual(expect.arrayContaining([
+    expect(filterSlashCommands("\u4ee3\u7801\u5757")).toEqual(expect.arrayContaining([
       expectedCodeCommand,
     ]))
     expect(filterSlashCommands("code")).toEqual(expect.arrayContaining([
@@ -41,14 +41,25 @@ describe("filterSlashCommands", () => {
     ]))
   })
 
-  it("returns the code block command for the /代码 query", () => {
-    expect(filterSlashCommands("/代码")).toEqual(expect.arrayContaining([
+  it("returns the code block command for the /\u4ee3\u7801 query", () => {
+    expect(filterSlashCommands("/\u4ee3\u7801")).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "code-block" }),
     ]))
   })
 
   it("returns every public slash command for an empty query", () => {
     expect(filterSlashCommands("")).toEqual(SLASH_COMMANDS)
+  })
+
+  it("exposes a distinct command for each supported heading level", () => {
+    expect(SLASH_COMMANDS).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "heading-1", label: "\u4e00\u7ea7\u6807\u9898" }),
+      expect.objectContaining({ id: "heading-2", label: "\u4e8c\u7ea7\u6807\u9898" }),
+      expect.objectContaining({ id: "heading-3", label: "\u4e09\u7ea7\u6807\u9898" }),
+    ]))
+    expect(filterSlashCommands("h2")).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "heading-2" }),
+    ]))
   })
 })
 
@@ -66,5 +77,28 @@ describe("executeSlashCommand", () => {
 
     expect(executeSlashCommand(editor, "not-a-command")).toBe(false)
     expect(editor.getJSON()).toEqual(before)
+  })
+
+  it.each([
+    ["heading-2", 2],
+    ["heading-3", 3],
+  ])("converts the current block to a level %i heading", (id, level) => {
+    const editor = createTestEditor()
+
+    expect(executeSlashCommand(editor, id)).toBe(true)
+    expect(editor.getJSON().content?.[0]).toMatchObject({
+      type: "heading",
+      attrs: { level },
+    })
+  })
+
+  it("keeps the legacy heading id as an alias for a level 1 heading", () => {
+    const editor = createTestEditor()
+
+    expect(executeSlashCommand(editor, "heading")).toBe(true)
+    expect(editor.getJSON().content?.[0]).toMatchObject({
+      type: "heading",
+      attrs: { level: 1 },
+    })
   })
 })

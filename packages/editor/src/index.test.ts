@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
 import type { CollaborationUser, EditorExtensionOptions } from "./index.js"
+import {
+  createEmptyDocument,
+  createStarterDocument,
+  isEditorDocument,
+} from "./index.js"
 
 describe("editor package public types", () => {
   it("exposes collaboration types from the package root", () => {
@@ -11,5 +16,15 @@ describe("editor package public types", () => {
     const options: EditorExtensionOptions = { user }
 
     expect(options.user).toEqual(user)
+  })
+})
+
+describe("editor package document API", () => {
+  it("exposes the stable document contract from the package root", () => {
+    const emptyDocument = createEmptyDocument()
+    const starterDocument = createStarterDocument()
+
+    expect(isEditorDocument(emptyDocument)).toBe(true)
+    expect(isEditorDocument(starterDocument)).toBe(true)
   })
 })
