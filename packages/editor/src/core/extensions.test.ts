@@ -3,12 +3,7 @@ import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
 import { createEditorExtensions } from "./extensions.js"
 import { createInitialDocument } from "./initial-document.js"
-
-type CollaborationUser = {
-  id: string
-  name: string
-  color: string
-}
+import type { CollaborationUser } from "./types.js"
 
 describe("editor core", () => {
   it("creates a non-empty initial document with representative block types", () => {
@@ -57,7 +52,7 @@ describe("editor core", () => {
       document,
       provider,
       user,
-    } as Parameters<typeof createEditorExtensions>[0])
+    })
 
     const collaboration = extensions.find(
       extension => extension.name === "collaboration",

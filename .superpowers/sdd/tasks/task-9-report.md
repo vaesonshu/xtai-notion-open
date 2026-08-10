@@ -1,10 +1,10 @@
-# Task 9 报告：编辑器扩展配置 RED 测试
+# Task 9 报告：编辑器扩展配置 RED/GREEN
 
 ## 状态
 
-已创建聚焦 RED 测试；未修改任何生产实现。测试按 tasks.md 3.2 与 3.4 覆盖普通和协作扩展配置。
+GREEN 已完成并提交。实现了编辑器扩展工厂的正式协作类型与协作扩展配置，保留 RED 阶段证据。
 
-## 失败命令与输出
+## RED 证据
 
 执行：
 
@@ -17,35 +17,62 @@ pnpm --filter @workspace/editor test -- src/core/extensions.test.ts
 ```text
 FAIL  src/core/extensions.test.ts > editor core > passes the collaboration document and provider to collaboration extensions
 AssertionError: expected undefined to be defined
-
-Test Files  1 failed (1)
-Tests  1 failed | 3 passed (4)
 ```
 
 失败位置：`extensions.test.ts:72` 的 `expect(collaboration).toBeDefined()`。
 
-## 失败原因
+RED 原因：`createEditorExtensions()` 只有 StarterKit、Link、Underline、TaskList、TaskItem 和 Placeholder，没有返回 `collaboration` 或 `collaborationCaret` 扩展；生产类型也没有 `document`、`provider`、`user` 选项。
 
-- `createEditorExtensions()` 当前只返回 StarterKit、Link、Underline、TaskList、TaskItem 和 Placeholder，没有 `collaboration` 或 `collaborationCaret`。
-- 因此协作配置所需的 `document`、`provider`、`user` 无法通过真实扩展实例接收和断言。
-- 普通模式 undo/redo 测试通过：当前 Tiptap 运行时将 `StarterKit.configure({ undoRedo: {} })` 保留为启用配置。该断言仍保留，作为普通模式回归保护。
-- 失败来自待实现的扩展配置差异，不是 mock 行为或网络连接问题。
+## GREEN 实现
 
-## 改动文件
+### 生产类型
 
-- `packages/editor/src/core/extensions.test.ts`：新增普通/协作模式配置测试；使用真实 Tiptap 扩展实例、真实 `Y.Doc`，Provider 仅作类型安全转换。
-- `.superpowers/sdd/tasks/task-9-brief.md`：记录目标与 RED 命令。
-- `.superpowers/sdd/tasks/task-9-report.md`：本报告。
+在 `packages/editor/src/core/types.ts` 中新增：
 
-## 自审
+- `CollaborationUser`：`id`、`name`、`color`。
+- `EditorExtensionOptions`：保留 `placeholder`，新增 `document?: Y.Doc`、`provider?: HocuspocusProvider`、`user?: CollaborationUser`。
 
-- 未修改 `extensions.ts`、`types.ts` 或其他生产文件。
-- 未 mock Tiptap、Yjs、Provider 或被测模块；仅对无网络连接的 Provider 使用 `{} as HocuspocusProvider`。
-- 测试检查扩展 `name` 与解析后的 `options`，覆盖 `document`、`provider`、`user` 的传递意图，以及协作时关闭 StarterKit undoRedo。
-- `CollaborationUser` 当前在测试中定义为最小结构，避免在生产类型尚未实现时引入解析错误；GREEN 阶段应改为从生产 `types.ts` 导入并让 `EditorExtensionOptions` 提供该契约。
-- RED 结果是运行时断言失败而非导入/解析错误；3 个既有/普通配置测试通过，证明测试基础设施和现有扩展仍可解析。
+并从 `packages/editor/src/core/index.ts` 导出这些类型。
+
+### 扩展工厂
+
+在 `packages/editor/src/core/extensions.ts` 中：
+
+- 普通模式使用 `StarterKit.configure({ undoRedo: {} })`。
+- 仅当 `document`、`provider`、`user` 同时提供时进入协作模式。
+- 协作模式加入真实的 `Collaboration.configure({ document, provider })`。
+- 协作模式加入真实的 `CollaborationCaret.configure({ provider, user })`。
+- 协作模式设置 `StarterKit.configure({ undoRedo: false })`。
+- 保留 Link、Underline、TaskList、TaskItem、Placeholder 配置。
+- 未创建 Provider 实例、未启动网络连接，也未实现其它 Task。
+
+### 测试调整
+
+删除测试中临时的本地 `CollaborationUser` 定义和 `Parameters<typeof createEditorExtensions>[0]` 转换，改为直接导入生产类型并调用正式 API。断言未削弱。
+
+## 验证
+
+```text
+pnpm --filter @workspace/editor test -- src/core/extensions.test.ts
+Test Files  1 passed (1)
+Tests  4 passed (4)
+
+pnpm --filter @workspace/editor typecheck
+通过
+
+pnpm --filter @workspace/editor lint
+通过
+
+pnpm --filter @workspace/editor test
+Test Files  3 passed (3)
+Tests  11 passed (11)
+```
 
 ## 顾虑
 
-- 测试调用处暂以 `Parameters<typeof createEditorExtensions>[0]` 转换承载尚未存在的生产选项字段，避免 RED 阶段因当前旧类型直接阻断测试执行。GREEN 阶段必须删除该转换，并由生产 `EditorExtensionOptions` 正式提供字段类型。
-- 本阶段只要求 RED，不实现生产代码，也未运行完整 monorepo 测试。
+- `CollaborationCaret` 的 Tiptap 3 类型声明将 `provider` 声明为 `any`、`user` 声明为 `Record<string, any>`；正式的 `CollaborationUser` 结构与其兼容，无需额外类型转换。
+- 测试中的 Provider 仍是无网络连接的 `{} as HocuspocusProvider`，只用于验证引用传递；生产工厂不会实例化或连接 Provider。
+
+## 提交
+
+提交：`Task 9 GREEN: implement editor extension factory`
