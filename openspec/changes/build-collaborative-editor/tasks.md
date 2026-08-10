@@ -6,7 +6,7 @@
 
 ## 2. 统一图标包
 
-- [ ] 2.1 创建 `packages/icons/src/index.test.ts`，先验证代表性图标与 `Icon` 类型出口可被导入，并运行 `pnpm exec vitest run packages/icons/src/index.test.ts` 确认其因包尚不存在而失败。
+- [x] 2.1 创建 `packages/icons/src/index.test.ts`，先验证代表性图标与 `Icon` 类型出口可被导入，并运行 `pnpm exec vitest run packages/icons/src/index.test.ts` 确认其因包尚不存在而失败。
 - [ ] 2.2 创建 `packages/icons/package.json`、`packages/icons/tsconfig.json`、`packages/icons/eslint.config.js` 与 `packages/icons/src/index.ts`；暴露 `Icon`、`IconProps` 以及编辑器和现有 Inkspace 页面需要的具名图标。接口为 `export { BoldIcon, CodeIcon, ... }` 和 `export type { LucideIcon as Icon }`，内部唯一依赖 `lucide-react`。测试必须使用 `expectTypeOf` 或等效类型断言验证 `Icon` 导出。运行 `pnpm --filter @workspace/icons test`、`pnpm --filter @workspace/icons lint` 和 `pnpm --filter @workspace/icons typecheck`。
 - [ ] 2.3 修改 `apps/web/package.json`、`packages/editor/package.json`、`apps/web/components/inkspace/icon.tsx`、`apps/web/components/inkspace/toolbar.tsx`、`apps/web/components/inkspace/sidebar.tsx` 与 `apps/web/components/inkspace/document.tsx`，改为从 `@workspace/icons` 导入图标并移除其直接 `lucide-react` 依赖；运行 `rg 'from "lucide-react"' apps/web packages/editor`，验收为无匹配。
 
