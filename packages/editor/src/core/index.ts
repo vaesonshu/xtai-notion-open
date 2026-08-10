@@ -1,3 +1,7 @@
-export type { CollaborationUser, EditorDocument, EditorExtensionOptions } from "./types.js"
+﻿export type { CollaborationUser, EditorDocument, EditorExtensionOptions } from "./types.js"
 export { createEditorExtensions } from "./extensions.js"
 export { createInitialDocument } from "./initial-document.js"
+export type { SlashCommand } from "./slash-commands.js"
+export { SLASH_COMMANDS, executeSlashCommand, filterSlashCommands } from "./slash-commands.js"
+export type { InlineMark } from "./commands.js"
+export { setEditorLink, toggleInlineMark } from "./commands.js"

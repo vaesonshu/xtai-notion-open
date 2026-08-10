@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 import { Editor } from "@tiptap/core"
 import { createEditorExtensions } from "./extensions.js"
 import { setEditorLink, toggleInlineMark } from "./commands.js"
@@ -41,14 +41,10 @@ describe("setEditorLink", () => {
 
     expect(setEditorLink(editor, "https://example.com/docs")).toBe(true)
     expect(editor.isActive("link", { href: "https://example.com/docs" })).toBe(true)
-    expect(editor.getJSON()).toMatchObject({
-      content: [{
-        type: "paragraph",
-        content: [{
-          type: "text",
-          marks: [{ type: "link", attrs: { href: "https://example.com/docs" } }],
-        }],
-      }],
+    expect(editor.getJSON().content?.[0]?.content?.[0]).toMatchObject({
+      type: "text",
+      text: "format",
+      marks: [{ type: "link", attrs: { href: "https://example.com/docs" } }],
     })
   })
 
