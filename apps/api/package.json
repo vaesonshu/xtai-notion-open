@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "migrate": "node-pg-migrate up --migrations-dir migrations"
+    "migrate": "node --env-file=.env ./node_modules/node-pg-migrate/bin/node-pg-migrate.js up --migrations-dir migrations"
   },
   "dependencies": {
     "@nestjs/common": "11.1.28",

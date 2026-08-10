@@ -44,7 +44,7 @@
 - [x] 6.3 创建 `apps/api/migrations/001-create-collaboration-schema.sql`，定义 `workspace`、`document`、`document_member`、`yjs_snapshot` 和 `yjs_update` 表、外键、`(document_id, sequence)` 唯一约束与加载更新所需索引；创建 `apps/api/src/database/database.module.ts`、`database.service.ts` 与 `database.service.spec.ts`，暴露 `query<T>(text, values): Promise<QueryResult<T>>` 和事务 API。
 - [x] 6.4 创建 `apps/api/src/auth/development-identity.guard.ts`、`current-user.decorator.ts` 与对应测试；`x-dev-user-id` 缺失或为空时返回 401，生产环境启用该 guard 时应用启动失败。
 - [x] 6.5 创建 `apps/api/src/documents/documents.repository.ts`、`documents.service.ts`、`documents.controller.ts` 与测试；定义 `DocumentRole = "owner" | "editor" | "viewer"`、`getMemberRole(documentId, userId)`、`assertCanRead` 与 `assertCanWrite`，并实现 `GET /documents/:documentId` 的元数据读取。
-- [ ] 6.6 使用 `DATABASE_URL` 指向测试 PostgreSQL 运行 `pnpm --filter api migrate` 和 `pnpm --filter api test:integration`，然后运行 `pnpm --filter api lint`、`typecheck`；验收为非成员得到 403、viewer 无写权限、owner/editor 具备预期权限。
+- [x] 6.6 使用 `DATABASE_URL` 指向测试 PostgreSQL 运行 `pnpm --filter api migrate` 和 `pnpm --filter api test:integration`，然后运行 `pnpm --filter api lint`、`typecheck`；验收为非成员得到 403、viewer 无写权限、owner/editor 具备预期权限。
 
 ## 7. Yjs 持久化与 Hocuspocus 协作服务
 
