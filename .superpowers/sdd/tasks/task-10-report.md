@@ -116,3 +116,51 @@ git diff --check
 
 - 文档 API 仅从既有 `document.ts` 重导出，未改变文档结构或创建逻辑。
 - 为确保命令目录不会出现重复或不明确的旧 UI 项，旧 `heading` 保留在可执行定义中以兼容持久化/下游调用，同时新的稳定目录公开 level 1-3 项；当前公开 `SLASH_COMMANDS` 仍含该兼容项。若 UI 需要只显示 1-3 级标题，应在调用方按 id 排除兼容别名，而不应移除该执行兼容性。
+
+## Fix round 2：P2 旧 heading 别名隔离
+
+### RED 证据
+
+先更新 `packages/editor/src/core/slash-commands.test.ts`，明确要求：
+
+- `SLASH_COMMANDS` 的标题命令仅为 `heading-1`、`heading-2`、`heading-3`；
+- `filterSlashCommands("标题")` 与 `filterSlashCommands("heading")` 均不得返回旧 `heading` id；
+- 若保留兼容性，`executeSlashCommand(editor, "heading")` 仍转换为 level 1 标题（原有测试已覆盖）。
+
+执行：
+
+```powershell
+pnpm --filter @workspace/editor test -- src/core/slash-commands.test.ts
+```
+
+结果：退出码 `1`，9 个测试中 1 个失败。失败断言收到 `heading-1`、`heading-2`、`heading-3`、`heading`，预期仅前三者，直接证明旧别名仍暴露在公开目录中。
+
+### GREEN 证据
+
+最小实现：
+
+- 从 `DEFINITIONS` 移除公开的 `heading` 定义，因此 `SLASH_COMMANDS` 和 `filterSlashCommands` 不再包含旧别名；
+- 增加内部 `LEGACY_COMMAND_ALIASES`，将执行时传入的 `heading` 解析为 `heading-1`，保持旧调用方兼容。
+
+聚焦验证：
+
+```powershell
+pnpm --filter @workspace/editor test -- src/core/slash-commands.test.ts src/core/commands.test.ts
+```
+
+结果：退出码 `0`，2 个测试文件、12 个测试通过。
+
+完整验证：
+
+```powershell
+pnpm --filter @workspace/editor test
+pnpm --filter @workspace/editor lint
+pnpm --filter @workspace/editor typecheck
+git diff --check
+```
+
+结果：全部退出码 `0`；editor 全量测试为 7 个测试文件、27 个测试通过；lint、typecheck 与 diff 空白检查均通过。IDE lint 对本轮修改文件无诊断。
+
+### 本轮顾虑
+
+- 旧 `heading` 仅存在于 `executeSlashCommand` 的内部别名映射，不再作为 `SlashCommand` 公共目录项，也不会被 `filterSlashCommands` 返回。

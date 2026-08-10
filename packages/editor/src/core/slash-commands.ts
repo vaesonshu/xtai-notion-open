@@ -27,10 +27,6 @@ const DEFINITIONS: SlashCommandDefinition[] = [
   command("heading-3", "\u4e09\u7ea7\u6807\u9898", ["heading-3", "heading", "\u6807\u9898", "h3", "\u4e09\u7ea7\u6807\u9898"], editor =>
     editor.chain().focus().setNode("heading", { level: 3 }).run(),
   ),
-  // Keep the original id executable for callers that persisted the old command id.
-  command("heading", "\u6807\u9898", ["heading", "\u6807\u9898"], editor =>
-    editor.chain().focus().setNode("heading", { level: 1 }).run(),
-  ),
   command("paragraph", "\u6bb5\u843d", ["paragraph", "\u6bb5\u843d", "text"], editor =>
     editor.chain().focus().setParagraph().run(),
   ),
@@ -74,6 +70,11 @@ export function filterSlashCommands(query: string): SlashCommand[] {
   )
 }
 
+const LEGACY_COMMAND_ALIASES: Record<string, string> = {
+  heading: "heading-1",
+}
+
 export function executeSlashCommand(editor: Editor, id: string): boolean {
-  return DEFINITIONS.find(item => item.id === id)?.execute(editor) ?? false
+  const resolvedId = LEGACY_COMMAND_ALIASES[id] ?? id
+  return DEFINITIONS.find(item => item.id === resolvedId)?.execute(editor) ?? false
 }

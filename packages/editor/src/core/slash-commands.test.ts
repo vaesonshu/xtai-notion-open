@@ -51,12 +51,17 @@ describe("filterSlashCommands", () => {
     expect(filterSlashCommands("")).toEqual(SLASH_COMMANDS)
   })
 
-  it("exposes a distinct command for each supported heading level", () => {
+  it("exposes only one public command for each supported heading level", () => {
+    const headingIds = ["heading-1", "heading-2", "heading-3"]
     expect(SLASH_COMMANDS).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "heading-1", label: "\u4e00\u7ea7\u6807\u9898" }),
       expect.objectContaining({ id: "heading-2", label: "\u4e8c\u7ea7\u6807\u9898" }),
       expect.objectContaining({ id: "heading-3", label: "\u4e09\u7ea7\u6807\u9898" }),
     ]))
+    expect(SLASH_COMMANDS.filter(({ id }) => id.startsWith("heading")).map(({ id }) => id))
+      .toEqual(headingIds)
+    expect(filterSlashCommands("\u6807\u9898").map(({ id }) => id)).toEqual(headingIds)
+    expect(filterSlashCommands("heading").map(({ id }) => id)).toEqual(headingIds)
     expect(filterSlashCommands("h2")).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "heading-2" }),
     ]))
