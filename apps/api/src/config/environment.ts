@@ -1,0 +1,56 @@
+export type NodeEnvironment = "development" | "test" | "production"
+
+export interface Environment {
+  PORT: number
+  DATABASE_URL: string
+  COLLABORATION_PORT: number
+  NODE_ENV: NodeEnvironment
+}
+
+function requireValue(
+  source: NodeJS.ProcessEnv,
+  key: keyof Environment
+): string {
+  const value = source[key]
+  if (value === undefined || value.trim() === "") {
+    throw new Error(`Missing required environment variable: ${key}`)
+  }
+  return value
+}
+
+function requirePort(
+  source: NodeJS.ProcessEnv,
+  key: "PORT" | "COLLABORATION_PORT"
+): number {
+  const raw = requireValue(source, key)
+  const port = Number(raw)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid port for ${key}: ${raw}`)
+  }
+  return port
+}
+
+function requireNodeEnv(source: NodeJS.ProcessEnv): NodeEnvironment {
+  const value = requireValue(source, "NODE_ENV")
+  if (
+    value !== "development" &&
+    value !== "test" &&
+    value !== "production"
+  ) {
+    throw new Error(
+      `Invalid NODE_ENV: ${value}. Expected development, test, or production.`
+    )
+  }
+  return value
+}
+
+export function loadEnvironment(
+  source: NodeJS.ProcessEnv = process.env
+): Environment {
+  return {
+    PORT: requirePort(source, "PORT"),
+    DATABASE_URL: requireValue(source, "DATABASE_URL"),
+    COLLABORATION_PORT: requirePort(source, "COLLABORATION_PORT"),
+    NODE_ENV: requireNodeEnv(source),
+  }
+}
