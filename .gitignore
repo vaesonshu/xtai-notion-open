@@ -24,6 +24,9 @@ dist
 # turbo
 .turbo
 
+# local git worktrees
+.worktrees/
+
 # misc
 .DS_Store
 *.pem
