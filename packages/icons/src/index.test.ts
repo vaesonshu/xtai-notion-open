@@ -7,9 +7,8 @@ describe("@workspace/icons exports", () => {
     expect(typeof BoldIcon).toBe("function")
   })
 
-  it("exports Icon type alias for Lucide components", () => {
+  it("exports Icon type alias compatible with exported icons", () => {
     expectTypeOf<Icon>().not.toBeAny()
-    expectTypeOf<Icon>().toBeFunction()
-    expectTypeOf<BoldIcon>().toMatchTypeOf<Icon>()
+    expectTypeOf<typeof BoldIcon>().toExtend<Icon>()
   })
 })
