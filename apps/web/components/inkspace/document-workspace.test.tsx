@@ -160,6 +160,16 @@ describe("DocumentWorkspace", () => {
     )
   })
 
+  it("shows a document content skeleton while metadata is pending", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})))
+
+    render(<DocumentWorkspace {...baseProps} />)
+
+    expect(screen.getByRole("status", { name: "正在加载文档" })).toBeInTheDocument()
+    expect(screen.getByRole("status").querySelectorAll(".animate-pulse")).toHaveLength(8)
+    expect(screen.queryByText("正在打开文档…")).not.toBeInTheDocument()
+  })
+
   it("renders an editable editor after collaboration sync for owner", async () => {
     mockDocumentRole("owner")
     const provider = createMockProvider()
@@ -180,7 +190,7 @@ describe("DocumentWorkspace", () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
+      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
     })
 
     const proseMirror = container.querySelector(".ProseMirror")
@@ -234,7 +244,7 @@ describe("DocumentWorkspace", () => {
       provider.emit("synced", { state: true })
     })
     await waitFor(() => {
-      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
+      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
     })
 
     await act(async () => {
@@ -291,7 +301,7 @@ describe("DocumentWorkspace", () => {
       provider.emit("synced", { state: true })
     })
     await waitFor(() => {
-      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
+      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
     })
 
     await act(async () => {

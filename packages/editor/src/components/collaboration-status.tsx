@@ -1,14 +1,7 @@
 "use client"
 
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
-import { Badge } from "@workspace/ui/components/badge"
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@workspace/ui/components/tooltip"
 import { useCollaborationStatus } from "../react/use-collaboration-status"
 
 export function CollaborationStatus() {
@@ -24,17 +17,7 @@ export function CollaborationStatus() {
   }
 
   if (status === "synced") {
-    return (
-      <div role="status" aria-label="已同步" className="flex items-center gap-2">
-        <Badge variant="secondary">已同步</Badge>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger render={<span className="text-xs text-muted-foreground">已保存</span>} />
-            <TooltipContent>文档更改已同步到服务器</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    )
+    return null
   }
 
   if (status === "offline") {

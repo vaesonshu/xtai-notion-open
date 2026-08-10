@@ -26,11 +26,11 @@ describe("CollaborationStatus", () => {
     expect(document.querySelector('[data-slot="skeleton"]')).not.toBeNull()
   })
 
-  it("shows synced feedback including saved affordance", () => {
+  it("does not render a redundant synced badge", () => {
     renderStatus("synced")
 
-    expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
-    expect(screen.getByText("已保存")).toBeInTheDocument()
+    expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
+    expect(screen.queryByText("已保存")).not.toBeInTheDocument()
   })
 
   it("shows offline feedback", () => {

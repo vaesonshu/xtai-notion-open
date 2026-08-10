@@ -189,7 +189,7 @@ export function SlashMenu() {
       <PopoverContent
         align="start"
         side="bottom"
-        className="w-72 p-0"
+        className="w-72 bg-white p-0 text-[#242321]"
         data-testid="slash-menu"
         initialFocus={false}
         finalFocus={false}
@@ -197,6 +197,7 @@ export function SlashMenu() {
         <Command
           shouldFilter={false}
           value={selectedId}
+          className="bg-white text-[#242321]"
           onValueChange={setSelectedId}
         >
           <CommandList>
@@ -207,6 +208,7 @@ export function SlashMenu() {
                   key={item.id}
                   value={item.id}
                   keywords={item.keywords}
+                  className="hover:!bg-[#F3F2EF] hover:!text-[#242321] data-[selected]:!bg-[#E6F3EC] data-[selected]:!text-[#24866B]"
                   onSelect={() => {
                     suggestionRef.current?.command(item)
                   }}

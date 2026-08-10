@@ -8,7 +8,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@workspace/ui/components/alert"
-import { Skeleton } from "@workspace/ui/components/skeleton"
 import { useEffect, useState } from "react"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
@@ -139,10 +138,24 @@ export function DocumentWorkspace({
 
   if (!role) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex flex-1 items-center justify-center p-8">
-          <Skeleton className="h-8 w-48" />
+      <div className="flex min-h-0 flex-1 flex-col" aria-busy="true" role="status" aria-label="正在加载文档">
+        <div className="flex h-[68px] shrink-0 items-center border-b border-[#E8E6E1] px-6">
+          <span className="h-4 w-56 animate-pulse rounded bg-[#E2DED5]" />
         </div>
+        <section className="flex min-h-0 flex-1 justify-center overflow-hidden px-[72px] pt-[58px] pb-[72px]">
+          <article className="flex w-[720px] max-w-full flex-col gap-5">
+            <span className="h-10 w-3/4 animate-pulse rounded-md bg-[#D8D2C4]" />
+            <span className="h-4 w-full animate-pulse rounded bg-[#E2DED5]" />
+            <span className="h-4 w-11/12 animate-pulse rounded bg-[#E2DED5]" />
+            <span className="h-4 w-4/5 animate-pulse rounded bg-[#E2DED5]" />
+            <div className="mt-4 flex flex-col gap-3">
+              <span className="h-4 w-full animate-pulse rounded bg-[#E8E6E1]" />
+              <span className="h-4 w-10/12 animate-pulse rounded bg-[#E8E6E1]" />
+              <span className="h-4 w-9/12 animate-pulse rounded bg-[#E8E6E1]" />
+            </div>
+          </article>
+        </section>
+        <span className="sr-only">正在加载文档内容</span>
       </div>
     )
   }

@@ -92,7 +92,9 @@ describe("SlashMenu", () => {
       editor!.chain().focus("start").insertContent("/\u4ee3\u7801").run()
     })
 
-    expect(await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })).toBeInTheDocument()
+    const option = await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })
+    expect(option).toBeInTheDocument()
+    expect(option).toHaveClass("data-[selected]:!bg-[#E6F3EC]")
   })
 
   it("converts the current block to a codeBlock when the command is executed", async () => {
@@ -173,6 +175,11 @@ describe("SlashMenu", () => {
     })
 
     expect(await screen.findByTestId("slash-menu")).toBeInTheDocument()
+    expect(screen.getByTestId("slash-menu")).toHaveClass("bg-white")
+    expect(screen.getByTestId("slash-menu")).toHaveClass("text-[#242321]")
+    expect(screen.getByTestId("slash-menu").firstElementChild).toHaveClass(
+      "bg-white",
+    )
 
     await waitFor(() => {
       expect(editor!.isFocused).toBe(true)

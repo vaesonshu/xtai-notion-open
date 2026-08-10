@@ -103,7 +103,10 @@ function LinkControl({ editor }: { editor: Editor }) {
       >
         <LinkIcon />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 gap-2 p-2">
+      <PopoverContent
+        align="start"
+        className="w-72 gap-2 bg-white p-2 text-[#242321]"
+      >
         <Input
           aria-label="链接地址"
           placeholder="https://"
@@ -165,12 +168,13 @@ function BubbleToolbarControls({ editor }: { editor: Editor }) {
   return (
     <div
       data-testid="bubble-toolbar"
-      className="flex items-center gap-0.5 rounded-lg border border-border bg-popover p-1 shadow-md"
+      className="flex items-center gap-0.5 rounded-lg border border-[#E7E4DC] bg-white p-1 text-[#242321] shadow-md"
     >
       {MARK_ACTIONS.map(({ mark, label, Icon }) => (
         <Toggle
           key={mark}
           size="sm"
+          className={`hover:!bg-[#F3F2EF] hover:!text-[#242321] ${activeMarks[mark] ? "!bg-[#E6F3EC] !text-[#24866B]" : ""}`}
           pressed={activeMarks[mark]}
           aria-label={label}
           onPressedChange={() => {

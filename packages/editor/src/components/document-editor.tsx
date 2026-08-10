@@ -6,7 +6,6 @@ import type { CollaborationConfig } from "../collaboration/types"
 import type { EditorDocument } from "../core/types"
 import { CollaborationEditorProvider } from "../react/collaboration-editor-provider"
 import { EditorProvider } from "../react/editor-provider"
-import { CollaborationStatus } from "./collaboration-status"
 import { EditorSurface } from "./editor-surface"
 
 type DocumentEditorSharedProps = {
@@ -58,7 +57,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
       >
         <div className={className}>
           {children}
-          <CollaborationStatus />
           {framedSurface}
         </div>
       </CollaborationEditorProvider>

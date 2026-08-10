@@ -135,9 +135,29 @@ describe("BubbleToolbar", () => {
 
     await selectFormattableRange(editor!)
 
-    expect(await screen.findByTestId("bubble-toolbar")).toBeInTheDocument()
+    const toolbar = await screen.findByTestId("bubble-toolbar")
+    expect(toolbar).toBeInTheDocument()
+    expect(toolbar).toHaveClass("bg-white")
+    expect(toolbar).toHaveClass("text-[#242321]")
+    const bold = screen.getByRole("button", { name: "粗体" })
+    expect(bold).toHaveClass("hover:!bg-[#F3F2EF]")
     expect(screen.getByRole("button", { name: "粗体" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "链接" })).toBeInTheDocument()
+  })
+
+  it("uses the selected color for marks already active in the selection", async () => {
+    renderEditableSurface()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus().setTextSelection({ from: 1, to: 7 }).toggleBold().run()
+    })
+
+    const bold = await screen.findByRole("button", { name: "粗体" })
+    expect(bold).toHaveAttribute("data-pressed")
+    expect(bold).toHaveClass("!bg-[#E6F3EC]")
+    expect(bold).toHaveClass("!text-[#24866B]")
   })
 
   it("does not show the toolbar for an empty cursor", async () => {
@@ -169,6 +189,7 @@ describe("BubbleToolbar", () => {
     await waitFor(() => {
       expect(editor!.isActive("bold")).toBe(true)
     })
+    expect(bold).toHaveAttribute("data-pressed")
     expect(editor!.state.selection.from).toBe(1)
     expect(editor!.state.selection.to).toBe(7)
   })

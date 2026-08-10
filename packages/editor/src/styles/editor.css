@@ -12,6 +12,23 @@
   margin-top: 0.75em;
 }
 
+.ProseMirror-dropcursor {
+  background: #24866B !important;
+  background-color: #24866B !important;
+  background-image: none !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  filter: none;
+  height: 2px;
+  mix-blend-mode: normal;
+  opacity: 1;
+  outline: none;
+  pointer-events: none;
+  position: absolute;
+  z-index: 5;
+}
+
 .ProseMirror p.is-editor-empty:first-child::before,
 .ProseMirror p.is-empty::before {
   color: #9a9488;

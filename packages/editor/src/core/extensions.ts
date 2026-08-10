@@ -1,6 +1,7 @@
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import Link from "@tiptap/extension-link"
+import Dropcursor from "@tiptap/extension-dropcursor"
 import Placeholder from "@tiptap/extension-placeholder"
 import TaskItem from "@tiptap/extension-task-item"
 import TaskList from "@tiptap/extension-task-list"
@@ -14,8 +15,16 @@ export type { EditorExtensionOptions } from "./types"
 export function createEditorExtensions(options: EditorExtensionOptions = {}): Extensions {
   const isCollaborative = Boolean(options.document && options.provider && options.user)
   const extensions: Extensions = [
-    StarterKit.configure({ undoRedo: isCollaborative ? false : {} }),
+    StarterKit.configure({
+      dropcursor: false,
+      undoRedo: isCollaborative ? false : {},
+    }),
     Link.configure({ openOnClick: false, autolink: true }),
+    Dropcursor.configure({
+      color: "#24866B",
+      width: 2,
+      class: "ProseMirror-dropcursor",
+    }),
     Underline,
     TaskList,
     TaskItem.configure({ nested: false }),

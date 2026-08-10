@@ -26,6 +26,8 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
   if (status === "synced") {
     return (
       <Badge
+        role="status"
+        aria-label="已同步"
         variant="secondary"
         className="ml-1 gap-1 !bg-[#EEF8F4] px-2 py-1 text-[11px] font-medium !text-[#24866B]"
       >
@@ -38,6 +40,8 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
   if (status === "connecting") {
     return (
       <Badge
+        role="status"
+        aria-label="连接中"
         variant="secondary"
         className="ml-1 px-2 py-1 text-[11px] font-medium"
       >
@@ -49,6 +53,8 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
   if (status === "offline") {
     return (
       <Badge
+        role="status"
+        aria-label="离线"
         variant="secondary"
         className="ml-1 px-2 py-1 text-[11px] font-medium !bg-[#FFF4E5] !text-[#9A6700]"
       >
@@ -60,6 +66,8 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
   if (status === "unauthorized") {
     return (
       <Badge
+        role="status"
+        aria-label="无权限"
         variant="secondary"
         className="ml-1 px-2 py-1 text-[11px] font-medium !bg-[#FDECEC] !text-[#B53B30]"
       >
@@ -70,6 +78,8 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
 
   return (
     <Badge
+      role="status"
+      aria-label="同步错误"
       variant="secondary"
       className="ml-1 px-2 py-1 text-[11px] font-medium !bg-[#FDECEC] !text-[#B53B30]"
     >

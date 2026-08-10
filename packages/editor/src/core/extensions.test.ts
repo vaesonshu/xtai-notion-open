@@ -31,6 +31,25 @@ describe("editor core", () => {
     ]))
   })
 
+  it("configures the drop cursor extension", () => {
+    const dropCursor = createEditorExtensions().find(
+      extension => extension.name === "dropCursor",
+    )
+
+    expect(dropCursor).toBeDefined()
+    expect(dropCursor?.options.color).toBe("#24866B")
+    expect(dropCursor?.options.width).toBe(2)
+    expect(dropCursor?.options.class).toBe("ProseMirror-dropcursor")
+  })
+
+  it("registers exactly one drop cursor extension", () => {
+    const dropCursors = createEditorExtensions().filter(
+      extension => extension.name === "dropCursor",
+    )
+
+    expect(dropCursors).toHaveLength(1)
+  })
+
   it("keeps undo and redo enabled in ordinary mode", () => {
     const starterKit = createEditorExtensions().find(
       extension => extension.name === "starterKit",

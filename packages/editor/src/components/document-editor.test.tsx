@@ -148,7 +148,7 @@ describe("DocumentEditor", () => {
     )
   })
 
-  it("shows collaboration connecting status before sync", () => {
+  it("does not render a duplicate in-editor status before sync", () => {
     const provider = createMockProvider()
 
     render(
@@ -158,7 +158,8 @@ describe("DocumentEditor", () => {
       />,
     )
 
-    expect(screen.getByRole("status", { name: /连接中/ })).toBeInTheDocument()
+    expect(screen.queryByRole("status", { name: /连接中/ })).not.toBeInTheDocument()
+    expect(screen.getByRole("status", { name: "正在加载编辑器" })).toBeInTheDocument()
   })
 
   it("shows synced status after first sync and never shows saved on error", async () => {
@@ -176,16 +177,16 @@ describe("DocumentEditor", () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
+      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
     })
-    expect(screen.getByText("已保存")).toBeInTheDocument()
+    expect(screen.queryByText("已保存")).not.toBeInTheDocument()
 
     await act(async () => {
       provider.emit("close", { event: { code: 1011 } })
     })
 
     await waitFor(() => {
-      expect(screen.getByRole("status", { name: /错误/ })).toBeInTheDocument()
+      expect(screen.queryByRole("status", { name: /错误/ })).not.toBeInTheDocument()
     })
     expect(screen.queryByText("已保存")).not.toBeInTheDocument()
   })
