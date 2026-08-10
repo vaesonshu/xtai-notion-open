@@ -1,9 +1,19 @@
 .ProseMirror {
   min-height: 20rem;
   outline: none;
+  padding: 1rem 1rem 1rem 0;
 }
 
-.ProseMirror p.is-editor-empty:first-child::before {
+.ProseMirror > * {
+  margin-inline-start: 2.5rem;
+}
+
+.ProseMirror > * + * {
+  margin-top: 0.75em;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror p.is-empty::before {
   color: #9a9488;
   content: attr(data-placeholder);
   float: left;
@@ -17,8 +27,19 @@
 }
 
 .ProseMirror ul[data-type="taskList"] li {
+  align-items: flex-start;
   display: flex;
   gap: 0.5rem;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 0.2em;
+  user-select: none;
+}
+
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
 }
 
 .ProseMirror pre {
@@ -32,4 +53,89 @@
   color: #5c574e;
   margin-left: 0;
   padding-left: 1rem;
+}
+
+.ProseMirror-noderangeselection *::selection {
+  background: transparent;
+}
+
+.ProseMirror-noderangeselection * {
+  caret-color: transparent;
+}
+
+.ProseMirror-selectednode,
+.ProseMirror-selectednoderange {
+  position: relative;
+}
+
+.ProseMirror-selectednode::before,
+.ProseMirror-selectednoderange::before {
+  background-color: rgba(112, 207, 248, 0.3);
+  border-radius: 0.2rem;
+  bottom: -0.25rem;
+  content: "";
+  left: -0.25rem;
+  pointer-events: none;
+  position: absolute;
+  right: -0.25rem;
+  top: -0.25rem;
+  z-index: -1;
+}
+
+.editor-block-handle {
+  display: flex;
+  align-items: center;
+}
+
+.editor-block-handle__grip {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  color: #9a9488;
+  cursor: grab;
+  display: inline-flex;
+  justify-content: center;
+  padding: 0.125rem;
+}
+
+.editor-block-handle__grip:active {
+  cursor: grabbing;
+}
+
+.editor-block-handle[data-dragging="true"] .editor-block-handle__grip {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+.collaboration-carets__caret {
+  border-left: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+  position: relative;
+  word-break: normal;
+}
+
+.collaboration-carets__selection {
+  background-color: currentColor;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.collaboration-carets__label {
+  background-color: currentColor;
+  border-radius: 3px 3px 3px 0;
+  color: #fff;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 600;
+  left: -1px;
+  line-height: normal;
+  padding: 0.1rem 0.3rem;
+  position: absolute;
+  top: -1.4em;
+  user-select: none;
+  white-space: nowrap;
 }
