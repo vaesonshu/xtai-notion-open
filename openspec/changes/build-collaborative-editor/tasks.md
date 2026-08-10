@@ -48,11 +48,11 @@
 
 ## 7. Yjs 持久化与 Hocuspocus 协作服务
 
-- [ ] 7.1 在 `apps/api/package.json` 固定新增 `@hocuspocus/server@4.5.0`、`yjs@13.6.32` 与所需协议依赖；创建 `src/collaboration/collaboration.module.ts`、`collaboration.service.ts`、`hocuspocus.factory.ts`，使 NestJS `OnModuleInit`/`OnModuleDestroy` 负责协作服务器启动、缓冲区刷新和停止。
-- [ ] 7.2 创建 `apps/api/src/collaboration/yjs-persistence.repository.ts` 与 `yjs-persistence.service.ts`；接口为 `loadDocument(documentId): Promise<Y.Doc>`、`enqueueUpdate(documentId, update: Uint8Array): void`、`flushDocument(documentId): Promise<void>`、`compactDocument(documentId): Promise<void>`。实现“最新快照 + 有序更新”恢复、同文档批量事务写入、阈值压缩和已覆盖 update 删除。
-- [ ] 7.3 创建 `apps/api/src/collaboration/collaboration-auth.service.ts` 与 `hocuspocus-hooks.ts`；从协作连接解析开发身份，调用 `DocumentsService.assertCanRead/assertCanWrite`，为 viewer 建立只读会话，拒绝非成员和无效身份，并将 persistence 失败转为客户端可感知的错误状态。
-- [ ] 7.4 创建 `apps/api/src/collaboration/yjs-persistence.service.spec.ts`、`hocuspocus-hooks.spec.ts` 和 `collaboration.integration.spec.ts`；覆盖快照后重放更新、批量写入、压缩、两个 editor 同步、viewer 写入拒绝、非成员不接收状态与服务重启后恢复。
-- [ ] 7.5 运行 `pnpm --filter api test`、`pnpm --filter api test:integration`、`pnpm --filter api lint` 和 `pnpm --filter api typecheck`；验收为所有协作会话都通过同一成员角色规则。
+- [x] 7.1 在 `apps/api/package.json` 固定新增 `@hocuspocus/server@4.5.0`、`yjs@13.6.32` 与所需协议依赖；创建 `src/collaboration/collaboration.module.ts`、`collaboration.service.ts`、`hocuspocus.factory.ts`，使 NestJS `OnModuleInit`/`OnModuleDestroy` 负责协作服务器启动、缓冲区刷新和停止。
+- [x] 7.2 创建 `apps/api/src/collaboration/yjs-persistence.repository.ts` 与 `yjs-persistence.service.ts`；接口为 `loadDocument(documentId): Promise<Y.Doc>`、`enqueueUpdate(documentId, update: Uint8Array): void`、`flushDocument(documentId): Promise<void>`、`compactDocument(documentId): Promise<void>`。实现“最新快照 + 有序更新”恢复、同文档批量事务写入、阈值压缩和已覆盖 update 删除。
+- [x] 7.3 创建 `apps/api/src/collaboration/collaboration-auth.service.ts` 与 `hocuspocus-hooks.ts`；从协作连接解析开发身份，调用 `DocumentsService.assertCanRead/assertCanWrite`，为 viewer 建立只读会话，拒绝非成员和无效身份，并将 persistence 失败转为客户端可感知的错误状态。
+- [x] 7.4 创建 `apps/api/src/collaboration/yjs-persistence.service.spec.ts`、`hocuspocus-hooks.spec.ts` 和 `collaboration.integration.spec.ts`；覆盖快照后重放更新、批量写入、压缩、两个 editor 同步、viewer 写入拒绝、非成员不接收状态与服务重启后恢复。
+- [x] 7.5 运行 `pnpm --filter api test`、`pnpm --filter api test:integration`、`pnpm --filter api lint` 和 `pnpm --filter api typecheck`；验收为所有协作会话都通过同一成员角色规则。
 
 ## 8. Web 编辑器集成
 
