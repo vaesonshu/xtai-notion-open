@@ -3,6 +3,7 @@
 import { use } from "react"
 import { EditorContent } from "../react/editor-content"
 import { EditorContext } from "../react/editor-context"
+import { BubbleToolbar } from "./bubble-toolbar"
 import { SlashMenu } from "./slash-menu"
 
 export type EditorSurfaceProps = {
@@ -18,7 +19,12 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
   return (
     <>
       <EditorContent className={className} />
-      {context.editor.isEditable ? <SlashMenu /> : null}
+      {context.editor.isEditable ? (
+        <>
+          <SlashMenu />
+          <BubbleToolbar />
+        </>
+      ) : null}
     </>
   )
 }

@@ -30,9 +30,9 @@
 
 ## 5. 可组合编辑器 UI
 
-- [ ] 5.1 创建 `packages/editor/src/components/document-editor.tsx`、`editor-surface.tsx` 和 `collaboration-status.tsx`；`DocumentEditorProps` 接收 `content?` 或 `collaboration`（二者互斥）、`editable?`、`onChange?`、`className?`，使用 `@workspace/ui/components/skeleton`、`alert`、`badge` 和 `tooltip` 显示加载、同步、离线、无权限和错误状态。
-- [ ] 5.2 创建 `packages/editor/src/components/slash-menu.tsx`，基于 `@workspace/ui/components/command` 与 `@workspace/ui/components/popover` 消费 `filterSlashCommands`；实现 `/` 查询、键盘上下选择、Enter 执行和 Escape 取消。
-- [ ] 5.3 创建 `packages/editor/src/components/bubble-toolbar.tsx`，基于 `@workspace/ui/components/toggle`、`button`、`input` 与 `popover` 消费共享命令；只在非空可格式化选区显示粗体、斜体、下划线、删除线、行内代码和链接控制。
+- [x] 5.1 创建 `packages/editor/src/components/document-editor.tsx`、`editor-surface.tsx` 和 `collaboration-status.tsx`；`DocumentEditorProps` 接收 `content?` 或 `collaboration`（二者互斥）、`editable?`、`onChange?`、`className?`，使用 `@workspace/ui/components/skeleton`、`alert`、`badge` 和 `tooltip` 显示加载、同步、离线、无权限和错误状态。
+- [x] 5.2 创建 `packages/editor/src/components/slash-menu.tsx`，基于 `@workspace/ui/components/command` 与 `@workspace/ui/components/popover` 消费 `filterSlashCommands`；实现 `/` 查询、键盘上下选择、Enter 执行和 Escape 取消。
+- [x] 5.3 创建 `packages/editor/src/components/bubble-toolbar.tsx`，基于 `@workspace/ui/components/toggle`、`button`、`input` 与 `popover` 消费共享命令；只在非空可格式化选区显示粗体、斜体、下划线、删除线、行内代码和链接控制。
 - [ ] 5.4 创建 `packages/editor/src/components/block-handle.tsx`，使用 Tiptap 拖拽手柄扩展并将操作限制为兼容顶层块；创建 `packages/editor/src/styles/editor.css`，定义 ProseMirror 基础样式、任务项、空段落、拖拽态及 CollaborationCaret 的 caret/selection/label 样式，修复现有 `./styles.css` export 指向缺失文件的问题。
 - [ ] 5.5 创建 `packages/editor/src/components/index.ts`，导出 UI 组件；创建 `document-editor.test.tsx`、`slash-menu.test.tsx`、`bubble-toolbar.test.tsx` 和 `collaboration-status.test.tsx`，覆盖只读渲染、`/代码` 插入、Escape、粗体/链接、连接状态 aria 文本和错误时不显示“已保存”。
 - [ ] 5.6 运行 `pnpm --filter @workspace/editor test`、`lint` 和 `typecheck`；验收为编辑器只从 `@workspace/ui/components/*` 和 `@workspace/icons` 使用基础 UI 与图标。
