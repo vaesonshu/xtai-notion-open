@@ -54,8 +54,15 @@ export function createCollaborationSession(
   let status: CollaborationStatus = "connecting"
   let destroyed = false
 
+  const isTerminalStatus = (value: CollaborationStatus) =>
+    value === "unauthorized" || value === "error"
+
   const setStatus = (next: CollaborationStatus) => {
     if (destroyed) {
+      return
+    }
+    // Auth/transport failures must stick; Hocuspocus often emits disconnect/close after.
+    if (isTerminalStatus(status) && next !== status) {
       return
     }
     status = next

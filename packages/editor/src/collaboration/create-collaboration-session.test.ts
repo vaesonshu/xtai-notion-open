@@ -153,6 +153,44 @@ describe("createCollaborationSession", () => {
     errorSession.destroy()
   })
 
+  it("keeps unauthorized after disconnect or normal close", () => {
+    const provider = createMockProvider()
+    const session = createCollaborationSession(baseConfig, {
+      createProvider: () => provider as unknown as HocuspocusProvider,
+    })
+
+    provider.emit("authenticationFailed", { reason: "permission-denied" })
+    expect(session.getStatus()).toBe("unauthorized")
+
+    provider.emit("status", { status: "disconnected" })
+    expect(session.getStatus()).toBe("unauthorized")
+
+    provider.emit("close", { event: { code: 1000 } })
+    expect(session.getStatus()).toBe("unauthorized")
+
+    session.destroy()
+  })
+
+  it("keeps error after subsequent offline disconnect", () => {
+    const provider = createMockProvider()
+    const session = createCollaborationSession(baseConfig, {
+      createProvider: () => provider as unknown as HocuspocusProvider,
+    })
+
+    provider.emit("close", {
+      event: { code: 1011, reason: "persistence-failed" },
+    })
+    expect(session.getStatus()).toBe("error")
+
+    provider.emit("status", { status: "disconnected" })
+    expect(session.getStatus()).toBe("error")
+
+    provider.emit("close", { event: { code: 1000 } })
+    expect(session.getStatus()).toBe("error")
+
+    session.destroy()
+  })
+
   it("destroy removes listeners and destroys the Y.Doc", () => {
     const provider = createMockProvider()
     const session = createCollaborationSession(baseConfig, {
@@ -167,6 +205,7 @@ describe("createCollaborationSession", () => {
 
     session.destroy()
 
+    expect(provider.off).toHaveBeenCalled()
     expect(provider.destroy).toHaveBeenCalledTimes(1)
     expect(document.isDestroyed).toBe(true)
     expect(provider.listenerCount("synced")).toBe(0)
