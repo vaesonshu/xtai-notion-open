@@ -18,7 +18,7 @@
 - [x] 3.2 修改 `packages/editor/src/core/extensions.ts`，导出 `createEditorExtensions(options: EditorExtensionOptions): Extensions`，并使 `EditorExtensionOptions` 包含 `placeholder`、`document?: Y.Doc`、`provider?: HocuspocusProvider`、`user?: CollaborationUser`；普通模式启用 undo/redo，协作模式启用 Collaboration 与 CollaborationCaret 且禁用 StarterKit history。
 - [x] 3.3 创建 `packages/editor/src/core/slash-commands.ts` 和 `packages/editor/src/core/commands.ts`；导出 `SlashCommand`、`SLASH_COMMANDS`、`filterSlashCommands(query)`、`executeSlashCommand(editor, id)`、`toggleInlineMark(editor, mark)` 与 `setEditorLink(editor, href)`，覆盖规格中的块与格式化命令。
 - [x] 3.4 更新 `packages/editor/src/core/index.ts` 与 `packages/editor/src/index.ts`，只导出稳定的文档、扩展和命令 API；创建或更新 `packages/editor/src/core/extensions.test.ts`、`document.test.ts`、`slash-commands.test.ts` 和 `commands.test.ts`，分别断言协作 history 配置、空/示例文档验证、`/代码` 过滤与链接/粗体命令。
-- [ ] 3.5 运行 `pnpm --filter @workspace/editor test -- --runInBand`、`pnpm --filter @workspace/editor lint` 和 `pnpm --filter @workspace/editor typecheck`；验收为 core 测试同时覆盖普通与协作扩展配置。
+- [x] 3.5 运行 `pnpm --filter @workspace/editor test -- --runInBand`、`pnpm --filter @workspace/editor lint` 和 `pnpm --filter @workspace/editor typecheck`；验收为 core 测试同时覆盖普通与协作扩展配置。（Vitest 不支持 `--runInBand`，等价执行 `--fileParallelism false`；27 项测试、lint、typecheck 均通过。）
 
 ## 4. 协作会话与 React 生命周期
 
