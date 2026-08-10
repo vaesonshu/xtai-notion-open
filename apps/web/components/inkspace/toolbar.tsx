@@ -1,12 +1,12 @@
 import {
-  ChevronDown,
-  CloudCheck,
-  Ellipsis,
-  FileText,
-  MessageSquare,
-  Send,
-  Users,
-} from "lucide-react"
+  ChevronDownIcon,
+  CloudCheckIcon,
+  EllipsisIcon,
+  FileTextIcon,
+  MessageSquareIcon,
+  SendIcon,
+  UsersIcon,
+} from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
@@ -16,15 +16,15 @@ export function EditorToolbar() {
   return (
     <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-[#E8E6E1] px-6">
       <div className="flex items-center gap-[7px] text-[13px] !text-[#242321]">
-        <PencilIcon icon={FileText} size={18} />
+        <PencilIcon icon={FileTextIcon} size={18} />
         <span className="font-medium text-[#78746C]">产品团队</span>
-        <PencilIcon icon={ChevronDown} color="#B5B1AA" size={14} />
+        <PencilIcon icon={ChevronDownIcon} color="#B5B1AA" size={14} />
         <span className="font-semibold !text-[#242321]">新一代知识工作台</span>
         <Badge
           variant="secondary"
           className="ml-1 gap-1 !bg-[#EEF8F4] px-2 py-1 text-[11px] font-medium !text-[#24866B]"
         >
-          <PencilIcon icon={CloudCheck} color="#24866B" size={13} />
+          <PencilIcon icon={CloudCheckIcon} color="#24866B" size={13} />
           已保存
         </Badge>
       </div>
@@ -50,28 +50,28 @@ export function EditorToolbar() {
           size="icon-sm"
           className="!text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
         >
-          <PencilIcon icon={MessageSquare} size={17} color="#615E58" />
+          <PencilIcon icon={MessageSquareIcon} size={17} color="#615E58" />
         </Button>
         <Button
           variant="ghost"
           size="icon-sm"
           className="!text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
         >
-          <PencilIcon icon={Ellipsis} size={17} color="#615E58" />
+          <PencilIcon icon={EllipsisIcon} size={17} color="#615E58" />
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="!text-[#373532] hover:!border-[#CFCBC4] hover:!bg-[#F3F2EF] hover:!text-[#373532]"
         >
-          <PencilIcon icon={Users} color="#4F4C47" />
+          <PencilIcon icon={UsersIcon} color="#4F4C47" />
           分享
         </Button>
         <Button
           size="sm"
           className="!bg-[#E64B3C] !text-white hover:!bg-[#D94335] hover:!text-white"
         >
-          <PencilIcon icon={Send} color="white" />
+          <PencilIcon icon={SendIcon} color="white" />
           发布
         </Button>
         <Button

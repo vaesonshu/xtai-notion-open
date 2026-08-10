@@ -1,4 +1,4 @@
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRightIcon } from "@workspace/icons"
 import {
   Alert,
   AlertDescription,
@@ -38,7 +38,7 @@ export function DocumentCanvas() {
               访谈」与这段内容高度相关，点击即可插入摘要或建立双向链接。
             </AlertDescription>
           </div>
-          <PencilIcon icon={ArrowUpRight} color="#24866B" size={16} />
+          <PencilIcon icon={ArrowUpRightIcon} color="#24866B" size={16} />
         </Alert>
         <section className="flex flex-col gap-[13px]">
           <h2 className="text-[21px] font-bold text-[#2D2B28]">

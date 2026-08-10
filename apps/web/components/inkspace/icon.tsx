@@ -1,10 +1,10 @@
-import type { LucideIcon } from "lucide-react"
+import type { Icon } from "@workspace/icons"
 export function PencilIcon({
   icon: Icon,
   color = "#78746C",
   size = 15,
 }: {
-  icon: LucideIcon
+  icon: Icon
   color?: string
   size?: number
 }) {

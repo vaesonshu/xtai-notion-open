@@ -1,29 +1,30 @@
+import type { Icon } from "@workspace/icons"
 import {
-  ChevronDown,
-  ChevronsUpDown,
-  FileText,
-  Folder,
-  FolderOpen,
-  Info,
-  Library,
-  Plus,
-  Search,
-  Star,
-} from "lucide-react"
+  ChevronDownIcon,
+  ChevronsUpDownIcon,
+  FileTextIcon,
+  FolderIcon,
+  FolderOpenIcon,
+  InfoIcon,
+  LibraryIcon,
+  PlusIcon,
+  SearchIcon,
+  StarIcon,
+} from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { PencilIcon } from "./icon"
 
 const docs = [
-  ["产品与设计", FolderOpen, true],
-  ["研究档案", Folder, false],
-  ["增长实验", Folder, false],
-  ["品牌资产", Folder, false],
+  ["产品与设计", FolderOpenIcon, true],
+  ["研究档案", FolderIcon, false],
+  ["增长实验", FolderIcon, false],
+  ["品牌资产", FolderIcon, false],
 ] as const
 const personal = [
-  ["今日随笔", FileText, false],
-  ["阅读清单", FileText, false],
+  ["今日随笔", FileTextIcon, false],
+  ["阅读清单", FileTextIcon, false],
 ] as const
 
 export function WorkspaceSidebar() {
@@ -45,14 +46,14 @@ export function WorkspaceSidebar() {
               PRO · 6 位成员
             </span>
           </div>
-          <PencilIcon icon={ChevronsUpDown} />
+          <PencilIcon icon={ChevronsUpDownIcon} />
         </div>
         <div className="flex flex-col gap-[3px]">
-          <SideAction icon={Search} label="搜索" shortcut="⌘ K" />
-          <SideAction icon={Plus} label="新建文档" shortcut="N" active />
-          <SideAction icon={Library} label="新建知识库" />
+          <SideAction icon={SearchIcon} label="搜索" shortcut="⌘ K" />
+          <SideAction icon={PlusIcon} label="新建文档" shortcut="N" active />
+          <SideAction icon={LibraryIcon} label="新建知识库" />
         </div>
-        <SideAction icon={Star} label="收藏" shortcut="3" selected />
+        <SideAction icon={StarIcon} label="收藏" shortcut="3" selected />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 bg-white">
         <SideSection title="协作文档" count="6" items={docs} />
@@ -64,7 +65,7 @@ export function WorkspaceSidebar() {
           <span className="size-[7px] rounded-full bg-[#22C55E]" />
           所有更改已同步
           <span className="flex-1" />
-          <PencilIcon icon={Info} />
+          <PencilIcon icon={InfoIcon} />
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex justify-between text-[10px] font-semibold text-[#78746C]">
@@ -86,7 +87,7 @@ function SideAction({
   active,
   selected,
 }: {
-  icon: typeof Search
+  icon: Icon
   label: string
   shortcut?: string
   active?: boolean
@@ -116,12 +117,12 @@ function SideSection({
 }: {
   title: string
   count: string
-  items: readonly (readonly [string, typeof Folder, boolean])[]
+  items: readonly (readonly [string, Icon, boolean])[]
 }) {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex h-6 items-center gap-1.5 px-[7px] text-[11px] font-semibold tracking-[0.3px] text-[#78746C]">
-        <PencilIcon icon={ChevronDown} size={12} />
+        <PencilIcon icon={ChevronDownIcon} size={12} />
         <span>{title}</span>
         <span className="flex-1" />
         <span className="font-normal">{count}</span>

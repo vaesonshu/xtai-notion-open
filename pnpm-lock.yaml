@@ -47,12 +47,12 @@ importers:
       '@workspace/editor':
         specifier: workspace:*
         version: link:../../packages/editor
+      '@workspace/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@workspace/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      lucide-react:
-        specifier: ^1.30.0
-        version: 1.30.0(react@19.2.4)
       next:
         specifier: 16.2.6
         version: 16.2.6(@playwright/test@1.62.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -141,9 +141,6 @@ importers:
       '@workspace/ui':
         specifier: workspace:*
         version: link:../ui
-      lucide-react:
-        specifier: ^1.30.0
-        version: 1.30.0(react@19.2.4)
       react:
         specifier: 19.2.4
         version: 19.2.4
@@ -1853,11 +1850,6 @@ packages:
   '@turbo/darwin-64@2.10.9':
     resolution: {integrity: sha512-Jh+pTGXLNz8+1tkUU13TI/f+ZOI+OvC4YbHi1H+57iSpLt5DR3xgptd+4sA07RdjdRR/RX/01uQQu2OkbzIefA==}
     cpu: [x64]
-    os: [darwin]
-
-  '@turbo/darwin-arm64@2.10.9':
-    resolution: {integrity: sha512-aqtpPkiIC4IUas8Vv27oJ3aDfTuP1d5wofd01dZ7gfhHRrIKuFdqQb4imvNnVFahcOViF9Jh8Oi7feDoz8/ciA==}
-    cpu: [arm64]
     os: [darwin]
 
   '@turbo/gen@2.9.15':
@@ -6029,9 +6021,6 @@ snapshots:
   '@turbo/darwin-64@2.10.9':
     optional: true
 
-  '@turbo/darwin-arm64@2.10.9':
-    optional: true
-
   '@turbo/gen@2.9.15(@types/node@20.19.41)':
     dependencies:
       '@inquirer/prompts': 7.10.1(@types/node@20.19.41)
@@ -8707,7 +8696,6 @@ snapshots:
   turbo@2.10.9:
     optionalDependencies:
       '@turbo/darwin-64': 2.10.9
-      '@turbo/darwin-arm64': 2.10.9
       '@turbo/linux-64': 2.10.9
       '@turbo/linux-arm64': 2.10.9
       '@turbo/windows-64': 2.10.9
