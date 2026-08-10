@@ -18,15 +18,17 @@ describe("editor document contract", () => {
   describe("createStarterDocument", () => {
     it("returns a doc with representative editable block types", () => {
       const document = createStarterDocument()
-      const json = JSON.stringify(document)
+      const blockTypes = document.content.map((block) => (block as { type: string }).type)
 
       expect(document.type).toBe("doc")
       expect(document.content.length).toBeGreaterThan(0)
-      expect(json).toContain('"heading"')
-      expect(json).toContain('"paragraph"')
-      expect(json).toContain('"bulletList"')
-      expect(json).toContain('"blockquote"')
-      expect(json).toContain('"codeBlock"')
+      expect(blockTypes).toEqual(expect.arrayContaining([
+        "heading",
+        "paragraph",
+        "bulletList",
+        "blockquote",
+        "codeBlock",
+      ]))
     })
   })
 
