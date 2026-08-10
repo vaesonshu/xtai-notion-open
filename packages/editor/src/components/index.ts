@@ -1,0 +1,5 @@
+export type { DocumentEditorProps } from "./document-editor"
+export { DocumentEditor } from "./document-editor"
+export type { EditorSurfaceProps } from "./editor-surface"
+export { EditorSurface } from "./editor-surface"
+export { CollaborationStatus } from "./collaboration-status"
