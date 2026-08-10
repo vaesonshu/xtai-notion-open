@@ -191,6 +191,8 @@ export function SlashMenu() {
         side="bottom"
         className="w-72 p-0"
         data-testid="slash-menu"
+        initialFocus={false}
+        finalFocus={false}
       >
         <Command
           shouldFilter={false}

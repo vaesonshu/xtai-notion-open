@@ -162,4 +162,30 @@ describe("SlashMenu", () => {
       })
     })
   })
+
+  it("keeps editor focus after opening so query filtering can continue", async () => {
+    renderEditableSurface()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/").run()
+    })
+
+    expect(await screen.findByTestId("slash-menu")).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(editor!.isFocused).toBe(true)
+    })
+
+    await act(async () => {
+      editor!.commands.insertContent("\u4ee3\u7801")
+    })
+
+    expect(
+      await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ }),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("slash-menu")).toBeInTheDocument()
+    expect(editor!.isFocused).toBe(true)
+  })
 })
