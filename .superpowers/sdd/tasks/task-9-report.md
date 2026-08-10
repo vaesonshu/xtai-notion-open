@@ -76,3 +76,56 @@ Tests  11 passed (11)
 ## 提交
 
 提交：`Task 9 GREEN: implement editor extension factory`
+## Fix：复审 Important finding
+
+### Finding
+
+[P1] `packages/editor/src/index.ts` 未导出 Task 9 新增的 `CollaborationUser` 与 `EditorExtensionOptions`。这会迫使公共 API 消费者从内部 `core/types` 导入类型，不符合稳定公共入口要求。
+
+### RED
+
+新增 `packages/editor/src/index.test.ts`，从 `./index.js` 导入两个类型并以真实类型契约使用。执行：
+
+```powershell
+pnpm --filter @workspace/editor typecheck
+```
+
+结果：退出码 2，准确报告两个根入口导出缺失：
+
+```text
+src/index.test.ts(2,15): error TS2305: Module '"./index.js"' has no exported member 'CollaborationUser'.
+src/index.test.ts(2,34): error TS2305: Module '"./index.js"' has no exported member 'EditorExtensionOptions'.
+```
+
+### GREEN
+
+最小修改 `packages/editor/src/index.ts`，从 `./core/types.js` 追加导出 `CollaborationUser` 与 `EditorExtensionOptions`，保持原有 `EditorDocument`、`createEditorExtensions` 和 `createInitialDocument` 导出不变。
+
+覆盖测试：
+
+```powershell
+pnpm --filter @workspace/editor test -- src/index.test.ts src/core/extensions.test.ts
+```
+
+结果：`Test Files 2 passed`，`Tests 5 passed`。
+
+### 修复后验证
+
+```text
+pnpm --filter @workspace/editor test
+Test Files 4 passed
+Tests 12 passed
+
+pnpm --filter @workspace/editor typecheck
+通过
+
+pnpm --filter @workspace/editor lint
+通过
+
+git diff --check
+通过
+```
+
+### Fix 提交
+
+提交：`fix: export editor collaboration types from root`
