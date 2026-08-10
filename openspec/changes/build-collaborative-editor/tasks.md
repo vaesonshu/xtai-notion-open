@@ -22,8 +22,8 @@
 
 ## 4. 协作会话与 React 生命周期
 
-- [ ] 4.1 创建 `packages/editor/src/collaboration/types.ts` 与 `create-collaboration-session.ts`，定义 `CollaborationConfig`（`documentId`、`websocketUrl`、`token`、`user`）、`CollaborationStatus`（`connecting | synced | offline | unauthorized | error`）和 `CollaborationSession`（`document`、`provider`、`getStatus()`、`destroy()`）；Provider 必须使用 `documentId` 作为房间名。
-- [ ] 4.2 创建 `packages/editor/src/collaboration/create-collaboration-session.test.ts`，使用可控 Provider mock 验证首次同步、断线状态、错误映射和 destroy 时移除监听器并销毁 Y.Doc。
+- [x] 4.1 创建 `packages/editor/src/collaboration/types.ts` 与 `create-collaboration-session.ts`，定义 `CollaborationConfig`（`documentId`、`websocketUrl`、`token`、`user`）、`CollaborationStatus`（`connecting | synced | offline | unauthorized | error`）和 `CollaborationSession`（`document`、`provider`、`getStatus()`、`destroy()`）；Provider 必须使用 `documentId` 作为房间名。
+- [x] 4.2 创建 `packages/editor/src/collaboration/create-collaboration-session.test.ts`，使用可控 Provider mock 验证首次同步、断线状态、错误映射和 destroy 时移除监听器并销毁 Y.Doc。
 - [ ] 4.3 创建 `packages/editor/src/react/collaboration-editor-provider.tsx` 与 `use-collaboration-status.ts`；接口为 `CollaborationEditorProviderProps extends EditorProviderProps`，额外接收 `collaboration: CollaborationConfig`，必须在同步完成后创建 Editor，且仅当远端为空时调用 `createStarterDocument()`。
 - [ ] 4.4 修改 `packages/editor/src/react/editor-context.tsx`、`editor-provider.tsx`、`use-editor-instance.ts`、`use-editor-change.ts`、`use-editor-selection.ts` 和 `react/index.ts`，使非协作 Provider 保持兼容，并增加 `useCollaborationStatus(): CollaborationStatus` 与 `useCollaborators(): CollaborationUser[]`。
 - [ ] 4.5 更新 `packages/editor/src/react/editor-provider.test.tsx`，新增协作入口渲染、远端内容不被初始内容覆盖、状态变更和卸载清理测试；运行 `pnpm --filter @workspace/editor test`，验收为每个 Editor、Provider 和 Y.Doc 在卸载时恰好释放一次。

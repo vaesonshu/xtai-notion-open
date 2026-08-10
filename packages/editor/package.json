@@ -42,6 +42,7 @@
     ".": "./src/index.ts",
     "./styles.css": "./src/styles/editor.css",
     "./core": "./src/core/index.ts",
+    "./collaboration": "./src/collaboration/index.ts",
     "./react": "./src/react/index.ts",
     "./components": "./src/components/index.ts"
   }
