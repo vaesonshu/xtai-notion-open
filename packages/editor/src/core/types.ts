@@ -1,4 +1,6 @@
-export type EditorDocument = {
+import type { JSONContent } from "@tiptap/core"
+
+export type EditorDocument = JSONContent & {
   type: "doc"
-  content: Array<Record<string, unknown>>
+  content: JSONContent[]
 }
