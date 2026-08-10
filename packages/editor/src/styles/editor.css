@@ -1,0 +1,35 @@
+.ProseMirror {
+  min-height: 20rem;
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9a9488;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ProseMirror pre {
+  background: #f3f1eb;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #d8d2c4;
+  color: #5c574e;
+  margin-left: 0;
+  padding-left: 1rem;
+}
