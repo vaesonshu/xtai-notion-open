@@ -32,9 +32,7 @@ describe("DocumentsService", () => {
         getMemberRole: vi.fn().mockResolvedValue(role),
       })
       const service = new DocumentsService(repo)
-      await expect(service.assertCanRead("doc-1", "user-1")).resolves.toBe(
-        role
-      )
+      await expect(service.assertCanRead("doc-1", "user-1")).resolves.toBe(role)
     }
   })
 
@@ -44,9 +42,9 @@ describe("DocumentsService", () => {
     })
     const service = new DocumentsService(repo)
 
-    await expect(service.assertCanRead("doc-1", "stranger")).rejects.toBeInstanceOf(
-      ForbiddenException
-    )
+    await expect(
+      service.assertCanRead("doc-1", "stranger")
+    ).rejects.toBeInstanceOf(ForbiddenException)
   })
 
   it("assertCanWrite allows owner and editor", async () => {
@@ -128,8 +126,32 @@ describe("DocumentsService", () => {
     })
     const service = new DocumentsService(repo)
 
-    await expect(service.getDocument("doc-1", "owner-1")).rejects.toBeInstanceOf(
-      NotFoundException
-    )
+    await expect(
+      service.getDocument("doc-1", "owner-1")
+    ).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  it("createDocument returns owner metadata for the new document", async () => {
+    const createdAt = new Date("2026-01-01T00:00:00.000Z")
+    const repo = createRepo({
+      createForOwner: vi.fn().mockResolvedValue({
+        id: "doc-1",
+        workspace_id: "ws-1",
+        title: "未命名文档",
+        created_at: createdAt,
+        updated_at: createdAt,
+      }),
+    })
+    const service = new DocumentsService(repo)
+
+    await expect(service.createDocument("user-1")).resolves.toEqual({
+      id: "doc-1",
+      workspaceId: "ws-1",
+      title: "未命名文档",
+      role: "owner",
+      createdAt,
+      updatedAt: createdAt,
+    })
+    expect(repo.createForOwner).toHaveBeenCalledWith("user-1")
   })
 })

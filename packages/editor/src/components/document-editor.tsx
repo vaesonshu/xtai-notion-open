@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import type { CreateProvider } from "../collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "../collaboration/types"
 import type { EditorDocument } from "../core/types"
@@ -12,6 +13,8 @@ type DocumentEditorSharedProps = {
   editable?: boolean
   onChange?: (document: EditorDocument) => void
   className?: string
+  children?: ReactNode
+  renderSurface?: (surface: ReactNode) => ReactNode
 }
 
 export type DocumentEditorProps =
@@ -41,7 +44,9 @@ function assertExclusiveMode(props: {
 export function DocumentEditor(props: DocumentEditorProps) {
   assertExclusiveMode(props)
 
-  const { editable, onChange, className } = props
+  const { editable, onChange, className, children, renderSurface } = props
+  const surface = <EditorSurface />
+  const framedSurface = renderSurface ? renderSurface(surface) : surface
 
   if ("collaboration" in props && props.collaboration) {
     return (
@@ -52,8 +57,9 @@ export function DocumentEditor(props: DocumentEditorProps) {
         createProvider={props.createProvider}
       >
         <div className={className}>
+          {children}
           <CollaborationStatus />
-          <EditorSurface />
+          {framedSurface}
         </div>
       </CollaborationEditorProvider>
     )
@@ -66,7 +72,8 @@ export function DocumentEditor(props: DocumentEditorProps) {
       onChange={onChange}
     >
       <div className={className}>
-        <EditorSurface />
+        {children}
+        {framedSurface}
       </div>
     </EditorProvider>
   )

@@ -18,7 +18,8 @@ export class CollaborationService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @Inject(ENVIRONMENT) private readonly env: Environment,
-    private readonly factory: HocuspocusFactory,
+    @Inject(HocuspocusFactory) private readonly factory: HocuspocusFactory,
+    @Inject(YjsPersistenceService)
     private readonly persistence: YjsPersistenceService
   ) {}
 

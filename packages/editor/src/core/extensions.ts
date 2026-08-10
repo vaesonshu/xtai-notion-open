@@ -7,9 +7,9 @@ import TaskList from "@tiptap/extension-task-list"
 import Underline from "@tiptap/extension-underline"
 import StarterKit from "@tiptap/starter-kit"
 import type { Extensions } from "@tiptap/core"
-import type { EditorExtensionOptions } from "./types.js"
+import type { EditorExtensionOptions } from "./types"
 
-export type { EditorExtensionOptions } from "./types.js"
+export type { EditorExtensionOptions } from "./types"
 
 export function createEditorExtensions(options: EditorExtensionOptions = {}): Extensions {
   const isCollaborative = Boolean(options.document && options.provider && options.user)

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { Editor } from "@tiptap/core"
-import { createEditorExtensions } from "./extensions.js"
-import { setEditorLink, toggleInlineMark } from "./commands.js"
+import { createEditorExtensions } from "./extensions"
+import { setEditorLink, toggleInlineMark } from "./commands"
 
 const editors: Editor[] = []
 

@@ -103,6 +103,7 @@ export function CollaborationEditorProvider({
   const [editor, setEditor] = useState<Editor | null>(null)
   const editorRef = useRef<Editor | null>(null)
   const createOptionsRef = useRef({ editable, initialContent })
+  const mountGenerationRef = useRef(0)
 
   useEffect(() => {
     createOptionsRef.current = { editable, initialContent }
@@ -178,8 +179,15 @@ export function CollaborationEditorProvider({
   }, [editor, onChange])
 
   useEffect(() => {
+    const mountGeneration = mountGenerationRef.current + 1
+    mountGenerationRef.current = mountGeneration
+
     return () => {
-      session.destroy()
+      queueMicrotask(() => {
+        if (mountGenerationRef.current === mountGeneration) {
+          session.destroy()
+        }
+      })
     }
   }, [session])
 

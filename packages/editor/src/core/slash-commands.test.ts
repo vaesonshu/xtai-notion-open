@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { Editor } from "@tiptap/core"
-import { createEditorExtensions } from "./extensions.js"
+import { createEditorExtensions } from "./extensions"
 import {
   executeSlashCommand,
   filterSlashCommands,
   SLASH_COMMANDS,
-} from "./slash-commands.js"
+} from "./slash-commands"
 
 const editors: Editor[] = []
 

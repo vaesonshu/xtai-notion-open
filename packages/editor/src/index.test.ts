@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
-import type { CollaborationUser, EditorExtensionOptions } from "./index.js"
+import type { CollaborationUser, EditorExtensionOptions } from "./index"
 import {
   createEmptyDocument,
   createStarterDocument,
   isEditorDocument,
-} from "./index.js"
+} from "./index"
 
 describe("editor package public types", () => {
   it("exposes collaboration types from the package root", () => {

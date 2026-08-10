@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Inject, Injectable } from "@nestjs/common"
 import type { DatabaseClient } from "../database/database.service"
 import { DatabaseService } from "../database/database.service"
 
@@ -21,7 +21,7 @@ function toNumber(value: string | number | bigint): number {
 
 @Injectable()
 export class YjsPersistenceRepository {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   async getLatestSnapshot(
     documentId: string

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
-import { createEditorExtensions } from "./extensions.js"
-import { createInitialDocument } from "./initial-document.js"
-import type { CollaborationUser } from "./types.js"
+import { createEditorExtensions } from "./extensions"
+import { createInitialDocument } from "./initial-document"
+import type { CollaborationUser } from "./types"
 
 describe("editor core", () => {
   it("creates a non-empty initial document with representative block types", () => {

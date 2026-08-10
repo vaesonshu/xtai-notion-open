@@ -4,7 +4,7 @@ import {
   createInitialDocument,
   createStarterDocument,
   isEditorDocument,
-} from "./index.js"
+} from "./index"
 
 describe("core document entry point", () => {
   it("exposes the stable document contract", () => {

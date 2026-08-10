@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   UnauthorizedException,
 } from "@nestjs/common"
@@ -20,7 +21,9 @@ export type AuthenticateConnectionInput = {
 
 @Injectable()
 export class CollaborationAuthService {
-  constructor(private readonly documents: DocumentsService) {}
+  constructor(
+    @Inject(DocumentsService) private readonly documents: DocumentsService
+  ) {}
 
   async authenticateConnection(
     input: AuthenticateConnectionInput

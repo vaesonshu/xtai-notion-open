@@ -1,5 +1,5 @@
-import { createStarterDocument } from "./document.js"
-import type { EditorDocument } from "./types.js"
+import { createStarterDocument } from "./document"
+import type { EditorDocument } from "./types"
 
 export function createInitialDocument(): EditorDocument {
   return createStarterDocument()

@@ -2,9 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 import type { DatabaseService } from "../database/database.service"
 import { DocumentsRepository } from "./documents.repository"
 
-function createDb(
-  queryImpl?: DatabaseService["query"]
-): DatabaseService {
+function createDb(queryImpl?: DatabaseService["query"]): DatabaseService {
   return {
     query: queryImpl ?? vi.fn(),
     withTransaction: vi.fn(),
@@ -25,9 +23,7 @@ describe("DocumentsRepository", () => {
     )
     const repo = new DocumentsRepository(db)
 
-    await expect(repo.getMemberRole("doc-1", "user-1")).resolves.toBe(
-      "editor"
-    )
+    await expect(repo.getMemberRole("doc-1", "user-1")).resolves.toBe("editor")
     expect(db.query).toHaveBeenCalledWith(
       expect.stringMatching(/document_member/i),
       ["doc-1", "user-1"]
@@ -88,5 +84,35 @@ describe("DocumentsRepository", () => {
     const repo = new DocumentsRepository(db)
 
     await expect(repo.findById("missing")).resolves.toBeNull()
+  })
+
+  it("createForOwner creates a workspace, document, and owner membership", async () => {
+    const transactionQuery = vi
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ id: "ws-1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "doc-1",
+            workspace_id: "ws-1",
+            title: "未命名文档",
+            created_at: new Date("2026-01-01T00:00:00.000Z"),
+            updated_at: new Date("2026-01-01T00:00:00.000Z"),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+    const db = createDb()
+    db.withTransaction = vi.fn(async (callback) =>
+      callback({ query: transactionQuery })
+    )
+    const repo = new DocumentsRepository(db)
+
+    await expect(repo.createForOwner("user-1")).resolves.toMatchObject({
+      id: "doc-1",
+      title: "未命名文档",
+    })
+    expect(transactionQuery).toHaveBeenCalledTimes(3)
+    expect(transactionQuery.mock.calls[2]?.[1]).toEqual(["doc-1", "user-1"])
   })
 })

@@ -27,7 +27,15 @@ const personal = [
   ["阅读清单", FileTextIcon, false],
 ] as const
 
-export function WorkspaceSidebar() {
+export function WorkspaceSidebar({
+  onCreateDocument,
+  creatingDocument = false,
+  createError,
+}: {
+  onCreateDocument?: () => void
+  creatingDocument?: boolean
+  createError?: string | null
+}) {
   return (
     <aside
       className="hidden shrink-0 flex-col gap-[18px] border-r bg-white px-3 py-4 lg:flex"
@@ -50,9 +58,21 @@ export function WorkspaceSidebar() {
         </div>
         <div className="flex flex-col gap-[3px]">
           <SideAction icon={SearchIcon} label="搜索" shortcut="⌘ K" />
-          <SideAction icon={PlusIcon} label="新建文档" shortcut="N" active />
+          <SideAction
+            icon={PlusIcon}
+            label={creatingDocument ? "新建中" : "新建文档"}
+            shortcut="N"
+            active
+            onClick={onCreateDocument}
+            disabled={creatingDocument}
+          />
           <SideAction icon={LibraryIcon} label="新建知识库" />
         </div>
+        {createError && (
+          <p className="px-2 text-xs text-destructive" role="alert">
+            {createError}
+          </p>
+        )}
         <SideAction icon={StarIcon} label="收藏" shortcut="3" selected />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 bg-white">
@@ -86,16 +106,22 @@ function SideAction({
   shortcut,
   active,
   selected,
+  onClick,
+  disabled,
 }: {
   icon: Icon
   label: string
   shortcut?: string
   active?: boolean
   selected?: boolean
+  onClick?: () => void
+  disabled?: boolean
 }) {
   return (
     <Button
       variant="ghost"
+      onClick={onClick}
+      disabled={disabled}
       className={`h-[34px] !justify-start gap-2.5 rounded-[7px] px-[9px] ${active ? "!bg-[#E6F3EC] !text-[#24866B] hover:!bg-[#DDEFE5] hover:!text-[#24866B]" : selected ? "!bg-[#EEF0EC] !text-[#24866B] hover:!bg-[#E4E8E2] hover:!text-[#24866B]" : "!text-[#242321] hover:!bg-[#F3F2EF] hover:!text-[#242321]"}`}
     >
       <PencilIcon

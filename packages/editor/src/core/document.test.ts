@@ -3,7 +3,7 @@ import {
   createEmptyDocument,
   createStarterDocument,
   isEditorDocument,
-} from "./document.js"
+} from "./document"
 
 describe("editor document contract", () => {
   describe("createEmptyDocument", () => {

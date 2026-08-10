@@ -24,6 +24,7 @@ export class YjsPersistenceService {
   private readonly buffers = new Map<string, DocumentBuffer>()
 
   constructor(
+    @Inject(YjsPersistenceRepository)
     private readonly repository: YjsPersistenceRepository,
     @Optional()
     @Inject(YJS_PERSISTENCE_OPTIONS)

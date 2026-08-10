@@ -56,10 +56,10 @@
 
 ## 8. Web 编辑器集成
 
-- [ ] 8.1 创建 `apps/web/components/inkspace/document-workspace.tsx` 作为客户端组合根；定义 `DocumentWorkspaceProps`（`documentId`、`user: { id, name, color }`、`apiUrl`、`collaborationUrl`），在同一编辑器 Provider 下组合 `EditorToolbar`、`DocumentEditor` 和状态 UI。
-- [ ] 8.2 修改 `apps/web/app/page.tsx`、`apps/web/components/inkspace/document.tsx` 和 `apps/web/components/inkspace/toolbar.tsx`，用 `DocumentWorkspace` 替换静态 `DocumentCanvas`；将页面演示数据限定为开发身份和稳定 demo `documentId`，不再在页面中硬编码正文块。
-- [ ] 8.3 修改 `apps/web/next.config.ts` 和新增 `.env.example`，定义 `NEXT_PUBLIC_API_URL`、`NEXT_PUBLIC_COLLABORATION_URL` 和 `NEXT_PUBLIC_DEV_USER_ID`；在缺少客户端端点时显示配置错误而不是静默退回静态内容。
-- [ ] 8.4 创建 `apps/web/components/inkspace/document-workspace.test.tsx`，mock 协作会话并覆盖同步后可编辑、viewer 只读、离线状态、无权限状态和错误状态；运行 `pnpm --filter web test`、`lint`、`typecheck` 和 `build`。
+- [x] 8.1 创建 `apps/web/components/inkspace/document-workspace.tsx` 作为客户端组合根；定义 `DocumentWorkspaceProps`（`documentId`、`user: { id, name, color }`、`apiUrl`、`collaborationUrl`），在同一编辑器 Provider 下组合 `EditorToolbar`、`DocumentEditor` 和状态 UI。
+- [x] 8.2 修改 `apps/web/app/page.tsx`、`apps/web/components/inkspace/document.tsx` 和 `apps/web/components/inkspace/toolbar.tsx`，用 `DocumentWorkspace` 替换静态 `DocumentCanvas`；将页面演示数据限定为开发身份和稳定 demo `documentId`，不再在页面中硬编码正文块。
+- [x] 8.3 修改 `apps/web/next.config.ts` 和新增 `.env.example`，定义 `NEXT_PUBLIC_API_URL`、`NEXT_PUBLIC_COLLABORATION_URL` 和 `NEXT_PUBLIC_DEV_USER_ID`；在缺少客户端端点时显示配置错误而不是静默退回静态内容。
+- [x] 8.4 创建 `apps/web/components/inkspace/document-workspace.test.tsx`，mock 协作会话并覆盖同步后可编辑、viewer 只读、离线状态、无权限状态和错误状态；运行 `pnpm --filter web test`、`lint`、`typecheck` 和 `build`。
 
 ## 9. 端到端验证与运维文档
 

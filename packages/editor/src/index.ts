@@ -1,12 +1,12 @@
-export type { CollaborationUser, EditorDocument, EditorExtensionOptions } from "./core/types.js"
-export { createEditorExtensions } from "./core/extensions.js"
+export type { CollaborationUser, EditorDocument, EditorExtensionOptions } from "./core/types"
+export { createEditorExtensions } from "./core/extensions"
 export {
   createEmptyDocument,
   createInitialDocument,
   createStarterDocument,
   isEditorDocument,
-} from "./core/index.js"
-export type { SlashCommand } from "./core/slash-commands.js"
-export { SLASH_COMMANDS, executeSlashCommand, filterSlashCommands } from "./core/slash-commands.js"
-export type { InlineMark } from "./core/commands.js"
-export { setEditorLink, toggleInlineMark } from "./core/commands.js"
+} from "./core/index"
+export type { SlashCommand } from "./core/slash-commands"
+export { SLASH_COMMANDS, executeSlashCommand, filterSlashCommands } from "./core/slash-commands"
+export type { InlineMark } from "./core/commands"
+export { setEditorLink, toggleInlineMark } from "./core/commands"

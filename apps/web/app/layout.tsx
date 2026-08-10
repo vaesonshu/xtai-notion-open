@@ -1,4 +1,5 @@
 import "@workspace/ui/globals.css"
+import "@workspace/editor/styles.css"
 import { ThemeProvider } from "@/components/theme-provider"
 
 export default function RootLayout({

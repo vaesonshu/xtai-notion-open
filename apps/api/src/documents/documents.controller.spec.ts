@@ -59,4 +59,28 @@ describe("DocumentsController", () => {
       controller.getDocument("doc-1", { id: "stranger" })
     ).rejects.toBeInstanceOf(ForbiddenException)
   })
+
+  it("POST /documents creates a document for the current user", async () => {
+    const metadata = {
+      id: "doc-1",
+      workspaceId: "ws-1",
+      title: "未命名文档",
+      role: "owner" as const,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    }
+    const createDocument = vi.fn().mockResolvedValue(metadata)
+    const moduleRef = await Test.createTestingModule({
+      controllers: [DocumentsController],
+      providers: [{ provide: DocumentsService, useValue: { createDocument } }],
+    })
+      .overrideGuard(DevelopmentIdentityGuard)
+      .useValue({ canActivate: () => true })
+      .compile()
+    const controller = moduleRef.get(DocumentsController)
+    await expect(controller.createDocument({ id: "user-1" })).resolves.toEqual(
+      metadata
+    )
+    expect(createDocument).toHaveBeenCalledWith("user-1")
+  })
 })

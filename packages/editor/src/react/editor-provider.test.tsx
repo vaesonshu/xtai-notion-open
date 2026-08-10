@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
+import { StrictMode } from "react"
 import { Editor } from "@tiptap/core"
 import { describe, expect, it, vi } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
@@ -220,6 +221,29 @@ describe("EditorProvider", () => {
 })
 
 describe("CollaborationEditorProvider", () => {
+  it("keeps the collaboration session alive across StrictMode effect checks", async () => {
+    const provider = createMockProvider()
+
+    render(
+      <StrictMode>
+        <CollaborationEditorProvider
+          collaboration={baseConfig}
+          createProvider={() => provider as unknown as HocuspocusProvider}
+        >
+          <CollaborationStatusLabel />
+        </CollaborationEditorProvider>
+      </StrictMode>,
+    )
+
+    expect(provider.destroy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      provider.emit("synced", { state: true })
+    })
+
+    expect(screen.getByTestId("collab-status")).toHaveTextContent("synced")
+  })
+
   it("does not create an editable editor before the first sync", () => {
     const provider = createMockProvider()
 
@@ -391,7 +415,10 @@ describe("CollaborationEditorProvider", () => {
 
     const editorDestroyCallsBeforeUnmount = editorDestroy.mock.calls.length
 
-    unmount()
+    await act(async () => {
+      unmount()
+      await Promise.resolve()
+    })
 
     expect(provider.destroy).toHaveBeenCalledTimes(1)
     expect(captured.document?.isDestroyed).toBe(true)

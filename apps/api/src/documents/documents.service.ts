@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common"
@@ -8,7 +9,10 @@ import { DocumentsRepository } from "./documents.repository"
 
 @Injectable()
 export class DocumentsService {
-  constructor(private readonly documents: DocumentsRepository) {}
+  constructor(
+    @Inject(DocumentsRepository)
+    private readonly documents: DocumentsRepository
+  ) {}
 
   getMemberRole(
     documentId: string,
@@ -53,6 +57,18 @@ export class DocumentsService {
       workspaceId: row.workspace_id,
       title: row.title,
       role,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  async createDocument(userId: string): Promise<DocumentMetadata> {
+    const row = await this.documents.createForOwner(userId)
+    return {
+      id: row.id,
+      workspaceId: row.workspace_id,
+      title: row.title,
+      role: "owner",
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }

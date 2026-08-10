@@ -20,7 +20,9 @@ function headersToRecord(
 export class HocuspocusFactory {
   constructor(
     @Inject(ENVIRONMENT) private readonly env: Environment,
+    @Inject(CollaborationAuthService)
     private readonly auth: CollaborationAuthService,
+    @Inject(YjsPersistenceService)
     private readonly persistence: YjsPersistenceService
   ) {}
 
