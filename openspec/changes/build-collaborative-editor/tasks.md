@@ -1,6 +1,6 @@
 ## 1. 工作区基础与可复现依赖
 
-- [ ] 1.1 在 `package.json`、`pnpm-workspace.yaml`、`turbo.json` 和 `pnpm-lock.yaml` 中注册 `apps/api`、其 build/lint/typecheck/test Turbo 任务，以及 Playwright 的根目录测试命令；运行 `pnpm install --frozen-lockfile` 后执行 `pnpm typecheck`，验收为所有现有工作区包仍能解析。
+- [x] 1.1 在 `package.json`、`pnpm-workspace.yaml`、`turbo.json` 和 `pnpm-lock.yaml` 中注册 `apps/api`、其 build/lint/typecheck/test Turbo 任务，以及 Playwright 的根目录测试命令；运行 `pnpm install --frozen-lockfile` 后执行 `pnpm typecheck`，验收为所有现有工作区包仍能解析。
 - [ ] 1.2 修改 `packages/editor/package.json`，以精确版本替换所有 `latest`：现有 Tiptap 包固定到 `3.29.2`，新增 `@tiptap/extension-collaboration@3.29.2`、`@tiptap/extension-collaboration-caret@3.29.2`、`@tiptap/extension-bubble-menu@3.29.2`、`@tiptap/extension-drag-handle-react@3.29.2`、`@hocuspocus/provider@4.5.0` 和 `yjs@13.6.32`；运行 `pnpm --filter @workspace/editor typecheck`，验收为没有 `latest` 依赖。
 - [ ] 1.3 在实现 Next.js 页面前阅读已安装 Next.js 16.2.6 对应文档的 Client Components、`transpilePackages`、环境变量与 SSR/hydration 指南；运行 `pnpm --filter web typecheck`，验收为计划中的客户端边界符合该版本 API。
 
