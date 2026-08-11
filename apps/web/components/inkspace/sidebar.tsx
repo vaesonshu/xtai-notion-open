@@ -167,6 +167,7 @@ export function WorkspaceSidebar({
           icon={StarIcon}
           label="收藏"
           shortcut="3"
+          className="-mt-[6px]"
         />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 bg-white">
@@ -219,6 +220,7 @@ function SideAction({
   shortcut,
   onClick,
   disabled,
+  className,
 }: {
   itemKey: string
   selectedKey: string
@@ -228,6 +230,7 @@ function SideAction({
   shortcut?: string
   onClick?: () => void
   disabled?: boolean
+  className?: string
 }) {
   const selected = selectedKey === itemKey
   return (
@@ -236,7 +239,7 @@ function SideAction({
       aria-current={selected ? "page" : undefined}
       onClick={() => onSelect(itemKey, onClick)}
       disabled={disabled}
-      className={`h-[34px] !justify-start gap-2.5 rounded-[7px] px-[9px] ${selected ? "!bg-[#E6F3EC] !text-[#24866B] hover:!bg-[#DDEFE5]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
+      className={`h-[34px] !justify-start gap-2.5 rounded-[7px] px-[9px] ${className ?? ""} ${selected ? "!bg-[#E6F3EC] !text-[#24866B] hover:!bg-[#DDEFE5]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
     >
       <PencilIcon icon={icon} color={selected ? "#24866B" : "#78746C"} />
       <span className="text-[13px] font-medium">{label}</span>

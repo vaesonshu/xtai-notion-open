@@ -21,6 +21,8 @@ export type DocumentWorkspaceProps = {
   collaborationUrl: string
   /** Optional provider factory for tests; omit in production. */
   createProvider?: CreateProvider
+  title?: string
+  parentTitle?: string
 }
 
 type DocumentRole = "owner" | "editor" | "viewer"
@@ -77,6 +79,8 @@ export function DocumentWorkspace({
   apiUrl,
   collaborationUrl,
   createProvider,
+  title,
+  parentTitle,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -138,7 +142,12 @@ export function DocumentWorkspace({
 
   if (!role) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col" aria-busy="true" role="status" aria-label="正在加载文档">
+      <div
+        className="flex min-h-0 flex-1 flex-col"
+        aria-busy="true"
+        role="status"
+        aria-label="正在加载文档"
+      >
         <div className="flex h-[68px] shrink-0 items-center border-b border-[#E8E6E1] px-6">
           <span className="h-4 w-56 animate-pulse rounded bg-[#E2DED5]" />
         </div>
@@ -175,7 +184,7 @@ export function DocumentWorkspace({
       className="flex min-h-0 flex-1 flex-col"
       renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
     >
-      <EditorToolbar />
+      <EditorToolbar title={title} parentTitle={parentTitle} />
     </DocumentEditor>
   )
 }

@@ -55,7 +55,7 @@ function renderSurface(editable = true) {
   return render(
     <EditorProvider initialContent={paragraphDoc} editable={editable}>
       <EditorSurface />
-    </EditorProvider>,
+    </EditorProvider>
   )
 }
 
@@ -79,19 +79,36 @@ describe("editor styles", () => {
   it("ships editor.css with ProseMirror, task, placeholder, drag, and caret classes", () => {
     const stylesPath = join(
       dirname(fileURLToPath(import.meta.url)),
-      "../styles/editor.css",
+      "../styles/editor.css"
     )
     const css = readFileSync(stylesPath, "utf8")
 
     expect(css).toContain(".ProseMirror")
+    expect(css).toContain(".ProseMirror > * {\n  margin-inline-start: 0;")
     expect(css).toContain('ul[data-type="taskList"]')
     expect(css).toContain("is-editor-empty")
     expect(css).toContain("data-placeholder")
     expect(css).toContain(".ProseMirror-selectednode")
     expect(css).toContain(".editor-block-handle")
     expect(css).toContain(".ProseMirror-dropcursor")
-    expect(css).toContain("#24866B")
-    expect(css).toContain("background: #24866B !important")
+    expect(css).toContain(".ProseMirror code")
+    expect(css).toContain(".ProseMirror h1")
+    expect(css).toContain(".ProseMirror h2")
+    expect(css).toContain(".ProseMirror h3")
+    expect(css).toContain('.ProseMirror ul:not([data-type="taskList"])')
+    expect(css).toContain(".ProseMirror ol")
+    expect(css).toContain('li[data-checked="true"] > div')
+    expect(css).toContain('input[type="checkbox"] + span')
+    expect(css).toContain('input[type="checkbox"]:checked + span')
+    expect(css).toContain('input[type="checkbox"] + span::after')
+    expect(css).toContain("align-items: center")
+    expect(css).toContain("display: flex")
+    expect(css).toContain("block-size: 1.5rem")
+    expect(css).toContain("outline-offset: 2px")
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)")
+    const normalizedCss = css.toUpperCase()
+    expect(normalizedCss).toContain("#24866B")
+    expect(normalizedCss).toContain("BACKGROUND: #24866B !IMPORTANT")
     expect(css).toContain("mix-blend-mode: normal")
     expect(css).toContain("border: none")
     expect(css).toContain("box-shadow: none")

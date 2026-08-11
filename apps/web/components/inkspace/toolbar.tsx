@@ -20,6 +20,7 @@ import { PencilIcon } from "./icon"
 export type EditorToolbarProps = {
   /** When omitted, status is read from CollaborationEditorProvider when available. */
   title?: string
+  parentTitle?: string
 }
 
 function StatusBadge({ status }: { status: CollaborationStatus }) {
@@ -56,7 +57,7 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
         role="status"
         aria-label="离线"
         variant="secondary"
-        className="ml-1 px-2 py-1 text-[11px] font-medium !bg-[#FFF4E5] !text-[#9A6700]"
+        className="ml-1 !bg-[#FFF4E5] px-2 py-1 text-[11px] font-medium !text-[#9A6700]"
       >
         离线
       </Badge>
@@ -69,7 +70,7 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
         role="status"
         aria-label="无权限"
         variant="secondary"
-        className="ml-1 px-2 py-1 text-[11px] font-medium !bg-[#FDECEC] !text-[#B53B30]"
+        className="ml-1 !bg-[#FDECEC] px-2 py-1 text-[11px] font-medium !text-[#B53B30]"
       >
         无权限
       </Badge>
@@ -81,7 +82,7 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
       role="status"
       aria-label="同步错误"
       variant="secondary"
-      className="ml-1 px-2 py-1 text-[11px] font-medium !bg-[#FDECEC] !text-[#B53B30]"
+      className="ml-1 !bg-[#FDECEC] px-2 py-1 text-[11px] font-medium !text-[#B53B30]"
     >
       同步错误
     </Badge>
@@ -95,12 +96,15 @@ function CollaborationToolbarBadge() {
 
 export function EditorToolbar({
   title = "新一代知识工作台",
+  parentTitle,
 }: EditorToolbarProps) {
   return (
     <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-[#E8E6E1] px-6">
       <div className="flex items-center gap-[7px] text-[13px] !text-[#242321]">
         <PencilIcon icon={FileTextIcon} size={18} />
-        <span className="font-medium text-[#78746C]">产品团队</span>
+        <span className="font-medium text-[#78746C]">
+          {parentTitle ?? "产品团队"}
+        </span>
         <PencilIcon icon={ChevronDownIcon} color="#B5B1AA" size={14} />
         <span className="font-semibold !text-[#242321]">{title}</span>
         <CollaborationToolbarBadge />

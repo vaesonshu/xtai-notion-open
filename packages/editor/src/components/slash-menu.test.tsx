@@ -64,7 +64,7 @@ function renderEditableSurface(content: EditorDocument = emptyParagraph) {
     <EditorProvider initialContent={content}>
       <EditorSurface />
       <EditorProbe />
-    </EditorProvider>,
+    </EditorProvider>
   )
 }
 
@@ -75,7 +75,9 @@ function dispatchEditorKey(editor: Editor, key: string) {
     bubbles: true,
     cancelable: true,
   })
-  editor.view.someProp("handleKeyDown", handleKeyDown => handleKeyDown(editor.view, event))
+  editor.view.someProp("handleKeyDown", (handleKeyDown) =>
+    handleKeyDown(editor.view, event)
+  )
 }
 
 afterEach(() => {
@@ -92,7 +94,9 @@ describe("SlashMenu", () => {
       editor!.chain().focus("start").insertContent("/\u4ee3\u7801").run()
     })
 
-    const option = await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })
+    const option = await screen.findByRole("option", {
+      name: /\u4ee3\u7801\u5757/,
+    })
     expect(option).toBeInTheDocument()
     expect(option).toHaveClass("data-[selected]:!bg-[#E6F3EC]")
   })
@@ -106,15 +110,70 @@ describe("SlashMenu", () => {
       editor!.chain().focus("start").insertContent("/\u4ee3\u7801").run()
     })
 
-    const option = await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })
+    const option = await screen.findByRole("option", {
+      name: /\u4ee3\u7801\u5757/,
+    })
     await act(async () => {
       fireEvent.click(option)
     })
 
     await waitFor(() => {
-      expect(editor!.getJSON().content?.[0]).toMatchObject({ type: "codeBlock" })
+      expect(editor!.getJSON().content?.[0]).toMatchObject({
+        type: "codeBlock",
+      })
     })
   })
+
+  it.each([
+    ["一级标题", 1],
+    ["二级标题", 2],
+    ["三级标题", 3],
+  ])("converts the current block to %s from the menu", async (label, level) => {
+    renderEditableSurface()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/").run()
+    })
+
+    const option = await screen.findByRole("option", { name: label })
+    await act(async () => {
+      fireEvent.click(option)
+    })
+
+    await waitFor(() => {
+      expect(editor!.getJSON().content?.[0]).toMatchObject({
+        type: "heading",
+        attrs: { level },
+      })
+    })
+  })
+
+  it.each([
+    ["无序列表", "bulletList"],
+    ["有序列表", "orderedList"],
+  ])(
+    "converts the current block to %s from the menu",
+    async (label, nodeType) => {
+      renderEditableSurface()
+      const editor = latestEditor
+      expect(editor).not.toBeNull()
+
+      await act(async () => {
+        editor!.chain().focus("start").insertContent("/").run()
+      })
+
+      const option = await screen.findByRole("option", { name: label })
+      await act(async () => {
+        fireEvent.click(option)
+      })
+
+      await waitFor(() => {
+        expect(editor!.getJSON().content?.[0]).toMatchObject({ type: nodeType })
+      })
+    }
+  )
 
   it("closes on Escape without changing the document", async () => {
     renderEditableSurface()
@@ -125,7 +184,9 @@ describe("SlashMenu", () => {
       editor!.chain().focus("start").insertContent("/\u4ee3\u7801").run()
     })
 
-    expect(await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })
+    ).toBeInTheDocument()
     const before = editor!.getJSON()
 
     await act(async () => {
@@ -133,7 +194,9 @@ describe("SlashMenu", () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByRole("option", { name: /\u4ee3\u7801\u5757/ })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("option", { name: /\u4ee3\u7801\u5757/ })
+      ).not.toBeInTheDocument()
     })
     expect(editor!.getJSON()).toEqual(before)
   })
@@ -147,7 +210,9 @@ describe("SlashMenu", () => {
       editor!.chain().focus("start").insertContent("/").run()
     })
 
-    expect(await screen.findByRole("option", { name: /\u4e00\u7ea7\u6807\u9898/ })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("option", { name: /\u4e00\u7ea7\u6807\u9898/ })
+    ).toBeInTheDocument()
 
     await act(async () => {
       dispatchEditorKey(editor!, "ArrowDown")
@@ -178,7 +243,7 @@ describe("SlashMenu", () => {
     expect(screen.getByTestId("slash-menu")).toHaveClass("bg-white")
     expect(screen.getByTestId("slash-menu")).toHaveClass("text-[#242321]")
     expect(screen.getByTestId("slash-menu").firstElementChild).toHaveClass(
-      "bg-white",
+      "bg-white"
     )
 
     await waitFor(() => {
@@ -190,7 +255,7 @@ describe("SlashMenu", () => {
     })
 
     expect(
-      await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ }),
+      await screen.findByRole("option", { name: /\u4ee3\u7801\u5757/ })
     ).toBeInTheDocument()
     expect(screen.getByTestId("slash-menu")).toBeInTheDocument()
     expect(editor!.isFocused).toBe(true)

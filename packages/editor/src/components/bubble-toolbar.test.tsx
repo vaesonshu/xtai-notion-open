@@ -63,13 +63,13 @@ function EditorProbe() {
 
 function renderEditableSurface(
   content: EditorDocument = paragraphDoc,
-  editable = true,
+  editable = true
 ) {
   return render(
     <EditorProvider initialContent={content} editable={editable}>
       <EditorSurface />
       <EditorProbe />
-    </EditorProvider>,
+    </EditorProvider>
   )
 }
 
@@ -101,7 +101,7 @@ describe("shouldShowBubbleToolbar", () => {
         state,
         from,
         to,
-      }),
+      })
     ).toBe(false)
   })
 
@@ -122,7 +122,7 @@ describe("shouldShowBubbleToolbar", () => {
         state,
         from,
         to,
-      }),
+      })
     ).toBe(true)
   })
 })
@@ -151,7 +151,12 @@ describe("BubbleToolbar", () => {
     expect(editor).not.toBeNull()
 
     await act(async () => {
-      editor!.chain().focus().setTextSelection({ from: 1, to: 7 }).toggleBold().run()
+      editor!
+        .chain()
+        .focus()
+        .setTextSelection({ from: 1, to: 7 })
+        .toggleBold()
+        .run()
     })
 
     const bold = await screen.findByRole("button", { name: "粗体" })
@@ -194,6 +199,24 @@ describe("BubbleToolbar", () => {
     expect(editor!.state.selection.to).toBe(7)
   })
 
+  it("toggles inline code on the current selection", async () => {
+    renderEditableSurface()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await selectFormattableRange(editor!)
+    const code = await screen.findByRole("button", { name: "行内代码" })
+
+    await act(async () => {
+      fireEvent.click(code)
+    })
+
+    await waitFor(() => {
+      expect(editor!.isActive("code")).toBe(true)
+    })
+    expect(code).toHaveAttribute("data-pressed")
+  })
+
   it("sets and removes a link on the current selection", async () => {
     renderEditableSurface()
     const editor = latestEditor
@@ -216,7 +239,7 @@ describe("BubbleToolbar", () => {
 
     await waitFor(() => {
       expect(
-        editor!.isActive("link", { href: "https://example.com/docs" }),
+        editor!.isActive("link", { href: "https://example.com/docs" })
       ).toBe(true)
     })
 

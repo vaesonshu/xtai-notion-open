@@ -147,6 +147,25 @@ describe("DocumentWorkspace", () => {
     expect(screen.queryByText("新一代知识工作台")).not.toBeInTheDocument()
   })
 
+  it("renders the current document title and parent breadcrumb", async () => {
+    mockDocumentRole("owner")
+    const provider = createMockProvider()
+
+    render(
+      <DocumentWorkspace
+        {...baseProps}
+        title="子文档"
+        parentTitle="项目规划"
+        createProvider={() => provider as unknown as HocuspocusProvider}
+      />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("子文档")).toBeInTheDocument()
+      expect(screen.getByText("项目规划")).toBeInTheDocument()
+    })
+  })
+
   it("shows a clear API connection error when metadata fetch is unreachable", async () => {
     vi.stubGlobal(
       "fetch",
@@ -161,12 +180,19 @@ describe("DocumentWorkspace", () => {
   })
 
   it("shows a document content skeleton while metadata is pending", () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})))
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {}))
+    )
 
     render(<DocumentWorkspace {...baseProps} />)
 
-    expect(screen.getByRole("status", { name: "正在加载文档" })).toBeInTheDocument()
-    expect(screen.getByRole("status").querySelectorAll(".animate-pulse")).toHaveLength(8)
+    expect(
+      screen.getByRole("status", { name: "正在加载文档" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("status").querySelectorAll(".animate-pulse")
+    ).toHaveLength(8)
     expect(screen.queryByText("正在打开文档…")).not.toBeInTheDocument()
   })
 
@@ -190,7 +216,9 @@ describe("DocumentWorkspace", () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("status", { name: /已同步/ })
+      ).not.toBeInTheDocument()
     })
 
     const proseMirror = container.querySelector(".ProseMirror")
@@ -244,7 +272,9 @@ describe("DocumentWorkspace", () => {
       provider.emit("synced", { state: true })
     })
     await waitFor(() => {
-      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("status", { name: /已同步/ })
+      ).not.toBeInTheDocument()
     })
 
     await act(async () => {
@@ -301,7 +331,9 @@ describe("DocumentWorkspace", () => {
       provider.emit("synced", { state: true })
     })
     await waitFor(() => {
-      expect(screen.queryByRole("status", { name: /已同步/ })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("status", { name: /已同步/ })
+      ).not.toBeInTheDocument()
     })
 
     await act(async () => {
