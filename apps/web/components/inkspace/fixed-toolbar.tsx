@@ -1,8 +1,6 @@
 "use client"
 
 import { use, useEffect, useRef, useState } from "react"
-import data from "@emoji-mart/data"
-import { Picker } from "emoji-mart"
 import {
   BoldIcon,
   CodeIcon,
@@ -42,27 +40,56 @@ export function insertEmoji(editor: Editor, emoji: string): boolean {
   return editor.chain().focus().insertContent(emoji).run()
 }
 
-function EmojiPicker({ editor }: { editor: Editor }) {
+function EmojiPicker({
+  editor,
+  onSelect,
+}: {
+  editor: Editor
+  onSelect: () => void
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+    let cancelled = false
+    let picker: HTMLElement | undefined
 
-    const picker = new Picker({
-      data,
-      locale: "zh",
-      previewPosition: "none",
-      onEmojiSelect: (emoji: { native?: string }) => {
-        if (emoji.native) insertEmoji(editor, emoji.native)
-      },
-    })
-    container.append(picker as unknown as Node)
+    void Promise.all([import("emoji-mart"), import("@emoji-mart/data")]).then(
+      ([{ Picker }, { default: data }]) => {
+        if (cancelled || !containerRef.current) return
 
-    return () => (picker as unknown as HTMLElement).remove()
+        picker = new Picker({
+          data,
+          locale: "zh",
+          previewPosition: "none",
+          onEmojiSelect: (emoji: { native?: string }) => {
+            if (!emoji.native) return
+            insertEmoji(editor, emoji.native)
+            onSelect()
+          },
+        }) as unknown as HTMLElement
+        container.replaceChildren()
+        containerRef.current.append(picker)
+      }
+    )
+
+    return () => {
+      cancelled = true
+      picker?.remove()
+    }
   }, [editor])
 
-  return <div ref={containerRef} />
+  return (
+    <div
+      ref={containerRef}
+      className="flex min-h-96 min-w-80 items-center justify-center"
+    >
+      <span className="text-sm text-muted-foreground">
+        Loading emoji picker…
+      </span>
+    </div>
+  )
 }
 
 export function FixedEditorToolbar() {
@@ -74,6 +101,7 @@ export function FixedEditorToolbar() {
     canRedo: editor?.can().redo() ?? false,
   })
   const [state, setState] = useState(readState)
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
 
   useEffect(() => {
     if (!editor) return
@@ -165,7 +193,7 @@ export function FixedEditorToolbar() {
       >
         <CodeIcon />
       </Toggle>
-      <Popover>
+      <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
         <PopoverTrigger
           render={
             <Button variant="ghost" size="icon-sm" aria-label="Insert emoji">
@@ -174,7 +202,12 @@ export function FixedEditorToolbar() {
           }
         />
         <PopoverContent align="start" className="w-auto p-0">
-          <EmojiPicker editor={editor} />
+          {emojiPickerOpen && (
+            <EmojiPicker
+              editor={editor}
+              onSelect={() => setEmojiPickerOpen(false)}
+            />
+          )}
         </PopoverContent>
       </Popover>
       <Separator orientation="vertical" className="mx-1 h-6" />
