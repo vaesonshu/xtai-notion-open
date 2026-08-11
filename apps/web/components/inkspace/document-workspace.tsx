@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from "react"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
+import { FixedEditorToolbar } from "./fixed-toolbar"
 
 export type DocumentWorkspaceUser = CollaborationUser
 
@@ -181,6 +182,7 @@ export function DocumentWorkspace({
       }}
       editable={editable}
       createProvider={createProvider}
+      renderToolbar={() => <FixedEditorToolbar />}
       className="flex min-h-0 flex-1 flex-col"
       renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
     >

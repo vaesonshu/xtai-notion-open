@@ -162,6 +162,26 @@ describe("DocumentEditor", () => {
     expect(screen.getByRole("status", { name: "正在加载编辑器" })).toBeInTheDocument()
   })
 
+  it("waits for sync before rendering the editor toolbar", async () => {
+    const provider = createMockProvider()
+
+    render(
+      <DocumentEditor
+        collaboration={baseConfig}
+        createProvider={() => provider as unknown as HocuspocusProvider}
+        renderToolbar={() => <div>Editor toolbar</div>}
+      />,
+    )
+
+    expect(screen.queryByText("Editor toolbar")).not.toBeInTheDocument()
+
+    await act(async () => {
+      provider.emit("synced", { state: true })
+    })
+
+    expect(await screen.findByText("Editor toolbar")).toBeInTheDocument()
+  })
+
   it("shows synced status after first sync and never shows saved on error", async () => {
     const provider = createMockProvider()
 

@@ -1,9 +1,5 @@
 import { createElement } from "react"
-import {
-  Bold,
-  type LucideIcon,
-  type LucideProps,
-} from "lucide-react"
+import { Bold, type LucideIcon, type LucideProps } from "lucide-react"
 
 export type Icon = LucideIcon
 export type IconProps = LucideProps
@@ -40,6 +36,7 @@ export {
   Redo2 as RedoIcon,
   Search as SearchIcon,
   Send as SendIcon,
+  Smile as SmileIcon,
   Star as StarIcon,
   Strikethrough as StrikethroughIcon,
   Underline as UnderlineIcon,

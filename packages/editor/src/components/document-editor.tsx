@@ -1,11 +1,12 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { use, type ReactNode } from "react"
 import type { CreateProvider } from "../collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "../collaboration/types"
 import type { EditorDocument } from "../core/types"
 import { CollaborationEditorProvider } from "../react/collaboration-editor-provider"
 import { EditorProvider } from "../react/editor-provider"
+import { EditorContext } from "../react/editor-context"
 import { EditorSurface } from "./editor-surface"
 
 type DocumentEditorSharedProps = {
@@ -13,6 +14,7 @@ type DocumentEditorSharedProps = {
   onChange?: (document: EditorDocument) => void
   className?: string
   children?: ReactNode
+  renderToolbar?: () => ReactNode
   renderSurface?: (surface: ReactNode) => ReactNode
 }
 
@@ -43,7 +45,7 @@ function assertExclusiveMode(props: {
 export function DocumentEditor(props: DocumentEditorProps) {
   assertExclusiveMode(props)
 
-  const { editable, onChange, className, children, renderSurface } = props
+  const { editable, onChange, className, children, renderToolbar, renderSurface } = props
   const surface = <EditorSurface />
   const framedSurface = renderSurface ? renderSurface(surface) : surface
 
@@ -57,6 +59,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       >
         <div className={className}>
           {children}
+          <EditorReadyToolbar renderToolbar={renderToolbar} />
           {framedSurface}
         </div>
       </CollaborationEditorProvider>
@@ -71,8 +74,14 @@ export function DocumentEditor(props: DocumentEditorProps) {
     >
       <div className={className}>
         {children}
+        <EditorReadyToolbar renderToolbar={renderToolbar} />
         {framedSurface}
       </div>
     </EditorProvider>
   )
+}
+
+function EditorReadyToolbar({ renderToolbar }: { renderToolbar?: () => ReactNode }) {
+  const context = use(EditorContext)
+  return context?.editor ? renderToolbar?.() : null
 }
