@@ -101,6 +101,8 @@ describe("DocumentsService", () => {
       workspaceId: "ws-1",
       title: "Demo",
       role: "editor",
+      parentId: null,
+      depth: 1,
       createdAt,
       updatedAt,
     })
@@ -149,9 +151,40 @@ describe("DocumentsService", () => {
       workspaceId: "ws-1",
       title: "未命名文档",
       role: "owner",
+      parentId: null,
+      depth: 1,
       createdAt,
       updatedAt: createdAt,
     })
     expect(repo.createForOwner).toHaveBeenCalledWith("user-1")
+  })
+
+  it("lists documents with each user's membership role", async () => {
+    const repo = createRepo({
+      listForUser: vi.fn().mockResolvedValue([
+        {
+          id: "owned",
+          workspace_id: "ws-1",
+          title: "Owned",
+          role: "owner",
+          created_at: new Date("2026-01-01"),
+          updated_at: new Date("2026-01-02"),
+        },
+        {
+          id: "shared",
+          workspace_id: "ws-2",
+          title: "Shared",
+          role: "editor",
+          created_at: new Date("2026-01-03"),
+          updated_at: new Date("2026-01-04"),
+        },
+      ]),
+    })
+    const service = new DocumentsService(repo)
+
+    await expect(service.listDocuments("user-1")).resolves.toEqual([
+      expect.objectContaining({ id: "owned", role: "owner" }),
+      expect.objectContaining({ id: "shared", role: "editor" }),
+    ])
   })
 })

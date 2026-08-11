@@ -1,12 +1,15 @@
 import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { WorkspaceShell } from "./workspace-shell"
+import { getDocumentIdAfterDeletion, WorkspaceShell } from "./workspace-shell"
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }))
+const { push, replace } = vi.hoisted(() => ({
+  push: vi.fn(),
+  replace: vi.fn(),
+}))
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }))
 
 vi.mock("./document-workspace", () => ({
@@ -28,11 +31,66 @@ afterEach(() => {
 })
 
 describe("WorkspaceShell", () => {
-  it("navigates to the created document URL", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: "new-document" }),
+  it("opens the first personal document on the app root", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { id: "first", title: "First" },
+          { id: "second", title: "Second" },
+        ],
+      })
+    )
+
+    render(<WorkspaceShell {...props} openFirstDocument />)
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/documents/first")
     })
+  })
+
+  it("selects the next personal document after deleting the first one", () => {
+    expect(
+      getDocumentIdAfterDeletion(
+        [
+          { id: "first", title: "First" },
+          { id: "second", title: "Second" },
+          { id: "third", title: "Third" },
+        ],
+        "first"
+      )
+    ).toBe("second")
+  })
+
+  it("selects the previous document when deleting the last one", () => {
+    expect(
+      getDocumentIdAfterDeletion(
+        [
+          { id: "first", title: "First" },
+          { id: "second", title: "Second" },
+        ],
+        "second"
+      )
+    ).toBe("first")
+  })
+
+  it("returns home when deleting the only document", () => {
+    expect(
+      getDocumentIdAfterDeletion([{ id: "only", title: "Only" }], "only")
+    ).toBeNull()
+  })
+
+  it("navigates to the created document URL", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((_url: string, options?: RequestInit) =>
+        Promise.resolve({
+          ok: true,
+          json: async () =>
+            options?.method === "POST" ? { id: "new-document" } : [],
+        })
+      )
     vi.stubGlobal("fetch", fetchMock)
 
     render(<WorkspaceShell {...props} />)

@@ -13,14 +13,22 @@ export function isDocumentRole(value: unknown): value is DocumentRole {
 export interface DocumentRow {
   id: string
   workspace_id: string
+  parent_id?: string | null
+  depth?: number
   title: string
   created_at: Date
   updated_at: Date
 }
 
+export interface DocumentListRow extends DocumentRow {
+  role: DocumentRole
+}
+
 export interface DocumentMetadata {
   id: string
   workspaceId: string
+  parentId: string | null
+  depth: number
   title: string
   role: DocumentRole
   createdAt: Date

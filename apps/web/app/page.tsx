@@ -15,6 +15,7 @@ export default function Page() {
     >
       <WorkspaceShell
         documentId={DEMO_DOCUMENT_ID}
+        openFirstDocument
         user={{
           id: DEMO_USER.id || "demo-owner",
           name: DEMO_USER.name,
