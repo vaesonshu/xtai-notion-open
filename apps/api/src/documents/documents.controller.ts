@@ -12,11 +12,12 @@ import {
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
 import { DevelopmentIdentityGuard } from "../auth/development-identity.guard"
+import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import type { DocumentMetadata } from "./document-types"
 import { DocumentsService } from "./documents.service"
 
 @Controller("documents")
-@UseGuards(DevelopmentIdentityGuard)
+@UseGuards(AuthenticatedIdentityGuard)
 export class DocumentsController {
   constructor(
     @Inject(DocumentsService) private readonly documents: DocumentsService

@@ -2,6 +2,7 @@ import { ForbiddenException } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import { describe, expect, it, vi } from "vitest"
 import { DevelopmentIdentityGuard } from "../auth/development-identity.guard"
+import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import { DocumentsController } from "./documents.controller"
 import { DocumentsService } from "./documents.service"
 
@@ -22,7 +23,7 @@ describe("DocumentsController", () => {
       controllers: [DocumentsController],
       providers: [{ provide: DocumentsService, useValue: { getDocument } }],
     })
-      .overrideGuard(DevelopmentIdentityGuard)
+      .overrideGuard(AuthenticatedIdentityGuard)
       .useValue({ canActivate: () => true })
       .compile()
 
@@ -49,7 +50,7 @@ describe("DocumentsController", () => {
       controllers: [DocumentsController],
       providers: [{ provide: DocumentsService, useValue: { getDocument } }],
     })
-      .overrideGuard(DevelopmentIdentityGuard)
+      .overrideGuard(AuthenticatedIdentityGuard)
       .useValue({ canActivate: () => true })
       .compile()
 
@@ -74,7 +75,7 @@ describe("DocumentsController", () => {
       controllers: [DocumentsController],
       providers: [{ provide: DocumentsService, useValue: { createDocument } }],
     })
-      .overrideGuard(DevelopmentIdentityGuard)
+      .overrideGuard(AuthenticatedIdentityGuard)
       .useValue({ canActivate: () => true })
       .compile()
     const controller = moduleRef.get(DocumentsController)
