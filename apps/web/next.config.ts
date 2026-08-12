@@ -17,7 +17,14 @@ const nextConfig: NextConfig = {
     // Keep browser auth requests on the web origin so session cookies do not
     // break when local development mixes localhost with 127.0.0.1.
     return apiUrl
-      ? [{ source: "/auth/:path*", destination: `${apiUrl}/auth/:path*` }]
+      ? [
+          { source: "/auth/:path*", destination: `${apiUrl}/auth/:path*` },
+          {
+            source: "/documents/:path*",
+            destination: `${apiUrl}/documents/:path*`,
+          },
+          { source: "/share/:path*", destination: `${apiUrl}/share/:path*` },
+        ]
       : []
   },
 }
