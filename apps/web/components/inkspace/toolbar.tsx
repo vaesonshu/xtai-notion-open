@@ -1,6 +1,7 @@
 "use client"
 
 import type { CollaborationStatus } from "@workspace/editor/collaboration"
+import { useCollaborationStatus } from "@workspace/editor/react"
 import {
   ChevronDownIcon,
   CloudCheckIcon,
@@ -10,12 +11,11 @@ import {
   SendIcon,
   UsersIcon,
 } from "@workspace/icons"
-import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
-import { useCollaborationStatus } from "@workspace/editor/react"
 import { PencilIcon } from "./icon"
+import { AuthMenu } from "../auth-menu"
 
 export type EditorToolbarProps = {
   /** When omitted, status is read from CollaborationEditorProvider when available. */
@@ -144,11 +144,7 @@ export function EditorToolbar({
           <PencilIcon icon={SendIcon} color="white" />
           发布
         </Button>
-        <Avatar className="size-8 bg-[#242321] hover:bg-[#242321]">
-          <AvatarFallback className="bg-[#242321] !text-white">
-            林
-          </AvatarFallback>
-        </Avatar>
+        <AuthMenu />
       </div>
     </header>
   )

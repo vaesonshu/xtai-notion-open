@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common"
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+} from "@nestjs/common"
 import { AuthService } from "./auth.service"
 
 /**
@@ -8,14 +13,16 @@ import { AuthService } from "./auth.service"
  */
 @Injectable()
 export class SessionInitGuard implements CanActivate {
-  constructor(private readonly auth: AuthService) {}
+  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest()
     const COOKIE_NAME = "session_token"
     // Not all environments (tests) have cookie-parser so fall back to parsing
     // the Cookie header manually.
-    const token = req.cookies?.[COOKIE_NAME] ?? parseCookieHeader(req.headers?.cookie)?.[COOKIE_NAME]
+    const token =
+      req.cookies?.[COOKIE_NAME] ??
+      parseCookieHeader(req.headers?.cookie)?.[COOKIE_NAME]
     if (!token) return true
     const user = await this.auth.findUserBySessionToken(token)
     if (user) {
@@ -26,7 +33,9 @@ export class SessionInitGuard implements CanActivate {
   }
 }
 
-function parseCookieHeader(header: string | undefined): Record<string, string> | undefined {
+function parseCookieHeader(
+  header: string | undefined
+): Record<string, string> | undefined {
   if (!header) return undefined
   const out: Record<string, string> = {}
   for (const part of header.split(";")) {
@@ -36,4 +45,3 @@ function parseCookieHeader(header: string | undefined): Record<string, string> |
   }
   return out
 }
-

@@ -8,6 +8,8 @@ export const BoldIcon = ((props: IconProps) =>
   createElement(Bold, props)) as Icon
 
 export {
+  AlertCircle as AlertCircleIcon,
+  ArrowLeft as ArrowLeftIcon,
   ArrowUpRight as ArrowUpRightIcon,
   Check as CheckIcon,
   ChevronDown as ChevronDownIcon,
@@ -27,11 +29,14 @@ export {
   Italic as ItalicIcon,
   Library as LibraryIcon,
   Link as LinkIcon,
+  LockKeyhole as LockKeyholeIcon,
   LoaderCircle as LoaderCircleIcon,
   List as ListIcon,
   ListOrdered as ListOrderedIcon,
   ListTodo as ListTodoIcon,
+  LogOut as LogOutIcon,
   MessageSquare as MessageSquareIcon,
+  Mail as MailIcon,
   Pilcrow as PilcrowIcon,
   Plus as PlusIcon,
   Quote as QuoteIcon,
@@ -45,6 +50,8 @@ export {
   Underline as UnderlineIcon,
   Undo2 as UndoIcon,
   Unlink as UnlinkIcon,
+  UserRound as UserRoundIcon,
+  UserRoundPlus as UserRoundPlusIcon,
   Users as UsersIcon,
   X as XIcon,
 } from "lucide-react"

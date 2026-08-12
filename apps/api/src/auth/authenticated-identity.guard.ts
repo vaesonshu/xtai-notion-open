@@ -22,7 +22,8 @@ import { AuthService } from "./auth.service"
 export class AuthenticatedIdentityGuard implements CanActivate {
   constructor(
     @Inject(ENVIRONMENT) private readonly env: Environment,
-    private readonly auth: AuthService
+    // tsx does not reliably emit type metadata for this runtime dependency.
+    @Inject(AuthService) private readonly auth: AuthService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -49,7 +50,9 @@ export class AuthenticatedIdentityGuard implements CanActivate {
         .map((p) => p.trim())
         .find((p) => p.startsWith("session_token="))
       if (token) {
-        const tokenValue = decodeURIComponent(token.split("=").slice(1).join("="))
+        const tokenValue = decodeURIComponent(
+          token.split("=").slice(1).join("=")
+        )
         const user = await this.auth.findUserBySessionToken(tokenValue)
         if (user) {
           req.user = user

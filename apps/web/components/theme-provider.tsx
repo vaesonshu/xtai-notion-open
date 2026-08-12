@@ -47,7 +47,9 @@ function ThemeHotkey() {
         return
       }
 
-      if (event.key.toLowerCase() !== "d") {
+      // Some environments can surface a keydown-like event without a usable
+      // `key` string, so guard before normalizing to avoid crashing the app.
+      if (event.key?.toLowerCase() !== "d") {
         return
       }
 

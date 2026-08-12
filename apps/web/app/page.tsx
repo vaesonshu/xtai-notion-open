@@ -1,4 +1,4 @@
-import { AuthStatus } from "@/components/auth-status"
+import { AuthMenu } from "@/components/auth-menu"
 import { DEMO_DOCUMENT_ID } from "@/components/inkspace/document"
 import { WorkspaceShell } from "@/components/inkspace/workspace-shell"
 
@@ -15,9 +15,8 @@ export default function Page() {
       data-pencil-page
       className="relative flex min-h-svh w-full overflow-hidden bg-[#F8F8F6] !text-[#242321]"
     >
-      {/* Auth status in top-right shows login or username + logout */}
       <div className="absolute top-4 right-4">
-        <AuthStatus />
+        <AuthMenu />
       </div>
 
       <WorkspaceShell
