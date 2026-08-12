@@ -16,11 +16,15 @@ import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { PencilIcon } from "./icon"
 import { AuthMenu } from "../auth-menu"
+import { ShareDialog } from "./share-dialog"
 
 export type EditorToolbarProps = {
   /** When omitted, status is read from CollaborationEditorProvider when available. */
   title?: string
   parentTitle?: string
+  apiUrl?: string
+  documentId?: string
+  canShare?: boolean
 }
 
 function StatusBadge({ status }: { status: CollaborationStatus }) {
@@ -97,6 +101,9 @@ function CollaborationToolbarBadge() {
 export function EditorToolbar({
   title = "新一代知识工作台",
   parentTitle,
+  apiUrl,
+  documentId,
+  canShare = true,
 }: EditorToolbarProps) {
   return (
     <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-[#E8E6E1] px-6">
@@ -129,14 +136,23 @@ export function EditorToolbar({
         >
           <PencilIcon icon={EllipsisIcon} size={17} color="#615E58" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="!text-[#373532] hover:!border-[#CFCBC4] hover:!bg-[#F3F2EF] hover:!text-[#373532]"
-        >
-          <PencilIcon icon={UsersIcon} color="#4F4C47" />
-          分享
-        </Button>
+        {apiUrl && documentId ? (
+          <ShareDialog
+            apiUrl={apiUrl}
+            documentId={documentId}
+            disabled={!canShare}
+          />
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canShare}
+            className="!text-[#373532] hover:!border-[#CFCBC4] hover:!bg-[#F3F2EF] hover:!text-[#373532]"
+          >
+            <PencilIcon icon={UsersIcon} color="#4F4C47" />
+            分享
+          </Button>
+        )}
         <Button
           size="sm"
           className="!bg-[#E64B3C] !text-white hover:!bg-[#D94335] hover:!text-white"

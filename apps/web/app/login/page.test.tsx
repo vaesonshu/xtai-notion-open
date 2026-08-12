@@ -1,14 +1,22 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import LoginPage from "./page"
 
 const push = vi.fn()
 const refresh = vi.fn()
 const refreshAuth = vi.fn()
+let returnTo = "/documents/demo"
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
-  useSearchParams: () => new URLSearchParams("returnTo=%2Fdocuments%2Fdemo"),
+  useSearchParams: () =>
+    new URLSearchParams(`returnTo=${encodeURIComponent(returnTo)}`),
 }))
 
 vi.mock("../../components/auth-provider", () => ({
@@ -17,43 +25,53 @@ vi.mock("../../components/auth-provider", () => ({
 
 describe("LoginPage", () => {
   afterEach(() => {
+    cleanup()
     vi.restoreAllMocks()
     push.mockReset()
     refresh.mockReset()
     refreshAuth.mockReset()
+    returnTo = "/documents/demo"
   })
 
   it("uses workspace form components and links to registration", () => {
-    render(<LoginPage />)
+    const { container } = render(<LoginPage />)
 
-    // Shared UI components expose data-slot attributes that keep auth forms
-    // aligned with the workspace design system.
-    expect(screen.getByRole("button", { name: "登录" })).toHaveAttribute(
+    // Stable data-slot and name attributes keep this test independent of UI translations.
+    expect(container.querySelector('button[type="submit"]')).toHaveAttribute(
       "data-slot",
       "button"
     )
-    expect(screen.getByLabelText("邮箱")).toHaveAttribute("data-slot", "input")
-    expect(screen.getByRole("link", { name: "创建账号" })).toHaveAttribute(
+    expect(container.querySelector('input[name="email"]')).toHaveAttribute(
+      "data-slot",
+      "input"
+    )
+    expect(screen.getByRole("link")).toHaveAttribute(
       "href",
       "/register?returnTo=%2Fdocuments%2Fdemo"
     )
   })
 
+  async function submitLogin() {
+    const { container } = render(<LoginPage />)
+    fireEvent.change(container.querySelector('input[name="email"]')!, {
+      target: { value: "member@example.com" },
+    })
+    fireEvent.change(container.querySelector('input[name="password"]')!, {
+      target: { value: "password123" },
+    })
+    // Submit the form directly so this regression test is stable across translated labels.
+    fireEvent.submit(container.querySelector("form#login-form")!)
+    await waitFor(() => expect(refreshAuth).toHaveBeenCalledOnce())
+    return container
+  }
+
   it("refreshes the session and returns to the requested page after login", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("{}", { status: 200 }))
-    render(<LoginPage />)
 
-    fireEvent.change(screen.getByLabelText("邮箱"), {
-      target: { value: "member@example.com" },
-    })
-    fireEvent.change(screen.getByLabelText("密码"), {
-      target: { value: "password123" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "登录" }))
+    await submitLogin()
 
-    await waitFor(() => expect(refreshAuth).toHaveBeenCalledOnce())
     expect(fetchMock).toHaveBeenCalledWith(
       "/auth/login",
       expect.objectContaining({
@@ -66,8 +84,22 @@ describe("LoginPage", () => {
       })
     )
     expect(push).toHaveBeenCalledWith("/documents/demo")
-    // Navigation already follows the refreshed auth context; refreshing here
-    // can reload `/login` before Next commits the destination route.
+    // Navigation already follows the refreshed auth context; refreshing here can reload `/login`.
     expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it("returns to a share link after login", async () => {
+    returnTo = "/share/share-token"
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 200 }))
+
+    await submitLogin()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/auth/login",
+      expect.objectContaining({ method: "POST" })
+    )
+    expect(push).toHaveBeenCalledWith("/share/share-token")
   })
 })

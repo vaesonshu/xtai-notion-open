@@ -191,7 +191,13 @@ export function DocumentWorkspace({
       className="flex min-h-0 flex-1 flex-col"
       renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
     >
-      <EditorToolbar title={title} parentTitle={parentTitle} />
+      <EditorToolbar
+        title={title}
+        parentTitle={parentTitle}
+        apiUrl={apiUrl}
+        documentId={documentId}
+        canShare={editable}
+      />
     </DocumentEditor>
   )
 }
