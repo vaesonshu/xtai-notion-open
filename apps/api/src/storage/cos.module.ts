@@ -1,12 +1,11 @@
 import { Module } from "@nestjs/common"
-import { loadEnvironment } from "../config/environment"
 import { CosService } from "./cos.service"
 
 @Module({
   providers: [
     {
       provide: CosService,
-      useFactory: () => new CosService(loadEnvironment()),
+      useFactory: () => new CosService(process.env),
     },
   ],
   exports: [CosService],

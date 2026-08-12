@@ -1,6 +1,7 @@
 import type { JSONContent } from "@tiptap/core"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type * as Y from "yjs"
+import type { ImageUploadHandler } from "./image-upload"
 
 export type EditorDocument = JSONContent & {
   type: "doc"
@@ -18,4 +19,5 @@ export type EditorExtensionOptions = {
   document?: Y.Doc
   provider?: HocuspocusProvider
   user?: CollaborationUser
+  imageUpload?: ImageUploadHandler
 }

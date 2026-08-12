@@ -151,6 +151,8 @@ export function WorkspaceShell({
           id: document.id,
           title: document.title || "未命名文档",
           role: "owner",
+          parentId: null,
+          depth: 1,
         },
       ])
       router.push(`/documents/${document.id}`)

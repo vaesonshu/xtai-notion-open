@@ -53,10 +53,10 @@ export function loadEnvironment(
     DATABASE_URL: requireValue(source, "DATABASE_URL"),
     COLLABORATION_PORT: requirePort(source, "COLLABORATION_PORT"),
     NODE_ENV: requireNodeEnv(source),
-    COS_SECRET_ID: requireValue(source, "COS_SECRET_ID"),
-    COS_SECRET_KEY: requireValue(source, "COS_SECRET_KEY"),
-    COS_BUCKET: requireValue(source, "COS_BUCKET"),
-    COS_REGION: requireValue(source, "COS_REGION"),
-    COS_PUBLIC_BASE_URL: requireValue(source, "COS_PUBLIC_BASE_URL"),
+    COS_SECRET_ID: source.COS_SECRET_ID,
+    COS_SECRET_KEY: source.COS_SECRET_KEY,
+    COS_BUCKET: source.COS_BUCKET,
+    COS_REGION: source.COS_REGION,
+    COS_PUBLIC_BASE_URL: source.COS_PUBLIC_BASE_URL,
   }
 }

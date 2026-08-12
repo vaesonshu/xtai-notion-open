@@ -6,6 +6,7 @@ import {
   CodeIcon,
   Heading1Icon,
   Heading2Icon,
+  ImageIcon,
   ItalicIcon,
   ListIcon,
   ListOrderedIcon,
@@ -19,9 +20,15 @@ import {
   UndoIcon,
 } from "@workspace/icons"
 import { EditorContext, type Editor } from "@workspace/editor/react"
+import { useImageUpload } from "@workspace/editor/components"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
 import {
   Popover,
   PopoverContent,
@@ -94,6 +101,7 @@ function EmojiPicker({
 
 export function FixedEditorToolbar() {
   const context = use(EditorContext)
+  const { canUpload, openFilePicker } = useImageUpload()
   const editor = context?.editor
   const readState = () => ({
     active: editor ? marks.map(([, , mark]) => editor.isActive(mark)) : [],
@@ -134,6 +142,23 @@ export function FixedEditorToolbar() {
         </Toggle>
       ))}
       <Separator orientation="vertical" className="mx-1 h-6" />
+      {canUpload ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="上传图片"
+                onClick={openFilePicker}
+              >
+                <ImageIcon />
+              </Button>
+            }
+          />
+          <TooltipContent>上传图片</TooltipContent>
+        </Tooltip>
+      ) : null}
       <Button
         variant="ghost"
         size="icon-sm"

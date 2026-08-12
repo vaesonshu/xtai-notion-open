@@ -3,7 +3,9 @@ import { Editor } from "@tiptap/core"
 import { createEditorExtensions } from "./extensions"
 import {
   executeSlashCommand,
+  filterCommands,
   filterSlashCommands,
+  getSlashCommands,
   SLASH_COMMANDS,
 } from "./slash-commands"
 
@@ -30,41 +32,70 @@ describe("filterSlashCommands", () => {
   it("filters the public command catalog by id, label, and keywords", () => {
     const expectedCodeCommand = expect.objectContaining({ id: "code-block" })
 
-    expect(filterSlashCommands("code-block")).toEqual(expect.arrayContaining([
-      expectedCodeCommand,
-    ]))
-    expect(filterSlashCommands("\u4ee3\u7801\u5757")).toEqual(expect.arrayContaining([
-      expectedCodeCommand,
-    ]))
-    expect(filterSlashCommands("code")).toEqual(expect.arrayContaining([
-      expectedCodeCommand,
-    ]))
+    expect(filterSlashCommands("code-block")).toEqual(
+      expect.arrayContaining([expectedCodeCommand])
+    )
+    expect(filterSlashCommands("\u4ee3\u7801\u5757")).toEqual(
+      expect.arrayContaining([expectedCodeCommand])
+    )
+    expect(filterSlashCommands("code")).toEqual(
+      expect.arrayContaining([expectedCodeCommand])
+    )
   })
 
   it("returns the code block command for the /\u4ee3\u7801 query", () => {
-    expect(filterSlashCommands("/\u4ee3\u7801")).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "code-block" }),
-    ]))
+    expect(filterSlashCommands("/\u4ee3\u7801")).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "code-block" })])
+    )
   })
 
   it("returns every public slash command for an empty query", () => {
     expect(filterSlashCommands("")).toEqual(SLASH_COMMANDS)
   })
 
+  it("returns every command from a supplied conditional catalog", () => {
+    const commands = getSlashCommands({ includeImageUpload: true })
+
+    expect(filterCommands(commands, "")).toEqual(commands)
+    expect(filterCommands(commands, "")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "upload-image", label: "上传图片" }),
+      ])
+    )
+  })
+
   it("exposes only one public command for each supported heading level", () => {
     const headingIds = ["heading-1", "heading-2", "heading-3"]
-    expect(SLASH_COMMANDS).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "heading-1", label: "\u4e00\u7ea7\u6807\u9898" }),
-      expect.objectContaining({ id: "heading-2", label: "\u4e8c\u7ea7\u6807\u9898" }),
-      expect.objectContaining({ id: "heading-3", label: "\u4e09\u7ea7\u6807\u9898" }),
-    ]))
-    expect(SLASH_COMMANDS.filter(({ id }) => id.startsWith("heading")).map(({ id }) => id))
-      .toEqual(headingIds)
-    expect(filterSlashCommands("\u6807\u9898").map(({ id }) => id)).toEqual(headingIds)
-    expect(filterSlashCommands("heading").map(({ id }) => id)).toEqual(headingIds)
-    expect(filterSlashCommands("h2")).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "heading-2" }),
-    ]))
+    expect(SLASH_COMMANDS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "heading-1",
+          label: "\u4e00\u7ea7\u6807\u9898",
+        }),
+        expect.objectContaining({
+          id: "heading-2",
+          label: "\u4e8c\u7ea7\u6807\u9898",
+        }),
+        expect.objectContaining({
+          id: "heading-3",
+          label: "\u4e09\u7ea7\u6807\u9898",
+        }),
+      ])
+    )
+    expect(
+      SLASH_COMMANDS.filter(({ id }) => id.startsWith("heading")).map(
+        ({ id }) => id
+      )
+    ).toEqual(headingIds)
+    expect(filterSlashCommands("\u6807\u9898").map(({ id }) => id)).toEqual(
+      headingIds
+    )
+    expect(filterSlashCommands("heading").map(({ id }) => id)).toEqual(
+      headingIds
+    )
+    expect(filterSlashCommands("h2")).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "heading-2" })])
+    )
   })
 })
 

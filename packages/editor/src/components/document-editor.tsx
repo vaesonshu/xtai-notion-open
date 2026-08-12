@@ -4,10 +4,12 @@ import { use, type ReactNode } from "react"
 import type { CreateProvider } from "../collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "../collaboration/types"
 import type { EditorDocument } from "../core/types"
+import type { ImageUploadHandler } from "../core/image-upload"
 import { CollaborationEditorProvider } from "../react/collaboration-editor-provider"
 import { EditorProvider } from "../react/editor-provider"
 import { EditorContext } from "../react/editor-context"
 import { EditorSurface } from "./editor-surface"
+import { ImageUpload } from "./image-upload"
 
 type DocumentEditorSharedProps = {
   editable?: boolean
@@ -16,6 +18,7 @@ type DocumentEditorSharedProps = {
   children?: ReactNode
   renderToolbar?: () => ReactNode
   renderSurface?: (surface: ReactNode) => ReactNode
+  imageUpload?: ImageUploadHandler
 }
 
 export type DocumentEditorProps =
@@ -37,7 +40,7 @@ function assertExclusiveMode(props: {
 }) {
   if (props.content !== undefined && props.collaboration !== undefined) {
     throw new Error(
-      "DocumentEditor: `content` and `collaboration` are mutually exclusive",
+      "DocumentEditor: `content` and `collaboration` are mutually exclusive"
     )
   }
 }
@@ -45,7 +48,14 @@ function assertExclusiveMode(props: {
 export function DocumentEditor(props: DocumentEditorProps) {
   assertExclusiveMode(props)
 
-  const { editable, onChange, className, children, renderToolbar, renderSurface } = props
+  const {
+    editable,
+    onChange,
+    className,
+    children,
+    renderToolbar,
+    renderSurface,
+  } = props
   const surface = <EditorSurface />
   const framedSurface = renderSurface ? renderSurface(surface) : surface
 
@@ -54,13 +64,16 @@ export function DocumentEditor(props: DocumentEditorProps) {
       <CollaborationEditorProvider
         collaboration={props.collaboration}
         editable={editable}
+        imageUpload={props.imageUpload}
         onChange={onChange}
         createProvider={props.createProvider}
       >
         <div className={className}>
-          {children}
-          <EditorReadyToolbar renderToolbar={renderToolbar} />
-          {framedSurface}
+          <ImageUpload>
+            {children}
+            <EditorReadyToolbar renderToolbar={renderToolbar} />
+            {framedSurface}
+          </ImageUpload>
         </div>
       </CollaborationEditorProvider>
     )
@@ -70,18 +83,25 @@ export function DocumentEditor(props: DocumentEditorProps) {
     <EditorProvider
       initialContent={props.content}
       editable={editable}
+      imageUpload={props.imageUpload}
       onChange={onChange}
     >
       <div className={className}>
-        {children}
-        <EditorReadyToolbar renderToolbar={renderToolbar} />
-        {framedSurface}
+        <ImageUpload>
+          {children}
+          <EditorReadyToolbar renderToolbar={renderToolbar} />
+          {framedSurface}
+        </ImageUpload>
       </div>
     </EditorProvider>
   )
 }
 
-function EditorReadyToolbar({ renderToolbar }: { renderToolbar?: () => ReactNode }) {
+function EditorReadyToolbar({
+  renderToolbar,
+}: {
+  renderToolbar?: () => ReactNode
+}) {
   const context = use(EditorContext)
   return context?.editor ? renderToolbar?.() : null
 }

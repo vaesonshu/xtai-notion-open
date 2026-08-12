@@ -12,6 +12,7 @@ import { useEffect, useState } from "react"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
+import { createDocumentImageUploader } from "./image-upload"
 
 export type DocumentWorkspaceUser = CollaborationUser
 
@@ -171,6 +172,9 @@ export function DocumentWorkspace({
   }
 
   const editable = role !== "viewer"
+  const imageUpload = editable
+    ? createDocumentImageUploader({ apiUrl, documentId, userId: user.id })
+    : undefined
 
   return (
     <DocumentEditor
@@ -181,6 +185,7 @@ export function DocumentWorkspace({
         user,
       }}
       editable={editable}
+      imageUpload={imageUpload}
       createProvider={createProvider}
       renderToolbar={() => <FixedEditorToolbar />}
       className="flex min-h-0 flex-1 flex-col"

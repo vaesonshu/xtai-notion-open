@@ -6,20 +6,31 @@ import { EditorContext } from "./editor-context"
 import { createEditorExtensions } from "../core/extensions"
 import { createInitialDocument } from "../core/initial-document"
 import type { EditorDocument } from "../core/types"
+import type { ImageUploadHandler } from "../core/image-upload"
 
 export type EditorProviderProps = {
   initialContent?: EditorDocument
   editable?: boolean
   onChange?: (document: EditorDocument) => void
+  imageUpload?: ImageUploadHandler
   children: ReactNode
 }
 
-export function EditorProvider({ initialContent, editable = true, onChange, children }: EditorProviderProps) {
-  const [editor] = useState(() => new Editor({
-    extensions: createEditorExtensions(),
-    content: initialContent ?? createInitialDocument(),
-    editable,
-  }))
+export function EditorProvider({
+  initialContent,
+  editable = true,
+  imageUpload,
+  onChange,
+  children,
+}: EditorProviderProps) {
+  const [editor] = useState(
+    () =>
+      new Editor({
+        extensions: createEditorExtensions({ imageUpload }),
+        content: initialContent ?? createInitialDocument(),
+        editable,
+      })
+  )
 
   useEffect(() => {
     editor.setEditable(editable)
@@ -28,11 +39,15 @@ export function EditorProvider({ initialContent, editable = true, onChange, chil
   useEffect(() => {
     const handleUpdate = () => onChange?.(editor.getJSON() as EditorDocument)
     editor.on("update", handleUpdate)
-    return () => { editor.off("update", handleUpdate) }
+    return () => {
+      editor.off("update", handleUpdate)
+    }
   }, [editor, onChange])
 
   useEffect(() => {
-    return () => { editor.destroy() }
+    return () => {
+      editor.destroy()
+    }
   }, [editor])
 
   return (

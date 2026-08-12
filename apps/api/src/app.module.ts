@@ -5,6 +5,7 @@ import { CollaborationModule } from "./collaboration/collaboration.module"
 import { DatabaseModule } from "./database/database.module"
 import { DocumentsModule } from "./documents/documents.module"
 import { HealthController } from "./health/health.controller"
+import { ImageUploadModule } from "./images/image-upload.module"
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { HealthController } from "./health/health.controller"
     DocumentsModule,
     CollaborationModule,
     CosModule,
+    ImageUploadModule,
   ],
   controllers: [HealthController],
 })

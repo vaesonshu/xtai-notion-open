@@ -1,11 +1,19 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import type { Editor } from "@tiptap/core"
-import { afterEach, beforeAll, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { useEffect } from "react"
 import type { EditorDocument } from "../core/types"
 import { EditorProvider } from "../react/editor-provider"
 import { useEditorInstance } from "../react/use-editor-instance"
 import { EditorSurface } from "./editor-surface"
+import { ImageUpload } from "./image-upload"
 
 const emptyParagraph: EditorDocument = {
   type: "doc",
@@ -59,11 +67,19 @@ function EditorProbe() {
   return null
 }
 
-function renderEditableSurface(content: EditorDocument = emptyParagraph) {
+function renderEditableSurface(
+  content: EditorDocument = emptyParagraph,
+  imageUpload?: (file: File) => Promise<{
+    publicUrl: string
+    contentType: string
+  }>
+) {
   return render(
-    <EditorProvider initialContent={content}>
-      <EditorSurface />
-      <EditorProbe />
+    <EditorProvider initialContent={content} imageUpload={imageUpload}>
+      <ImageUpload>
+        <EditorSurface />
+        <EditorProbe />
+      </ImageUpload>
     </EditorProvider>
   )
 }
@@ -81,6 +97,7 @@ function dispatchEditorKey(editor: Editor, key: string) {
 }
 
 afterEach(() => {
+  cleanup()
   latestEditor = null
 })
 
@@ -99,6 +116,48 @@ describe("SlashMenu", () => {
     })
     expect(option).toBeInTheDocument()
     expect(option).toHaveClass("data-[selected]:!bg-[#E6F3EC]")
+  })
+
+  it("shows upload only when configured and deletes the slash range", async () => {
+    const upload = async () => ({
+      publicUrl: "https://cdn.example/image.png",
+      contentType: "image/png",
+    })
+    renderEditableSurface(emptyParagraph, upload)
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/上传").run()
+    })
+
+    const option = await screen.findByRole("option", { name: "上传图片" })
+    await act(async () => {
+      fireEvent.click(option)
+    })
+
+    await waitFor(() => {
+      expect(editor!.getJSON().content).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "imageUpload" }),
+        ])
+      )
+    })
+  })
+
+  it("does not show upload without an upload handler", async () => {
+    renderEditableSurface()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/").run()
+    })
+
+    await screen.findByRole("option", { name: /一级标题/ })
+    expect(
+      screen.queryByRole("option", { name: "上传图片" })
+    ).not.toBeInTheDocument()
   })
 
   it("converts the current block to a codeBlock when the command is executed", async () => {

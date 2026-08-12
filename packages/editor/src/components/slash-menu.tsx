@@ -22,10 +22,12 @@ import {
 } from "@workspace/ui/components/popover"
 import {
   executeSlashCommand,
-  filterSlashCommands,
+  filterCommands,
+  getSlashCommands,
   type SlashCommand,
 } from "../core/slash-commands"
 import { useEditorInstance } from "../react/use-editor-instance"
+import { useImageUpload } from "./image-upload"
 
 const slashMenuPluginKey = new PluginKey("slashMenu")
 
@@ -36,25 +38,37 @@ type SlashSuggestionState = {
   command: (item: SlashCommand) => void
 }
 
-function applySlashCommand(editor: Editor, range: Range, item: SlashCommand) {
+function applySlashCommand(
+  editor: Editor,
+  range: Range,
+  item: SlashCommand,
+  insertImageUpload: () => void
+) {
   editor.chain().focus().deleteRange(range).run()
+  if (item.id === "upload-image") {
+    insertImageUpload()
+    return
+  }
   executeSlashCommand(editor, item.id)
 }
 
 export function SlashMenu() {
   const editor = useEditorInstance()
+  const { canUpload, openFilePicker: insertImageUpload } = useImageUpload()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [items, setItems] = useState<SlashCommand[]>([])
   const [selectedId, setSelectedId] = useState("")
   const suggestionRef = useRef<SlashSuggestionState | null>(null)
+  const insertImageUploadRef = useRef(insertImageUpload)
   const selectedIdRef = useRef(selectedId)
   const itemsRef = useRef(items)
 
   useEffect(() => {
+    insertImageUploadRef.current = insertImageUpload
     selectedIdRef.current = selectedId
     itemsRef.current = items
-  }, [selectedId, items])
+  }, [insertImageUpload, items, selectedId])
 
   useEffect(() => {
     if (!editor.isEditable) {
@@ -67,9 +81,19 @@ export function SlashMenu() {
       char: "/",
       startOfLine: true,
       allowedPrefixes: null,
-      items: ({ query: nextQuery }) => filterSlashCommands(nextQuery),
+      items: ({ query: nextQuery }) => {
+        return filterCommands(
+          getSlashCommands({ includeImageUpload: canUpload }),
+          nextQuery
+        )
+      },
       command: ({ editor: activeEditor, range, props }) => {
-        applySlashCommand(activeEditor, range, props)
+        applySlashCommand(
+          activeEditor,
+          range,
+          props,
+          insertImageUploadRef.current
+        )
       },
       render: () => {
         const sync = (props: SuggestionProps<SlashCommand, SlashCommand>) => {
@@ -81,10 +105,10 @@ export function SlashMenu() {
           }
           setQuery(props.query)
           setItems(props.items)
-          setSelectedId(current =>
-            props.items.some(item => item.id === current)
+          setSelectedId((current) =>
+            props.items.some((item) => item.id === current)
               ? current
-              : (props.items[0]?.id ?? ""),
+              : (props.items[0]?.id ?? "")
           )
           setOpen(true)
         }
@@ -116,7 +140,7 @@ export function SlashMenu() {
 
             if (event.key === "ArrowDown") {
               const index = currentItems.findIndex(
-                item => item.id === selectedIdRef.current,
+                (item) => item.id === selectedIdRef.current
               )
               const next = currentItems[(index + 1) % currentItems.length]
               if (next) {
@@ -127,7 +151,7 @@ export function SlashMenu() {
 
             if (event.key === "ArrowUp") {
               const index = currentItems.findIndex(
-                item => item.id === selectedIdRef.current,
+                (item) => item.id === selectedIdRef.current
               )
               const next =
                 currentItems[
@@ -141,8 +165,9 @@ export function SlashMenu() {
 
             if (event.key === "Enter") {
               const selected =
-                currentItems.find(item => item.id === selectedIdRef.current) ??
-                currentItems[0]
+                currentItems.find(
+                  (item) => item.id === selectedIdRef.current
+                ) ?? currentItems[0]
               if (selected) {
                 suggestionRef.current.command(selected)
               }
@@ -156,11 +181,14 @@ export function SlashMenu() {
     })
 
     // Prepend so Arrow/Enter/Escape are handled before default keymap actions.
-    editor.registerPlugin(plugin, (nextPlugin, plugins) => [nextPlugin, ...plugins])
+    editor.registerPlugin(plugin, (nextPlugin, plugins) => [
+      nextPlugin,
+      ...plugins,
+    ])
     return () => {
       editor.unregisterPlugin(slashMenuPluginKey)
     }
-  }, [editor])
+  }, [canUpload, editor])
 
   if (!editor.isEditable) {
     return null
@@ -169,7 +197,7 @@ export function SlashMenu() {
   return (
     <Popover
       open={open}
-      onOpenChange={nextOpen => {
+      onOpenChange={(nextOpen) => {
         if (!nextOpen) {
           exitSuggestion(editor.view, slashMenuPluginKey)
         }
@@ -203,7 +231,7 @@ export function SlashMenu() {
           <CommandList>
             <CommandEmpty>没有匹配的命令</CommandEmpty>
             <CommandGroup heading={query ? `/${query}` : "插入块"}>
-              {items.map(item => (
+              {items.map((item) => (
                 <CommandItem
                   key={item.id}
                   value={item.id}

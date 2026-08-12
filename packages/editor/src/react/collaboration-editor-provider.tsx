@@ -15,6 +15,7 @@ import type {
 import { createEditorExtensions } from "../core/extensions"
 import { createStarterDocument } from "../core/document"
 import type { CollaborationUser, EditorDocument } from "../core/types"
+import type { ImageUploadHandler } from "../core/image-upload"
 import { EditorContext } from "./editor-context"
 import type { EditorProviderProps } from "./editor-provider"
 
@@ -43,11 +44,11 @@ function readCollaborators(provider: HocuspocusProvider): CollaborationUser[] {
     }
     const user = state.user
     if (
-      user
-      && typeof user === "object"
-      && typeof user.id === "string"
-      && typeof user.name === "string"
-      && typeof user.color === "string"
+      user &&
+      typeof user === "object" &&
+      typeof user.id === "string" &&
+      typeof user.name === "string" &&
+      typeof user.color === "string"
     ) {
       users.push({
         id: user.id,
@@ -65,6 +66,7 @@ function createSyncedEditor(options: {
   user: CollaborationUser
   editable: boolean
   initialContent?: EditorDocument
+  imageUpload?: ImageUploadHandler
 }): Editor {
   const wasEmpty = isRemoteDocumentEmpty(options.document)
   const editor = new Editor({
@@ -72,13 +74,14 @@ function createSyncedEditor(options: {
       document: options.document,
       provider: options.provider,
       user: options.user,
+      imageUpload: options.imageUpload,
     }),
     editable: options.editable,
   })
 
   if (wasEmpty) {
     editor.commands.setContent(
-      options.initialContent ?? createStarterDocument(),
+      options.initialContent ?? createStarterDocument()
     )
   }
 
@@ -89,25 +92,26 @@ export function CollaborationEditorProvider({
   collaboration,
   createProvider,
   initialContent,
+  imageUpload,
   editable = true,
   onChange,
   children,
 }: CollaborationEditorProviderProps) {
   const [session] = useState(() =>
-    createCollaborationSession(collaboration, { createProvider }),
+    createCollaborationSession(collaboration, { createProvider })
   )
   const [status, setStatus] = useState<CollaborationStatus>(() =>
-    session.getStatus(),
+    session.getStatus()
   )
   const [collaborators, setCollaborators] = useState<CollaborationUser[]>([])
   const [editor, setEditor] = useState<Editor | null>(null)
   const editorRef = useRef<Editor | null>(null)
-  const createOptionsRef = useRef({ editable, initialContent })
+  const createOptionsRef = useRef({ editable, initialContent, imageUpload })
   const mountGenerationRef = useRef(0)
 
   useEffect(() => {
-    createOptionsRef.current = { editable, initialContent }
-  }, [editable, initialContent])
+    createOptionsRef.current = { editable, initialContent, imageUpload }
+  }, [editable, imageUpload, initialContent])
 
   useEffect(() => {
     const provider = session.provider
@@ -123,6 +127,7 @@ export function CollaborationEditorProvider({
         user: collaboration.user,
         editable: createOptionsRef.current.editable,
         initialContent: createOptionsRef.current.initialContent,
+        imageUpload: createOptionsRef.current.imageUpload,
       })
       editorRef.current = nextEditor
       setEditor(nextEditor)

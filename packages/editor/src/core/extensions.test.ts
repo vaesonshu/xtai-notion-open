@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
+import { Editor } from "@tiptap/core"
 import * as Y from "yjs"
 import { createEditorExtensions } from "./extensions"
 import { createInitialDocument } from "./initial-document"
@@ -19,21 +20,41 @@ describe("editor core", () => {
   })
 
   it("registers the MVP extensions", () => {
-    const names = createEditorExtensions().map(extension => extension.name)
+    const names = createEditorExtensions().map((extension) => extension.name)
 
-    expect(names).toEqual(expect.arrayContaining([
-      "starterKit",
-      "link",
-      "underline",
-      "taskList",
-      "taskItem",
-      "placeholder",
-    ]))
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "starterKit",
+        "taskList",
+        "taskItem",
+        "placeholder",
+        "imageUpload",
+      ])
+    )
+  })
+
+  it("configures Link through StarterKit without duplicate extension names", () => {
+    const extensions = createEditorExtensions()
+    const starterKit = extensions.find(
+      (extension) => extension.name === "starterKit"
+    )
+    const editor = new Editor({ extensions })
+    const names = editor.extensionManager.extensions.map(
+      (extension) => extension.name
+    )
+
+    expect(starterKit?.options.link).toMatchObject({
+      openOnClick: false,
+      autolink: true,
+    })
+    expect(new Set(names)).toHaveLength(names.length)
+
+    editor.destroy()
   })
 
   it("configures the drop cursor extension", () => {
     const dropCursor = createEditorExtensions().find(
-      extension => extension.name === "dropCursor",
+      (extension) => extension.name === "dropCursor"
     )
 
     expect(dropCursor).toBeDefined()
@@ -44,7 +65,7 @@ describe("editor core", () => {
 
   it("registers exactly one drop cursor extension", () => {
     const dropCursors = createEditorExtensions().filter(
-      extension => extension.name === "dropCursor",
+      (extension) => extension.name === "dropCursor"
     )
 
     expect(dropCursors).toHaveLength(1)
@@ -52,7 +73,7 @@ describe("editor core", () => {
 
   it("keeps undo and redo enabled in ordinary mode", () => {
     const starterKit = createEditorExtensions().find(
-      extension => extension.name === "starterKit",
+      (extension) => extension.name === "starterKit"
     )
 
     expect(starterKit?.options.undoRedo).toEqual({})
@@ -74,13 +95,13 @@ describe("editor core", () => {
     })
 
     const collaboration = extensions.find(
-      extension => extension.name === "collaboration",
+      (extension) => extension.name === "collaboration"
     )
     const collaborationCaret = extensions.find(
-      extension => extension.name === "collaborationCaret",
+      (extension) => extension.name === "collaborationCaret"
     )
     const starterKit = extensions.find(
-      extension => extension.name === "starterKit",
+      (extension) => extension.name === "starterKit"
     )
 
     expect(collaboration).toBeDefined()

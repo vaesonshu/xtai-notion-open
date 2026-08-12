@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { describe, expect, it } from "vitest"
 import { flattenDocuments, WorkspaceSidebar } from "./sidebar"
 
 describe("WorkspaceSidebar selection states", () => {

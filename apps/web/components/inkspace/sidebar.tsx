@@ -223,7 +223,7 @@ function SideAction({
   className,
 }: {
   itemKey: string
-  selectedKey: string
+  selectedKey: string | null
   onSelect: (key: string, action?: () => void) => void
   icon: Icon
   label: string
