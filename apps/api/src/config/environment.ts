@@ -5,6 +5,11 @@ export interface Environment {
   DATABASE_URL: string
   COLLABORATION_PORT: number
   NODE_ENV: NodeEnvironment
+  COS_SECRET_ID?: string
+  COS_SECRET_KEY?: string
+  COS_BUCKET?: string
+  COS_REGION?: string
+  COS_PUBLIC_BASE_URL?: string
 }
 
 function requireValue(
@@ -32,11 +37,7 @@ function requirePort(
 
 function requireNodeEnv(source: NodeJS.ProcessEnv): NodeEnvironment {
   const value = requireValue(source, "NODE_ENV")
-  if (
-    value !== "development" &&
-    value !== "test" &&
-    value !== "production"
-  ) {
+  if (value !== "development" && value !== "test" && value !== "production") {
     throw new Error(
       `Invalid NODE_ENV: ${value}. Expected development, test, or production.`
     )
@@ -52,5 +53,10 @@ export function loadEnvironment(
     DATABASE_URL: requireValue(source, "DATABASE_URL"),
     COLLABORATION_PORT: requirePort(source, "COLLABORATION_PORT"),
     NODE_ENV: requireNodeEnv(source),
+    COS_SECRET_ID: requireValue(source, "COS_SECRET_ID"),
+    COS_SECRET_KEY: requireValue(source, "COS_SECRET_KEY"),
+    COS_BUCKET: requireValue(source, "COS_BUCKET"),
+    COS_REGION: requireValue(source, "COS_REGION"),
+    COS_PUBLIC_BASE_URL: requireValue(source, "COS_PUBLIC_BASE_URL"),
   }
 }
