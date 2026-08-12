@@ -1,13 +1,23 @@
 import { Module } from "@nestjs/common"
 import { AuthModule } from "../auth/auth.module"
-import { DocumentsController } from "./documents.controller"
+import {
+  DocumentsController,
+  ShareLinkController,
+} from "./documents.controller"
 import { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
+import { ShareLinkRepository } from "./share-link.repository"
+import { ShareLinkService } from "./share-link.service"
 
 @Module({
   imports: [AuthModule],
-  controllers: [DocumentsController],
-  providers: [DocumentsRepository, DocumentsService],
+  controllers: [DocumentsController, ShareLinkController],
+  providers: [
+    DocumentsRepository,
+    DocumentsService,
+    ShareLinkRepository,
+    ShareLinkService,
+  ],
   exports: [DocumentsService],
 })
 export class DocumentsModule {}

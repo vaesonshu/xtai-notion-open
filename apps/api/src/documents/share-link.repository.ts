@@ -45,4 +45,29 @@ export class ShareLinkRepository {
     if (!row) throw new Error("Failed to create share link")
     return row
   }
+
+  async upsertMemberAsEditor(
+    documentId: string,
+    userId: string
+  ): Promise<"owner" | "editor"> {
+    // Keep membership insertion and promotion atomic with the existing row.
+    return this.db.withTransaction(async (client) => {
+      const result = await client.query<{ role: "owner" | "editor" }>(
+        `INSERT INTO document_member (document_id, user_id, role)
+         VALUES ($1, $2, 'editor')
+         ON CONFLICT (document_id, user_id) DO UPDATE
+         SET role = CASE
+           WHEN document_member.role = 'viewer' THEN 'editor'
+           ELSE document_member.role
+         END
+         RETURNING role`,
+        [documentId, userId]
+      )
+      const role = result.rows[0]?.role
+      if (role !== "owner" && role !== "editor") {
+        throw new Error("Failed to update document membership")
+      }
+      return role
+    })
+  }
 }

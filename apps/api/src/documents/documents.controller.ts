@@ -7,21 +7,35 @@ import {
   Param,
   Patch,
   Post,
+  Optional,
   UseGuards,
 } from "@nestjs/common"
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
-import { DevelopmentIdentityGuard } from "../auth/development-identity.guard"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import type { DocumentMetadata } from "./document-types"
 import { DocumentsService } from "./documents.service"
+import { ShareLinkService } from "./share-link.service"
 
 @Controller("documents")
 @UseGuards(AuthenticatedIdentityGuard)
 export class DocumentsController {
   constructor(
-    @Inject(DocumentsService) private readonly documents: DocumentsService
+    @Inject(DocumentsService) private readonly documents: DocumentsService,
+    @Optional()
+    @Inject(ShareLinkService)
+    private readonly shareLinks?: ShareLinkService
   ) {}
+
+  // Share creation remains behind the same document membership guard.
+  @Post(":documentId/share-link")
+  createShareLink(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<{ token: string }> {
+    if (!this.shareLinks) throw new Error("Share link service unavailable")
+    return this.shareLinks.createOrGet(documentId, user.id)
+  }
 
   @Post()
   createDocument(
@@ -61,5 +75,21 @@ export class DocumentsController {
     @CurrentUser() user: DevUser
   ): Promise<void> {
     return this.documents.deleteDocument(documentId, user.id)
+  }
+}
+
+@Controller("share")
+@UseGuards(AuthenticatedIdentityGuard)
+export class ShareLinkController {
+  constructor(
+    @Inject(ShareLinkService) private readonly shareLinks: ShareLinkService
+  ) {}
+
+  @Post(":token/accept")
+  accept(
+    @Param("token") token: string,
+    @CurrentUser() user: DevUser
+  ): Promise<{ documentId: string; role: "editor" }> {
+    return this.shareLinks.accept(token, user.id)
   }
 }
