@@ -96,13 +96,16 @@ describe("WorkspaceShell", () => {
     render(<WorkspaceShell {...props} />)
     fireEvent.click(screen.getByRole("button", { name: /新建文档/ }))
 
+    // The implementation includes credentials: 'include' so assert using
+    // objectContaining to avoid brittle exact-object matching while still
+    // verifying the important request parts (method and headers).
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
         "http://127.0.0.1:3100/documents",
-        {
+        expect.objectContaining({
           method: "POST",
           headers: { "x-dev-user-id": "demo-owner" },
-        }
+        })
       )
     })
     await waitFor(() => {
