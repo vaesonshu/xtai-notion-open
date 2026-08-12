@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common"
+import { APP_GUARD } from "@nestjs/core"
 import { AuthModule } from "./auth/auth.module"
 import { CosModule } from "./storage/cos.module"
 import { CollaborationModule } from "./collaboration/collaboration.module"
@@ -15,6 +16,13 @@ import { ImageUploadModule } from "./images/image-upload.module"
     CollaborationModule,
     CosModule,
     ImageUploadModule,
+  ],
+  providers: [
+    // Register SessionInitGuard globally so every request will attempt to
+    // resolve a session cookie into request.user when present. This is a
+    // non-enforcing guard (it only attaches the user) and lets controllers
+    // continue to use CurrentUser without explicit per-route session parsing.
+    { provide: APP_GUARD, useClass: (require("./auth/session-init.guard").SessionInitGuard) },
   ],
   controllers: [HealthController],
 })

@@ -20,7 +20,12 @@ describe("CollaborationAuthService", () => {
     const documents = createDocuments({
       assertCanRead: vi.fn().mockResolvedValue("editor"),
     })
-    const auth = new CollaborationAuthService(documents)
+    const auth = new CollaborationAuthService(
+      documents,
+      // Provide a minimal mock AuthService for the constructor; tests that
+      // exercise session-cookie paths will stub this further if needed.
+      { findUserBySessionToken: vi.fn().mockResolvedValue(null) } as any
+    )
 
     await expect(
       auth.authenticateConnection({
@@ -40,7 +45,10 @@ describe("CollaborationAuthService", () => {
     const documents = createDocuments({
       assertCanRead: vi.fn().mockResolvedValue("viewer"),
     })
-    const auth = new CollaborationAuthService(documents)
+    const auth = new CollaborationAuthService(
+      documents,
+      { findUserBySessionToken: vi.fn().mockResolvedValue(null) } as any
+    )
 
     await expect(
       auth.authenticateConnection({
@@ -56,7 +64,10 @@ describe("CollaborationAuthService", () => {
   })
 
   it("rejects missing identity with unauthorized", async () => {
-    const auth = new CollaborationAuthService(createDocuments())
+    const auth = new CollaborationAuthService(
+      createDocuments(),
+      { findUserBySessionToken: vi.fn().mockResolvedValue(null) } as any
+    )
 
     await expect(
       auth.authenticateConnection({
@@ -73,7 +84,10 @@ describe("CollaborationAuthService", () => {
         .fn()
         .mockRejectedValue(new ForbiddenException("Not a document member")),
     })
-    const auth = new CollaborationAuthService(documents)
+    const auth = new CollaborationAuthService(
+      documents,
+      { findUserBySessionToken: vi.fn().mockResolvedValue(null) } as any
+    )
 
     await expect(
       auth.authenticateConnection({

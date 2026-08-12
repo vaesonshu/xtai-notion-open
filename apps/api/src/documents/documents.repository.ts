@@ -76,9 +76,9 @@ export class DocumentsRepository {
       }
 
       const documentResult = await client.query<DocumentRow>(
-        `INSERT INTO document (workspace_id, title, depth) VALUES ($1, $2, 1)
+        `INSERT INTO document (workspace_id, title, depth, owner_id) VALUES ($1, $2, 1, $3)
          RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at`,
-        [workspaceId, "未命名文档"]
+        [workspaceId, "未命名文档", userId]
       )
       const document = documentResult.rows[0]
       if (!document) {
@@ -97,10 +97,10 @@ export class DocumentsRepository {
   async createChild(parent: DocumentRow, userId: string): Promise<DocumentRow> {
     return this.db.withTransaction(async (client) => {
       const result = await client.query<DocumentRow>(
-        `INSERT INTO document (workspace_id, parent_id, depth, title)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO document (workspace_id, parent_id, depth, title, owner_id)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at`,
-        [parent.workspace_id, parent.id, (parent.depth ?? 1) + 1, "未命名文档"]
+        [parent.workspace_id, parent.id, (parent.depth ?? 1) + 1, "未命名文档", userId]
       )
       const document = result.rows[0]
       if (!document) throw new Error("Failed to create child document")
