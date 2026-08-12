@@ -86,6 +86,16 @@ describe("ShareLinkService", () => {
     expect(upsertMemberAsEditor).toHaveBeenCalledWith("doc-1", "viewer-1")
   })
 
+  it("preserves owner membership when the owner accepts a link", async () => {
+    const upsertMemberAsEditor = vi.fn().mockResolvedValue("owner")
+    const { service } = createService({ upsertMemberAsEditor })
+
+    await expect(service.accept("existing-token", "owner-1")).resolves.toEqual({
+      documentId: "doc-1",
+      role: "owner",
+    })
+  })
+
   it("returns not found for an invalid token", async () => {
     const findActiveByToken = vi.fn().mockResolvedValue(null)
     const { service } = createService({ findActiveByToken })

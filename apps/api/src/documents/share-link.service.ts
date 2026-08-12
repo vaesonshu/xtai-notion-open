@@ -27,12 +27,12 @@ export class ShareLinkService {
   async accept(
     token: string,
     userId: string
-  ): Promise<{ documentId: string; role: "editor" }> {
+  ): Promise<{ documentId: string; role: "owner" | "editor" }> {
     const link = await this.links.findActiveByToken(token)
     if (!link) throw new NotFoundException("Share link not found")
 
     // Repository SQL preserves owner/editor roles while promoting viewers.
-    await this.links.upsertMemberAsEditor(link.document_id, userId)
-    return { documentId: link.document_id, role: "editor" }
+    const role = await this.links.upsertMemberAsEditor(link.document_id, userId)
+    return { documentId: link.document_id, role }
   }
 }

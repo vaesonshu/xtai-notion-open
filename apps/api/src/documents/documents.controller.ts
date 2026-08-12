@@ -89,7 +89,8 @@ export class ShareLinkController {
   accept(
     @Param("token") token: string,
     @CurrentUser() user: DevUser
-  ): Promise<{ documentId: string; role: "editor" }> {
+  ): Promise<{ documentId: string; role: "owner" | "editor" }> {
+    // Preserve the repository's owner role when an existing member accepts.
     return this.shareLinks.accept(token, user.id)
   }
 }
