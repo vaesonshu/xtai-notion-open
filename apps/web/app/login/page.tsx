@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 
 // Simple login page to authenticate against the API. The form posts to
@@ -8,6 +8,7 @@ import { useState } from "react"
 // backend. On success we navigate back to the root.
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -30,9 +31,11 @@ export default function LoginPage() {
         throw new Error(body?.message || `登录失败 (${res.status})`)
       }
       // On success the server sets a HttpOnly session cookie. We navigate to
-      // the root which will now be able to read session-backed endpoints.
-      router.push("/")
-      // ensure any client components pick up the new session
+      // the requested returnTo (if provided) or root, and refresh so client
+      // components pick up the new session.
+      const params = searchParams
+      const returnTo = params?.get("returnTo") || "/"
+      router.push(returnTo)
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))

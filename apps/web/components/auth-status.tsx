@@ -1,34 +1,21 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/auth-provider"
+import { useState } from "react"
 
-type PublicUser = { id: string; name: string; color?: string } | null
-
-// AuthStatus is a small client component that displays the current user state
-// and provides a logout button. It relies on the backend /auth/me and /auth/logout
-// endpoints and includes credentials so the session cookie is sent.
+// AuthStatus uses the AuthProvider's hook to read the current user and provides
+// logout functionality. It also shows a small loading indicator while the
+// provider populates the user to avoid layout flash.
 export function AuthStatus() {
   const router = useRouter()
-  const [user, setUser] = useState<PublicUser | undefined>(undefined)
-  const [loading, setLoading] = useState(false)
+  const { user, loading: providerLoading, refresh } = useAuth()
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // Load current user on mount. Undefined means not yet loaded; null means
-    // explicitly unauthenticated.
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
-    void fetch(`${apiUrl.replace(/\/$/, "")}/auth/me`, {
-      credentials: "include",
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => setUser(body ?? null))
-      .catch(() => setUser(null))
-  }, [])
-
   async function logout() {
-    setLoading(true)
+    setBusy(true)
     setError(null)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
@@ -37,20 +24,18 @@ export function AuthStatus() {
         credentials: "include",
       })
       if (!res.ok) throw new Error(`Logout failed (${res.status})`)
-      // Refresh the app so session-backed client components update.
+      await refresh()
       router.push("/")
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  // While user is undefined we show nothing to avoid a flash of "login" in
-  // layouts that immediately query the server; the caller can place this into
-  // a visible area and the effect will replace it shortly after mount.
-  if (user === undefined) return null
+  // show small placeholder during load to avoid layout shift
+  if (providerLoading) return <div className="h-6 w-16 rounded bg-gray-100" />
 
   if (!user)
     return (
@@ -67,13 +52,15 @@ export function AuthStatus() {
   return (
     <div className="flex items-center gap-3">
       <span className="text-sm font-medium">{user.name}</span>
-      <button
-        className="rounded bg-red-600 px-3 py-1 text-sm text-white disabled:opacity-60"
-        onClick={() => void logout()}
-        disabled={loading}
-      >
-        注销
-      </button>
+      <div className="relative">
+        <button
+          className="rounded bg-red-600 px-3 py-1 text-sm text-white disabled:opacity-60"
+          onClick={() => void logout()}
+          disabled={busy}
+        >
+          注销
+        </button>
+      </div>
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
     </div>
   )
