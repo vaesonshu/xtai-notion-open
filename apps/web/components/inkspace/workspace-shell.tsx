@@ -84,6 +84,8 @@ export function WorkspaceShell({
       `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
       {
         method: "PATCH",
+        // Include credentials so session cookie is sent in production.
+        credentials: "include",
         headers: {
           "content-type": "application/json",
           "x-dev-user-id": user.id,
@@ -102,7 +104,11 @@ export function WorkspaceShell({
   async function deleteDocument(id: string) {
     const response = await fetch(
       `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
-      { method: "DELETE", headers: { "x-dev-user-id": user.id } }
+      {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "x-dev-user-id": user.id },
+      }
     )
     if (!response.ok) throw new Error("删除失败")
     setDocuments((current) => current.filter((item) => item.id !== id))
@@ -114,6 +120,7 @@ export function WorkspaceShell({
   useEffect(() => {
     if (!apiUrl) return
     void fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+      credentials: "include",
       headers: { "x-dev-user-id": user.id },
     })
       .then((response) => (response.ok ? response.json() : []))
@@ -136,6 +143,7 @@ export function WorkspaceShell({
     try {
       const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
         method: "POST",
+        credentials: "include",
         headers: { "x-dev-user-id": user.id },
       })
       if (!response.ok) {
@@ -166,6 +174,7 @@ export function WorkspaceShell({
   async function createChildDocument(parentId: string) {
     const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
       method: "POST",
+      credentials: "include",
       headers: { "x-dev-user-id": user.id, "content-type": "application/json" },
       body: JSON.stringify({ parentId }),
     })

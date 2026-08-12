@@ -10,6 +10,12 @@ import { ENVIRONMENT } from "../database/database.tokens"
 import type { DevUser } from "./dev-user"
 import { DEV_USER_HEADER, DEV_USER_REQUEST_KEY } from "./dev-user"
 
+/**
+ * The development identity guard allows quick local testing by accepting a
+ * `x-dev-user-id` header. It remains enabled in development/test only and is
+ * intentionally rejected in production to avoid accidental exposure.
+ */
+
 @Injectable()
 export class DevelopmentIdentityGuard implements CanActivate {
   constructor(

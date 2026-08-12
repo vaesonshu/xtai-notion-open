@@ -10,10 +10,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - Generated code must follow the existing project conventions and use only
   libraries and APIs already confirmed in the current codebase.
-- Add comments in an appropriate amount to make the code easier to understand.
-  Prefer comments that explain intent, non-obvious decisions, data flow, edge
-  cases, or important constraints. Do not add comments that merely restate
-  the code, and do not comment every obvious line.
+- Every generated or materially modified code block must include at least one
+  useful comment. Comments must explain intent, non-obvious decisions, data
+  flow, edge cases, or important constraints; they must not merely restate the
+  code or annotate every obvious line.
 - Keep comments accurate when code changes. Remove or update comments that are
   no longer true.
 - Before adding a new abstraction or dependency, search for an existing

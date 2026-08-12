@@ -216,9 +216,7 @@ describe("DocumentWorkspace", () => {
     })
 
     await waitFor(() => {
-      expect(
-        screen.queryByRole("status", { name: /已同步/ })
-      ).not.toBeInTheDocument()
+      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
     })
 
     const proseMirror = container.querySelector(".ProseMirror")
@@ -272,9 +270,7 @@ describe("DocumentWorkspace", () => {
       provider.emit("synced", { state: true })
     })
     await waitFor(() => {
-      expect(
-        screen.queryByRole("status", { name: /已同步/ })
-      ).not.toBeInTheDocument()
+      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
     })
 
     await act(async () => {
@@ -331,9 +327,7 @@ describe("DocumentWorkspace", () => {
       provider.emit("synced", { state: true })
     })
     await waitFor(() => {
-      expect(
-        screen.queryByRole("status", { name: /已同步/ })
-      ).not.toBeInTheDocument()
+      expect(screen.getByRole("status", { name: /已同步/ })).toBeInTheDocument()
     })
 
     await act(async () => {

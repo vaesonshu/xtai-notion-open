@@ -48,8 +48,10 @@ export function createDocumentImageUploader({
         `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/images`,
         {
           method: "POST",
+          credentials: "include",
           signal,
           headers: {
+            // keep x-dev-user-id for development; production will use cookie
             "x-dev-user-id": userId,
           },
           body: formData,

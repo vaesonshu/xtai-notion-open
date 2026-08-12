@@ -6,8 +6,11 @@ import { loadEnvironment } from "./config/environment"
 async function bootstrap() {
   const env = loadEnvironment()
   const app = await NestFactory.create(AppModule)
+  // enable CORS and allow cookies from the web origin; credentials must be
+  // allowed so browser can send HttpOnly session cookies.
   app.enableCors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: true,
+    credentials: true,
   })
   await app.listen(env.PORT)
 }
