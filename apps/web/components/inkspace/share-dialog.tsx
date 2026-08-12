@@ -14,7 +14,7 @@ import {
 import { Input } from "@workspace/ui/components/input"
 
 export type ShareDialogProps = {
-  apiUrl: string
+  apiUrl?: string
   documentId: string
   disabled?: boolean
 }
@@ -36,7 +36,7 @@ export function ShareDialog({
     setCopied(false)
     try {
       const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/share-link`,
+        `/documents/${encodeURIComponent(documentId)}/share-link`,
         { method: "POST", credentials: "include" }
       )
       if (!response.ok) {
