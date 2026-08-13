@@ -27,6 +27,7 @@ export type {
   MentionProvider,
 } from "./mention"
 export { filterMentionItems, insertMention } from "./mention"
+export { insertTable } from "./table"
 export {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,

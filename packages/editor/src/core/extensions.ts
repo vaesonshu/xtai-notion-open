@@ -4,6 +4,10 @@ import Image from "@tiptap/extension-image"
 import Dropcursor from "@tiptap/extension-dropcursor"
 import Mention from "@tiptap/extension-mention"
 import Placeholder from "@tiptap/extension-placeholder"
+import { Table } from "@tiptap/extension-table"
+import TableCell from "@tiptap/extension-table-cell"
+import TableHeader from "@tiptap/extension-table-header"
+import TableRow from "@tiptap/extension-table-row"
 import TaskItem from "@tiptap/extension-task-item"
 import TaskList from "@tiptap/extension-task-list"
 import StarterKit from "@tiptap/starter-kit"
@@ -73,6 +77,11 @@ export function createEditorExtensions(
     Image.configure({ inline: false, allowBase64: false }),
     ImageUpload.configure({ upload: options.imageUpload }),
     MentionNode,
+    // 表格：官方 Table/Row/Header/Cell 四件套，StarterKit 不含表格需显式注册。
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableHeader,
+    TableCell,
   ]
 
   if (isCollaborative) {
