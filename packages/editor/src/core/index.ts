@@ -21,6 +21,12 @@ export {
 } from "./slash-commands"
 export type { InlineMark } from "./commands"
 export { setEditorLink, toggleInlineMark } from "./commands"
+export type {
+  MentionableItem,
+  MentionOptions,
+  MentionProvider,
+} from "./mention"
+export { filterMentionItems, insertMention } from "./mention"
 export {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,

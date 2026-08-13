@@ -9,4 +9,11 @@ export { useEditorSelection } from "./use-editor-selection"
 export { useCollaborationStatus } from "./use-collaboration-status"
 export { useCollaborators } from "./use-collaborators"
 export { EditorContext } from "./editor-context"
+export {
+  MentionContext,
+  useMentionContext,
+  useMentionProvider,
+  useMentionNavigate,
+} from "./mention-provider"
+export type { MentionContextValue, MentionNavigate } from "./mention-provider"
 export type { Editor } from "@tiptap/core"

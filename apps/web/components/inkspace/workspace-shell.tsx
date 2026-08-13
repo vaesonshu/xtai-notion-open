@@ -205,6 +205,7 @@ export function WorkspaceShell({
           user={user}
           apiUrl={apiUrl}
           collaborationUrl={collaborationUrl}
+          mentionNavigate={(href) => router.push(href)}
           title={documents.find((item) => item.id === documentId)?.title}
           parentTitle={(() => {
             const current = documents.find((item) => item.id === documentId)

@@ -172,6 +172,9 @@ importers:
 
   packages/editor:
     dependencies:
+      '@floating-ui/react':
+        specifier: ^0.27.20
+        version: 0.27.20(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@hocuspocus/provider':
         specifier: 4.5.0
         version: 4.5.0(y-protocols@1.0.7(yjs@13.6.32))(yjs@13.6.32)
@@ -199,6 +202,9 @@ importers:
       '@tiptap/extension-link':
         specifier: 3.29.2
         version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
+      '@tiptap/extension-mention':
+        specifier: 3.29.2
+        version: 3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)(@tiptap/suggestion@3.29.2(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
       '@tiptap/extension-placeholder':
         specifier: 3.29.2
         version: 3.29.2(@tiptap/extensions@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))
@@ -874,6 +880,12 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
+
+  '@floating-ui/react@0.27.20':
+    resolution: {integrity: sha512-CMqMy7OaXl9W0eq1Uy7L7i2Y/anPvHmFmESd2CEw0t5YvZhcVCeo4MBevAmswRllX7Y2dEidA4ozGPunLSTQpw==}
+    peerDependencies:
+      react: '>=17.0.0'
+      react-dom: '>=17.0.0'
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
@@ -1918,6 +1930,13 @@ packages:
     peerDependencies:
       '@tiptap/core': 3.29.2
       '@tiptap/pm': 3.29.2
+
+  '@tiptap/extension-mention@3.29.2':
+    resolution: {integrity: sha512-WF8ugDa2IRbgyRW+PffPYg8ZI+Qp9azvIsNoyuf+VSg5Vp7ze2TuJXUTObSckyiN5Ann8bDNM9Hbu3TdoI0DFQ==}
+    peerDependencies:
+      '@tiptap/core': 3.29.2
+      '@tiptap/pm': 3.29.2
+      '@tiptap/suggestion': 3.29.2
 
   '@tiptap/extension-node-range@3.29.2':
     resolution: {integrity: sha512-7ipYCrGZvnOL0vR4E69m8PSKDg49hH5n8nVFRej3cRn/xAdAl+ytJmrLSE+SLPvw6TN44NWk3iug23IjOu3Nbw==}
@@ -4767,6 +4786,9 @@ packages:
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
 
+  tabbable@6.5.0:
+    resolution: {integrity: sha512-wieBHXygIm7OyQOu5hQlkk62/WyCFYGlWg7L6/ZCUZwx0o398Zkn4pVmMyfYhfMG8kGrj/Krt8eIk6UKC6VzwA==}
+
   tailwind-merge@3.6.0:
     resolution: {integrity: sha512-uxL7qAVQriqRQPAyK3pj66VqskWqoZ37PW94jwOTwNfq/z9oyu1V+eqrZqtR2+fCiXdYOZe/Modt8GtvqNzu+w==}
 
@@ -5662,6 +5684,14 @@ snapshots:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
 
+  '@floating-ui/react@0.27.20(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@floating-ui/react-dom': 2.1.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@floating-ui/utils': 0.2.12
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      tabbable: 6.5.0
+
   '@floating-ui/utils@0.2.12': {}
 
   '@hocuspocus/common@4.5.0':
@@ -6498,6 +6528,12 @@ snapshots:
     dependencies:
       '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
       '@tiptap/pm': 3.29.2
+
+  '@tiptap/extension-mention@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)(@tiptap/suggestion@3.29.2(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2))':
+    dependencies:
+      '@tiptap/core': 3.29.2(@tiptap/pm@3.29.2)
+      '@tiptap/pm': 3.29.2
+      '@tiptap/suggestion': 3.29.2(@floating-ui/dom@1.8.0)(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)
 
   '@tiptap/extension-node-range@3.29.2(@tiptap/core@3.29.2(@tiptap/pm@3.29.2))(@tiptap/pm@3.29.2)':
     dependencies:
@@ -9549,6 +9585,8 @@ snapshots:
   symbol-tree@3.2.4: {}
 
   systeminformation@5.33.1: {}
+
+  tabbable@6.5.0: {}
 
   tailwind-merge@3.6.0: {}
 

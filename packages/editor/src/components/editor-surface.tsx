@@ -1,10 +1,12 @@
 "use client"
 
-import { use } from "react"
+import { use, type MouseEvent } from "react"
 import { EditorContent } from "../react/editor-content"
 import { EditorContext } from "../react/editor-context"
+import { useMentionNavigate } from "../react/mention-provider"
 import { BlockHandle } from "./block-handle"
 import { BubbleToolbar } from "./bubble-toolbar"
+import { MentionMenu } from "./mention-menu"
 import { SlashMenu } from "./slash-menu"
 
 export type EditorSurfaceProps = {
@@ -13,6 +15,8 @@ export type EditorSurfaceProps = {
 
 export function EditorSurface({ className }: EditorSurfaceProps) {
   const context = use(EditorContext)
+  const navigate = useMentionNavigate()
+
   if (!context?.editor) {
     return (
       <div
@@ -31,16 +35,35 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
     )
   }
 
+  // 在编辑器容器上统一处理提及节点的点击：定位到最近的
+  // [data-mention="true"] 元素，阻止默认跳转并交由宿主注入的导航回调处理
+  // （SPA 路由跳转）。
+  function handleClick(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement | null
+    const link = target?.closest<HTMLAnchorElement>('[data-mention="true"]')
+    if (!link) {
+      return
+    }
+    event.preventDefault()
+    const href = link.getAttribute("href")
+    if (navigate && href) {
+      navigate(href)
+    } else if (href) {
+      window.location.href = href
+    }
+  }
+
   return (
-    <>
+    <div onClick={handleClick}>
       <EditorContent className={className} />
       {context.editor.isEditable ? (
         <>
           <SlashMenu />
+          <MentionMenu />
           <BubbleToolbar />
           <BlockHandle />
         </>
       ) : null}
-    </>
+    </div>
   )
 }

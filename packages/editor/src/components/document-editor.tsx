@@ -8,8 +8,11 @@ import type { ImageUploadHandler } from "../core/image-upload"
 import { CollaborationEditorProvider } from "../react/collaboration-editor-provider"
 import { EditorProvider } from "../react/editor-provider"
 import { EditorContext } from "../react/editor-context"
+import { MentionContext } from "../react/mention-provider"
 import { EditorSurface } from "./editor-surface"
 import { ImageUpload } from "./image-upload"
+import type { MentionProvider } from "../core/mention"
+import type { MentionNavigate } from "../react/mention-provider"
 
 type DocumentEditorSharedProps = {
   editable?: boolean
@@ -19,6 +22,10 @@ type DocumentEditorSharedProps = {
   renderToolbar?: () => ReactNode
   renderSurface?: (surface: ReactNode) => ReactNode
   imageUpload?: ImageUploadHandler
+  /** 提供 @ 提及的候选文档；省略时提及菜单不显示任何结果。 */
+  mentionProvider?: MentionProvider
+  /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
+  mentionNavigate?: MentionNavigate
 }
 
 export type DocumentEditorProps =
@@ -55,9 +62,27 @@ export function DocumentEditor(props: DocumentEditorProps) {
     children,
     renderToolbar,
     renderSurface,
+    mentionProvider,
+    mentionNavigate,
   } = props
   const surface = <EditorSurface />
   const framedSurface = renderSurface ? renderSurface(surface) : surface
+  const framedContent = (
+    <MentionContext
+      value={{
+        provider: mentionProvider ?? null,
+        navigate: mentionNavigate ?? null,
+      }}
+    >
+      <div className={className}>
+        <ImageUpload>
+          {children}
+          <EditorReadyToolbar renderToolbar={renderToolbar} />
+          {framedSurface}
+        </ImageUpload>
+      </div>
+    </MentionContext>
+  )
 
   if ("collaboration" in props && props.collaboration) {
     return (
@@ -68,13 +93,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
         onChange={onChange}
         createProvider={props.createProvider}
       >
-        <div className={className}>
-          <ImageUpload>
-            {children}
-            <EditorReadyToolbar renderToolbar={renderToolbar} />
-            {framedSurface}
-          </ImageUpload>
-        </div>
+        {framedContent}
       </CollaborationEditorProvider>
     )
   }
@@ -86,13 +105,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       imageUpload={props.imageUpload}
       onChange={onChange}
     >
-      <div className={className}>
-        <ImageUpload>
-          {children}
-          <EditorReadyToolbar renderToolbar={renderToolbar} />
-          {framedSurface}
-        </ImageUpload>
-      </div>
+      {framedContent}
     </EditorProvider>
   )
 }

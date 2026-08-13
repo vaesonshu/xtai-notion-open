@@ -2,15 +2,51 @@ import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import Image from "@tiptap/extension-image"
 import Dropcursor from "@tiptap/extension-dropcursor"
+import Mention from "@tiptap/extension-mention"
 import Placeholder from "@tiptap/extension-placeholder"
 import TaskItem from "@tiptap/extension-task-item"
 import TaskList from "@tiptap/extension-task-list"
 import StarterKit from "@tiptap/starter-kit"
+import { mergeAttributes } from "@tiptap/core"
 import type { Extensions } from "@tiptap/core"
 import type { EditorExtensionOptions } from "./types"
 import { ImageUpload } from "./image-upload-node"
 
 export type { EditorExtensionOptions } from "./types"
+
+/**
+ * 文档提及节点：基于 @tiptap/extension-mention 的原子节点（atom），光标不可
+ * 进入其中，从根本上避免“选中提及后继续输入会延续链接下划线”的问题。
+ * 额外挂载 href 属性并将其渲染为可点击的 `<a>`，供点击跳转使用。
+ */
+export const MentionNode = Mention.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      href: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("href"),
+        renderHTML: (attributes) =>
+          attributes.href ? { href: attributes.href } : {},
+      },
+    }
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    const label = node.attrs.label ?? node.attrs.id ?? ""
+    return [
+      "a",
+      mergeAttributes(
+        { "data-type": this.name, "data-mention": "true" },
+        this.options.HTMLAttributes,
+        HTMLAttributes
+      ),
+      `@${label}`,
+    ]
+  },
+  renderText({ node }) {
+    return `@${node.attrs.label ?? node.attrs.id ?? ""}`
+  },
+})
 
 export function createEditorExtensions(
   options: EditorExtensionOptions = {}
@@ -36,6 +72,7 @@ export function createEditorExtensions(
     }),
     Image.configure({ inline: false, allowBase64: false }),
     ImageUpload.configure({ upload: options.imageUpload }),
+    MentionNode,
   ]
 
   if (isCollaborative) {

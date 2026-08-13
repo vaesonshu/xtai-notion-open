@@ -292,6 +292,23 @@
   padding: 0.75rem 1rem;
 }
 
+/* 提及节点：Notion 风格的页面提及，带下划线与悬停背景，点击可跳转。 */
+.ProseMirror [data-mention="true"] {
+  color: #24866b;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(36, 134, 107, 0.4);
+  text-underline-offset: 2px;
+  transition:
+    background-color 120ms ease,
+    text-decoration-color 120ms ease;
+}
+
+.ProseMirror [data-mention="true"]:hover {
+  background: rgba(36, 134, 107, 0.08);
+  text-decoration-color: #24866b;
+}
+
 .ProseMirror code {
   background: #f3f1eb;
   border-radius: 0.25rem;

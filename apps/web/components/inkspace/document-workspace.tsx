@@ -3,12 +3,13 @@
 import type { CollaborationUser } from "@workspace/editor"
 import type { CreateProvider } from "@workspace/editor/collaboration"
 import { DocumentEditor } from "@workspace/editor/components"
+import type { MentionProvider, MentionNavigate } from "@workspace/editor"
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@workspace/ui/components/alert"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
@@ -25,6 +26,8 @@ export type DocumentWorkspaceProps = {
   createProvider?: CreateProvider
   title?: string
   parentTitle?: string
+  /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
+  mentionNavigate?: MentionNavigate
 }
 
 type DocumentRole = "owner" | "editor" | "viewer"
@@ -75,6 +78,53 @@ async function fetchDocumentRole(
   return body.role
 }
 
+type MentionableDocument = { id: string; title: string }
+
+/**
+ * 拉取用户可见的全部文档，供 @ 提及使用。结果在组件生命周期内缓存，
+ * 避免每次键入都重新请求；提及菜单在本地按查询过滤。
+ */
+function useMentionProvider(
+  apiUrl: string,
+  userId: string,
+  excludeDocumentId?: string
+): MentionProvider {
+  const [documents, setDocuments] = useState<MentionableDocument[]>([])
+
+  useEffect(() => {
+    if (!apiUrl) return
+    let cancelled = false
+    void fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+      credentials: "include",
+      headers: { "x-dev-user-id": userId },
+    })
+      .then((response) => (response.ok ? response.json() : []))
+      .then((items: Array<{ id: string; title?: string }>) => {
+        if (cancelled) return
+        setDocuments(
+          items
+            .filter((item) => item.id !== excludeDocumentId)
+            .map((item) => ({ id: item.id, title: item.title || "未命名文档" }))
+        )
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [apiUrl, userId, excludeDocumentId])
+
+  return useCallback(
+    // query 参数由 editor 端在本地过滤，这里始终返回全量候选文档。
+    () =>
+      documents.map((document) => ({
+        id: document.id,
+        title: document.title,
+        href: `/documents/${document.id}`,
+      })),
+    [documents]
+  )
+}
+
 export function DocumentWorkspace({
   documentId,
   user,
@@ -83,11 +133,13 @@ export function DocumentWorkspace({
   createProvider,
   title,
   parentTitle,
+  mentionNavigate,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const configured = isConfigured(apiUrl, collaborationUrl)
+  const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
 
   useEffect(() => {
     if (!configured) {
@@ -187,6 +239,8 @@ export function DocumentWorkspace({
       editable={editable}
       imageUpload={imageUpload}
       createProvider={createProvider}
+      mentionProvider={mentionProvider}
+      mentionNavigate={mentionNavigate}
       renderToolbar={() => <FixedEditorToolbar />}
       className="flex min-h-0 flex-1 flex-col"
       renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}

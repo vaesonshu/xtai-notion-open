@@ -21,6 +21,16 @@ export {
 } from "./core/slash-commands"
 export type { InlineMark } from "./core/commands"
 export { setEditorLink, toggleInlineMark } from "./core/commands"
+export type {
+  MentionableItem,
+  MentionOptions,
+  MentionProvider,
+} from "./core/mention"
+export { filterMentionItems, insertMention } from "./core/mention"
+export type {
+  MentionContextValue,
+  MentionNavigate,
+} from "./react/mention-provider"
 export {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,
