@@ -8,6 +8,7 @@ import { BlockHandle } from "./block-handle"
 import { BubbleToolbar } from "./bubble-toolbar"
 import { MentionMenu } from "./mention-menu"
 import { SlashMenu } from "./slash-menu"
+import { TableMenu } from "./table-menu"
 
 export type EditorSurfaceProps = {
   className?: string
@@ -61,6 +62,7 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
           <SlashMenu />
           <MentionMenu />
           <BubbleToolbar />
+          <TableMenu />
           <BlockHandle />
         </>
       ) : null}
