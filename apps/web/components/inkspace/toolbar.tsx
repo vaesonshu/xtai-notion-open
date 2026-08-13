@@ -1,7 +1,10 @@
 "use client"
 
 import type { CollaborationStatus } from "@workspace/editor/collaboration"
-import { useCollaborationStatus } from "@workspace/editor/react"
+import {
+  useCollaborationStatus,
+  useCollaborators,
+} from "@workspace/editor/react"
 import {
   ChevronDownIcon,
   CloudCheckIcon,
@@ -11,9 +14,21 @@ import {
   SendIcon,
   UsersIcon,
 } from "@workspace/icons"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarGroup,
+  AvatarGroupCount,
+} from "@workspace/ui/components/avatar"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
 import { PencilIcon } from "./icon"
 import { AuthMenu } from "../auth-menu"
 import { ShareDialog } from "./share-dialog"
@@ -98,6 +113,76 @@ function CollaborationToolbarBadge() {
   return <StatusBadge status={status} />
 }
 
+/** 存在其他在线协作者时，在工具栏顶部渲染协作状态与头像组。 */
+function CollaborationPresence() {
+  const collaborators = useCollaborators()
+  if (collaborators.length === 0) return null
+
+  return (
+    <>
+      <span className="flex items-center gap-1.5 text-xs font-medium text-[#5E625D]">
+        <span className="size-[7px] rounded-full bg-[#2FA778]" />
+        协作中
+      </span>
+      <Separator orientation="vertical" className="mx-1 h-5" />
+      <CollaboratorAvatars />
+    </>
+  )
+}
+
+const MAX_VISIBLE_AVATARS = 3
+
+function CollaboratorAvatars() {
+  const collaborators = useCollaborators()
+  if (collaborators.length === 0) return null
+
+  const visible = collaborators.slice(0, MAX_VISIBLE_AVATARS)
+  const overflow = collaborators.length - MAX_VISIBLE_AVATARS
+
+  return (
+    <TooltipProvider delay={0}>
+      <AvatarGroup>
+        {visible.map((user) => (
+          <Tooltip key={user.id}>
+            <TooltipTrigger
+              render={
+                <button type="button" className="cursor-default">
+                  <Avatar
+                    size="sm"
+                    style={{ backgroundColor: user.color + "20" }}
+                  >
+                    <AvatarFallback
+                      style={{ color: user.color }}
+                      className="text-[11px] font-medium"
+                    >
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              }
+            />
+            <TooltipContent>{user.name}</TooltipContent>
+          </Tooltip>
+        ))}
+        {overflow > 0 && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button type="button" className="cursor-default">
+                  <AvatarGroupCount className="text-[11px] font-medium">
+                    +{overflow}
+                  </AvatarGroupCount>
+                </button>
+              }
+            />
+            <TooltipContent>还有 {overflow} 位协作者在线</TooltipContent>
+          </Tooltip>
+        )}
+      </AvatarGroup>
+    </TooltipProvider>
+  )
+}
+
 export function EditorToolbar({
   title = "新一代知识工作台",
   parentTitle,
@@ -117,11 +202,7 @@ export function EditorToolbar({
         <CollaborationToolbarBadge />
       </div>
       <div className="flex items-center gap-2.5">
-        <span className="flex items-center gap-1.5 text-xs font-medium text-[#5E625D]">
-          <span className="size-[7px] rounded-full bg-[#2FA778]" />
-          协作中
-        </span>
-        <Separator orientation="vertical" className="mx-1 h-5" />
+        <CollaborationPresence />
         <Button
           variant="ghost"
           size="icon-sm"
