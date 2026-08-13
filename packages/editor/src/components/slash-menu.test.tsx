@@ -319,4 +319,33 @@ describe("SlashMenu", () => {
     expect(screen.getByTestId("slash-menu")).toBeInTheDocument()
     expect(editor!.isFocused).toBe(true)
   })
+
+  it("inserts a table via the grid picker from the table command", async () => {
+    renderEditableSurface()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/\u8868\u683c").run()
+    })
+
+    const option = await screen.findByRole("option", { name: /表格/ })
+    await act(async () => {
+      fireEvent.click(option)
+    })
+
+    // 表格项展开内嵌网格，点击 2×2 的单元格提交。
+    const cell = await screen.findByTestId("table-grid-cell-1-1")
+    await act(async () => {
+      fireEvent.click(cell)
+    })
+
+    await waitFor(() => {
+      const table = editor!.getJSON().content?.find(
+        (node) => node.type === "table"
+      ) as { type: string; content?: unknown[] } | undefined
+      expect(table?.type).toBe("table")
+      expect(table?.content).toHaveLength(2)
+    })
+  })
 })

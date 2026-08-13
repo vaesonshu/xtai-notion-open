@@ -94,6 +94,18 @@ const DEFINITIONS: SlashCommandDefinition[] = [
     ["horizontal-rule", "divider", "\u5206\u9694\u7ebf"],
     (editor) => editor.chain().focus().setHorizontalRule().run()
   ),
+  command(
+    "table",
+    "\u8868\u683c",
+    ["table", "\u8868\u683c"],
+    // 表格通过网格选择器插入；execute 仅作为兜底，默认插入 3×3。
+    (editor) =>
+      editor
+        .chain()
+        .focus()
+        .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+        .run()
+  ),
 ]
 
 export const SLASH_COMMANDS: SlashCommand[] = DEFINITIONS.map(

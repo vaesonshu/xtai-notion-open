@@ -26,8 +26,10 @@ import {
   getSlashCommands,
   type SlashCommand,
 } from "../core/slash-commands"
+import { insertTable } from "../core/table"
 import { useEditorInstance } from "../react/use-editor-instance"
 import { useImageUpload } from "./image-upload"
+import { TableGridPicker } from "./table-grid-picker"
 
 const slashMenuPluginKey = new PluginKey("slashMenu")
 
@@ -194,6 +196,15 @@ export function SlashMenu() {
     return null
   }
 
+  // 表格命令特殊处理：删除已输入的 "/" 范围后在光标处插入所选尺寸的表格。
+  function applyTable(rows: number, cols: number) {
+    const range = suggestionRef.current?.range
+    if (!range) return
+    editor.chain().focus().deleteRange(range).run()
+    insertTable(editor, rows, cols)
+    exitSuggestion(editor.view, slashMenuPluginKey)
+  }
+
   return (
     <Popover
       open={open}
@@ -238,10 +249,20 @@ export function SlashMenu() {
                   keywords={item.keywords}
                   className="hover:!bg-[#F3F2EF] hover:!text-[#242321] data-[selected]:!bg-[#E6F3EC] data-[selected]:!text-[#24866B]"
                   onSelect={() => {
+                    if (item.id === "table") {
+                      // 展开内嵌网格，点击后通过 applyTable 插入，不直接执行命令。
+                      return
+                    }
                     suggestionRef.current?.command(item)
                   }}
                 >
-                  {item.label}
+                  {item.id === "table" ? (
+                    <div onPointerDown={(event) => event.stopPropagation()}>
+                      <TableGridPicker onSelect={applyTable} />
+                    </div>
+                  ) : (
+                    item.label
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>
