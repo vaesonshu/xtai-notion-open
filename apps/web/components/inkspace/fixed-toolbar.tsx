@@ -16,11 +16,16 @@ import {
   RedoIcon,
   StrikethroughIcon,
   SmileIcon,
+  TableIcon,
   UnderlineIcon,
   UndoIcon,
 } from "@workspace/icons"
 import { EditorContext, type Editor } from "@workspace/editor/react"
-import { useImageUpload } from "@workspace/editor/components"
+import {
+  TableGridPicker,
+  useImageUpload,
+} from "@workspace/editor/components"
+import { insertTable } from "@workspace/editor/core"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
@@ -110,6 +115,7 @@ export function FixedEditorToolbar() {
   })
   const [state, setState] = useState(readState)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
+  const [tablePickerOpen, setTablePickerOpen] = useState(false)
 
   useEffect(() => {
     if (!editor) return
@@ -218,6 +224,23 @@ export function FixedEditorToolbar() {
       >
         <CodeIcon />
       </Toggle>
+      <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
+        <PopoverTrigger
+          render={
+            <Button variant="ghost" size="icon-sm" aria-label="插入表格">
+              <TableIcon />
+            </Button>
+          }
+        />
+        <PopoverContent align="start" className="w-auto p-0">
+          <TableGridPicker
+            onSelect={(rows, cols) => {
+              insertTable(editor, rows, cols)
+              setTablePickerOpen(false)
+            }}
+          />
+        </PopoverContent>
+      </Popover>
       <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
         <PopoverTrigger
           render={
