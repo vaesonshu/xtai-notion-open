@@ -1,18 +1,34 @@
 import "@testing-library/jest-dom/vitest"
-import { render } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { render, screen } from "@testing-library/react"
+import { describe, expect, it, vi } from "vitest"
 import DocumentPage from "./page"
 
-describe("DocumentPage", () => {
-  it("opens the document identified by the route parameter", async () => {
-    const { container } = render(
-      await DocumentPage({
-        params: Promise.resolve({ documentId: "route-document" }),
-      })
-    )
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ documentId: "route-document" }),
+}))
 
-    expect(container.firstElementChild).toHaveAttribute(
-      "data-document-route",
+vi.mock("../../../components/auth-provider", () => ({
+  useAuth: () => ({
+    user: { id: "user-1", name: "Lin", color: "#24866B" },
+    loading: false,
+  }),
+}))
+
+vi.mock("../../../components/inkspace/workspace-shell", () => ({
+  WorkspaceShell: ({ documentId }: { documentId: string }) => (
+    <div
+      data-testid="workspace-document"
+      data-workspace-document-id={documentId}
+    />
+  ),
+}))
+
+describe("DocumentPage", () => {
+  it("renders the workspace for the document identified by the route parameter", () => {
+    render(<DocumentPage />)
+
+    expect(screen.getByTestId("workspace-document")).toHaveAttribute(
+      "data-workspace-document-id",
       "route-document"
     )
   })

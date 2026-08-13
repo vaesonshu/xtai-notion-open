@@ -14,17 +14,13 @@ const nextConfig: NextConfig = {
   // keep an explicit turbopack block so Next 16 does not reject sibling webpack hints.
   turbopack: {},
   async rewrites() {
-    // Keep browser auth requests on the web origin so session cookies do not
-    // break when local development mixes localhost with 127.0.0.1.
+    // Only proxy auth traffic so the browser keeps the session cookie on the
+    // web origin. /share must NOT be rewritten here: a broad "/share/:path*"
+    // rule would swallow the app/share/[token] page route and forward every
+    // page request to the API, which only implements POST /share/:token/accept
+    // and would 404 the rest. Share acceptance is proxied by its own route.ts.
     return apiUrl
-      ? [
-          { source: "/auth/:path*", destination: `${apiUrl}/auth/:path*` },
-          {
-            source: "/documents/:path*",
-            destination: `${apiUrl}/documents/:path*`,
-          },
-          { source: "/share/:path*", destination: `${apiUrl}/share/:path*` },
-        ]
+      ? [{ source: "/auth/:path*", destination: `${apiUrl}/auth/:path*` }]
       : []
   },
 }

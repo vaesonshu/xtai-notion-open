@@ -36,7 +36,7 @@ export function ShareDialog({
     setCopied(false)
     try {
       const response = await fetch(
-        `/documents/${encodeURIComponent(documentId)}/share-link`,
+        `/api/documents/${encodeURIComponent(documentId)}/share-link`,
         { method: "POST", credentials: "include" }
       )
       if (!response.ok) {
