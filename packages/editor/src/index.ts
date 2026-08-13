@@ -27,6 +27,7 @@ export type {
   MentionProvider,
 } from "./core/mention"
 export { filterMentionItems, insertMention } from "./core/mention"
+export { insertTable } from "./core/table"
 export type {
   MentionContextValue,
   MentionNavigate,
