@@ -95,6 +95,12 @@ export class YjsPersistenceRepository {
     }
 
     return this.db.withTransaction(async (client) => {
+      // 对同一文档加事务级 advisory 锁，串行化 sequence 的“读 MAX + 1”与
+      // 插入，避免并发 flush 读到相同起始 sequence 而触发唯一约束冲突。
+      // hashtext 碰撞只会导致不同文档偶发串行化（仅轻微影响性能），不会漏锁。
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
+        documentId,
+      ])
       const start = await this.nextSequence(client, documentId)
       let sequence = start
       for (const update of updates) {
