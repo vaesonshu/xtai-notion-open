@@ -17,6 +17,12 @@ import { SessionInitGuard } from "./session-init.guard"
     SessionInitGuard,
   ],
   controllers: [AuthController],
-  exports: [DevelopmentIdentityGuard, SessionInitGuard, AuthService],
+  // DocumentsService reads roles here rather than trusting a client-provided header.
+  exports: [
+    DevelopmentIdentityGuard,
+    SessionInitGuard,
+    AuthService,
+    UserRepository,
+  ],
 })
 export class AuthModule {}

@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react"
+import { fireEvent, render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { EditorToolbar } from "./toolbar"
 
@@ -22,5 +22,21 @@ describe("EditorToolbar", () => {
     const { container } = render(<EditorToolbar />)
 
     expect(container.querySelector("button button")).toBeNull()
+  })
+
+  it("shows a disabled pending approval action", () => {
+    const { getByRole } = render(<EditorToolbar publicationStatus="pending" />)
+
+    expect(getByRole("button", { name: "待审批" })).toBeDisabled()
+  })
+
+  it("submits a draft publication through the toolbar callback", () => {
+    const onPublish = vi.fn()
+    const { getByRole } = render(
+      <EditorToolbar publicationStatus="draft" onPublish={onPublish} />
+    )
+
+    fireEvent.click(getByRole("button", { name: "发布" }))
+    expect(onPublish).toHaveBeenCalledOnce()
   })
 })

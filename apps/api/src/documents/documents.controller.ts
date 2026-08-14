@@ -13,7 +13,7 @@ import {
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
-import type { DocumentMetadata } from "./document-types"
+import type { DocumentMetadata, PublishedArticle } from "./document-types"
 import { DocumentsService } from "./documents.service"
 import { ShareLinkService } from "./share-link.service"
 
@@ -60,6 +60,15 @@ export class DocumentsController {
     return this.documents.getDocument(documentId, user.id)
   }
 
+  @Post(":documentId/submit-publication")
+  submitPublication(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata> {
+    // Service owns membership rules so this endpoint cannot drift from sharing.
+    return this.documents.submitPublication(documentId, user.id)
+  }
+
   @Patch(":documentId")
   renameDocument(
     @Param("documentId") documentId: string,
@@ -75,6 +84,52 @@ export class DocumentsController {
     @CurrentUser() user: DevUser
   ): Promise<void> {
     return this.documents.deleteDocument(documentId, user.id)
+  }
+}
+
+@Controller("admin/publications")
+@UseGuards(AuthenticatedIdentityGuard)
+export class PublicationAdminController {
+  constructor(
+    @Inject(DocumentsService) private readonly documents: DocumentsService
+  ) {}
+
+  @Get()
+  listPending(@CurrentUser() user: DevUser): Promise<DocumentMetadata[]> {
+    return this.documents.listPendingPublications(user.id)
+  }
+
+  @Post(":documentId/approve")
+  approve(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata> {
+    return this.documents.approvePublication(documentId, user.id)
+  }
+
+  @Post(":documentId/reject")
+  reject(
+    @Param("documentId") documentId: string,
+    @Body() body: { reason?: string },
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata> {
+    return this.documents.rejectPublication(
+      documentId,
+      user.id,
+      body.reason ?? ""
+    )
+  }
+}
+
+@Controller("square")
+export class PublicSquareController {
+  constructor(
+    @Inject(DocumentsService) private readonly documents: DocumentsService
+  ) {}
+
+  @Get("articles")
+  listArticles(): Promise<PublishedArticle[]> {
+    return this.documents.listPublishedArticles()
   }
 }
 

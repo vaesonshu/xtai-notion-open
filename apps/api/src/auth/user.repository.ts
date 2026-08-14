@@ -8,6 +8,7 @@ export type UserRecord = {
   password_hash: string
   display_name: string
   color: string
+  role: "user" | "admin"
   created_at: string
   updated_at: string
 }

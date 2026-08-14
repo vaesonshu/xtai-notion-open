@@ -42,6 +42,8 @@ export type EditorToolbarProps = {
   canShare?: boolean
   aiOpen?: boolean
   onAiToggle?: () => void
+  publicationStatus?: "draft" | "pending" | "published"
+  onPublish?: () => void
 }
 
 function StatusBadge({ status }: { status: CollaborationStatus }) {
@@ -193,7 +195,17 @@ export function EditorToolbar({
   canShare = true,
   aiOpen = false,
   onAiToggle,
+  publicationStatus = "draft",
+  onPublish,
 }: EditorToolbarProps) {
+  const publicationLabel =
+    publicationStatus === "pending"
+      ? "待审批"
+      : publicationStatus === "published"
+        ? "已发布"
+        : "发布"
+  // Only the draft state is actionable; all other labels are server state.
+  const publicationDisabled = publicationStatus !== "draft" || !onPublish
   return (
     <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-[#E8E6E1] px-6">
       <div className="flex items-center gap-[7px] text-[13px] !text-[#242321]">
@@ -245,9 +257,13 @@ export function EditorToolbar({
         )}
         <Button
           size="sm"
-          className="!bg-[#E64B3C] !text-white hover:!bg-[#D94335] hover:!text-white"
+          aria-label={publicationLabel}
+          disabled={publicationDisabled}
+          onClick={onPublish}
+          className="!bg-[#E64B3C] !text-[0px] !text-white hover:!bg-[#D94335] hover:!text-white"
         >
           <PencilIcon icon={SendIcon} color="white" />
+          <span className="text-[13px]">{publicationLabel}</span>
           发布
         </Button>
         <AuthMenu />

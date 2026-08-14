@@ -38,6 +38,7 @@ type DocumentMetadataResponse = {
   id: string
   role: DocumentRole
   title?: string
+  publicationStatus?: "draft" | "pending" | "published"
 }
 
 function isConfigured(apiUrl: string, collaborationUrl: string): boolean {
@@ -59,7 +60,7 @@ async function fetchDocumentRole(
   apiUrl: string,
   documentId: string,
   userId: string
-): Promise<DocumentRole> {
+): Promise<DocumentMetadataResponse> {
   const response = await fetch(
     `${apiUrl.replace(/\/$/, "")}/documents/${documentId}`,
     {
@@ -77,7 +78,7 @@ async function fetchDocumentRole(
   if (!isDocumentRole(body.role)) {
     throw new Error("Invalid document role in API response")
   }
-  return body.role
+  return body
 }
 
 type MentionableDocument = { id: string; title: string }
@@ -138,6 +139,9 @@ export function DocumentWorkspace({
   mentionNavigate,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
+  const [publicationStatus, setPublicationStatus] = useState<
+    "draft" | "pending" | "published"
+  >("draft")
   const [loadError, setLoadError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [getDocumentText, setGetDocumentText] = useState<() => string>(
@@ -150,6 +154,22 @@ export function DocumentWorkspace({
 
   const configured = isConfigured(apiUrl, collaborationUrl)
   const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
+  const submitPublication = useCallback(async () => {
+    const response = await fetch(
+      `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/submit-publication`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "x-dev-user-id": user.id },
+      }
+    )
+    if (!response.ok) {
+      throw new Error(`Failed to submit publication (${response.status})`)
+    }
+    // The post response is authoritative, avoiding a local-only pending state.
+    const body = (await response.json()) as DocumentMetadataResponse
+    setPublicationStatus(body.publicationStatus ?? "pending")
+  }, [apiUrl, documentId, user.id])
 
   useEffect(() => {
     if (!configured) {
@@ -159,9 +179,10 @@ export function DocumentWorkspace({
     let cancelled = false
 
     void fetchDocumentRole(apiUrl, documentId, user.id)
-      .then((nextRole) => {
+      .then((metadata) => {
         if (!cancelled) {
-          setRole(nextRole)
+          setRole(metadata.role)
+          setPublicationStatus(metadata.publicationStatus ?? "draft")
           setLoadError(null)
         }
       })
@@ -264,6 +285,8 @@ export function DocumentWorkspace({
           apiUrl={apiUrl}
           documentId={documentId}
           canShare={editable}
+          publicationStatus={publicationStatus}
+          onPublish={editable ? () => void submitPublication() : undefined}
           aiOpen={aiOpen}
           onAiToggle={() => setAiOpen((open) => !open)}
         />

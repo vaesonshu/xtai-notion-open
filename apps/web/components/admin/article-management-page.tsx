@@ -8,6 +8,7 @@ import { AdminSidebar } from "./admin-sidebar"
 import { ArticleFilters, type ArticleFiltersValue } from "./article-filters"
 import { ArticleStatCard } from "./article-stat-card"
 import { ArticleTable } from "./article-table"
+import { PublicationApprovalQueue } from "./publication-approval-queue"
 
 export type Article = {
   id: string
@@ -144,6 +145,9 @@ export function ArticleManagementPage() {
             />
           </div>
           <ArticleFilters value={filters} onChange={setFilters} />
+          <PublicationApprovalQueue
+            apiUrl={process.env.NEXT_PUBLIC_API_URL ?? ""}
+          />
           <section className="flex min-h-0 flex-1 flex-col">
             <ArticleTable articles={filtered} />
           </section>

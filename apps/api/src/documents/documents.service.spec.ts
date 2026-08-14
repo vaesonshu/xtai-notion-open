@@ -1,7 +1,12 @@
-import { ForbiddenException, NotFoundException } from "@nestjs/common"
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import type { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
+import type { UserRepository } from "../auth/user.repository"
 
 function createRepo(
   overrides: Partial<DocumentsRepository> = {}
@@ -105,6 +110,10 @@ describe("DocumentsService", () => {
       depth: 1,
       createdAt,
       updatedAt,
+      publicationStatus: "draft",
+      rejectionReason: null,
+      publishedAt: null,
+      publishedBy: null,
     })
   })
 
@@ -155,6 +164,10 @@ describe("DocumentsService", () => {
       depth: 1,
       createdAt,
       updatedAt: createdAt,
+      publicationStatus: "draft",
+      rejectionReason: null,
+      publishedAt: null,
+      publishedBy: null,
     })
     expect(repo.createForOwner).toHaveBeenCalledWith("user-1")
   })
@@ -186,5 +199,98 @@ describe("DocumentsService", () => {
       expect.objectContaining({ id: "owned", role: "owner" }),
       expect.objectContaining({ id: "shared", role: "editor" }),
     ])
+  })
+
+  it("submits a draft document when the current member is an editor", async () => {
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue("editor"),
+      submitPublication: vi.fn().mockResolvedValue({
+        id: "doc-1",
+        workspace_id: "ws-1",
+        title: "Draft",
+        publication_status: "pending",
+        created_at: new Date("2026-01-01"),
+        updated_at: new Date("2026-01-02"),
+      }),
+    })
+    const service = new DocumentsService(repo)
+
+    await expect(
+      service.submitPublication("doc-1", "editor-1")
+    ).resolves.toMatchObject({
+      publicationStatus: "pending",
+    })
+    expect(repo.submitPublication).toHaveBeenCalledWith("doc-1")
+  })
+
+  it("rejects publication submission from a viewer", async () => {
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue("viewer"),
+    })
+    const service = new DocumentsService(repo)
+
+    await expect(
+      service.submitPublication("doc-1", "viewer-1")
+    ).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it("rejects a duplicate publication submission with a conflict", async () => {
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue("owner"),
+      submitPublication: vi.fn().mockResolvedValue(null),
+    })
+    const service = new DocumentsService(repo)
+
+    await expect(
+      service.submitPublication("doc-1", "owner-1")
+    ).rejects.toBeInstanceOf(ConflictException)
+  })
+
+  it("approves a pending document for an administrator", async () => {
+    const repo = createRepo({
+      approvePublication: vi.fn().mockResolvedValue({
+        id: "doc-1",
+        workspace_id: "ws-1",
+        title: "Pending",
+        publication_status: "published",
+        published_at: new Date("2026-08-14"),
+        published_by: "admin-1",
+        created_at: new Date("2026-01-01"),
+        updated_at: new Date("2026-08-14"),
+      }),
+    })
+    const users = {
+      findById: vi.fn().mockResolvedValue({ role: "admin" }),
+    } as unknown as UserRepository
+    const service = new DocumentsService(repo, users)
+
+    await expect(
+      service.approvePublication("doc-1", "admin-1")
+    ).resolves.toMatchObject({
+      publicationStatus: "published",
+      publishedBy: "admin-1",
+    })
+  })
+
+  it("does not allow a regular user to approve a document", async () => {
+    const users = {
+      findById: vi.fn().mockResolvedValue({ role: "user" }),
+    } as unknown as UserRepository
+    const service = new DocumentsService(createRepo(), users)
+
+    await expect(
+      service.approvePublication("doc-1", "user-1")
+    ).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it("requires a non-empty reason when an administrator rejects a document", async () => {
+    const users = {
+      findById: vi.fn().mockResolvedValue({ role: "admin" }),
+    } as unknown as UserRepository
+    const service = new DocumentsService(createRepo(), users)
+
+    await expect(
+      service.rejectPublication("doc-1", "admin-1", "  ")
+    ).rejects.toBeInstanceOf(ConflictException)
   })
 })

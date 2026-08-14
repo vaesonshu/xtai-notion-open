@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common"
 import { AuthModule } from "../auth/auth.module"
 import {
   DocumentsController,
+  PublicationAdminController,
+  PublicSquareController,
   ShareLinkController,
 } from "./documents.controller"
 import { DocumentsRepository } from "./documents.repository"
@@ -11,7 +13,12 @@ import { ShareLinkService } from "./share-link.service"
 
 @Module({
   imports: [AuthModule],
-  controllers: [DocumentsController, ShareLinkController],
+  controllers: [
+    DocumentsController,
+    ShareLinkController,
+    PublicationAdminController,
+    PublicSquareController,
+  ],
   providers: [
     DocumentsRepository,
     DocumentsService,

@@ -1,4 +1,5 @@
 export type DocumentRole = "owner" | "editor" | "viewer"
+export type PublicationStatus = "draft" | "pending" | "published"
 
 export const DOCUMENT_ROLES: readonly DocumentRole[] = [
   "owner",
@@ -18,6 +19,10 @@ export interface DocumentRow {
   title: string
   created_at: Date
   updated_at: Date
+  publication_status?: PublicationStatus
+  rejection_reason?: string | null
+  published_at?: Date | null
+  published_by?: string | null
 }
 
 export interface DocumentListRow extends DocumentRow {
@@ -33,4 +38,20 @@ export interface DocumentMetadata {
   role: DocumentRole
   createdAt: Date
   updatedAt: Date
+  publicationStatus: PublicationStatus
+  rejectionReason: string | null
+  publishedAt: Date | null
+  publishedBy: string | null
+}
+
+export interface PublicationMetadata extends DocumentMetadata {
+  author: string | null
+}
+
+export interface PublishedArticle {
+  id: string
+  title: string
+  author: string | null
+  publishedAt: Date
+  excerpt: string
 }

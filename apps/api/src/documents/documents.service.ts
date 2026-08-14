@@ -1,17 +1,28 @@
 import {
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common"
-import type { DocumentMetadata, DocumentRole } from "./document-types"
+import { UserRepository } from "../auth/user.repository"
+import type {
+  DocumentMetadata,
+  DocumentRole,
+  DocumentRow,
+  PublishedArticle,
+} from "./document-types"
 import { DocumentsRepository } from "./documents.repository"
 
 @Injectable()
 export class DocumentsService {
   constructor(
     @Inject(DocumentsRepository)
-    private readonly documents: DocumentsRepository
+    private readonly documents: DocumentsRepository,
+    @Optional()
+    @Inject(UserRepository)
+    private readonly users?: UserRepository
   ) {}
 
   getMemberRole(
@@ -52,44 +63,17 @@ export class DocumentsService {
     if (!row) {
       throw new NotFoundException("Document not found")
     }
-    return {
-      id: row.id,
-      workspaceId: row.workspace_id,
-      parentId: row.parent_id ?? null,
-      depth: row.depth ?? 1,
-      title: row.title,
-      role,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }
+    return this.toMetadata(row, role)
   }
 
   async listDocuments(userId: string): Promise<DocumentMetadata[]> {
     const rows = await this.documents.listForUser(userId)
-    return rows.map((row) => ({
-      id: row.id,
-      workspaceId: row.workspace_id,
-      parentId: row.parent_id ?? null,
-      depth: row.depth ?? 1,
-      title: row.title,
-      role: row.role,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }))
+    return rows.map((row) => this.toMetadata(row, row.role))
   }
 
   async createDocument(userId: string): Promise<DocumentMetadata> {
     const row = await this.documents.createForOwner(userId)
-    return {
-      id: row.id,
-      workspaceId: row.workspace_id,
-      parentId: row.parent_id ?? null,
-      depth: row.depth ?? 1,
-      title: row.title,
-      role: "owner",
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }
+    return this.toMetadata(row, "owner")
   }
 
   async renameDocument(
@@ -102,16 +86,7 @@ export class DocumentsService {
     if (!nextTitle) throw new Error("Document title cannot be empty")
     const row = await this.documents.rename(documentId, nextTitle)
     if (!row) throw new NotFoundException("Document not found")
-    return {
-      id: row.id,
-      workspaceId: row.workspace_id,
-      parentId: row.parent_id ?? null,
-      depth: row.depth ?? 1,
-      title: row.title,
-      role,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }
+    return this.toMetadata(row, role)
   }
 
   async deleteDocument(documentId: string, userId: string): Promise<void> {
@@ -131,6 +106,81 @@ export class DocumentsService {
       throw new ForbiddenException("Documents can be nested up to three levels")
     }
     const row = await this.documents.createChild(parent, userId)
+    return this.toMetadata(row, role)
+  }
+
+  async submitPublication(
+    documentId: string,
+    userId: string
+  ): Promise<DocumentMetadata> {
+    const role = await this.assertCanWrite(documentId, userId)
+    const row = await this.documents.submitPublication(documentId)
+    if (!row) {
+      throw new ConflictException("Document is not a draft")
+    }
+    return this.toMetadata(row, role)
+  }
+
+  async approvePublication(
+    documentId: string,
+    adminUserId: string
+  ): Promise<DocumentMetadata> {
+    await this.assertAdmin(adminUserId)
+    const row = await this.documents.approvePublication(documentId, adminUserId)
+    if (!row) throw new ConflictException("Document is not pending approval")
+    return this.toMetadata(row, "owner")
+  }
+
+  async rejectPublication(
+    documentId: string,
+    adminUserId: string,
+    reason: string
+  ): Promise<DocumentMetadata> {
+    await this.assertAdmin(adminUserId)
+    const trimmedReason = reason.trim()
+    if (!trimmedReason)
+      throw new ConflictException("Rejection reason is required")
+    const row = await this.documents.rejectPublication(
+      documentId,
+      trimmedReason
+    )
+    if (!row) throw new ConflictException("Document is not pending approval")
+    return this.toMetadata(row, "owner")
+  }
+
+  async listPendingPublications(userId: string): Promise<DocumentMetadata[]> {
+    await this.assertAdmin(userId)
+    const rows = await this.documents.listPendingPublications()
+    return rows.map((row) => this.toMetadata(row, "owner"))
+  }
+
+  async listPublishedArticles(): Promise<PublishedArticle[]> {
+    const rows = await this.documents.listPublishedArticles()
+    // Never return internal approval metadata from the public square endpoint.
+    return rows.flatMap((row) =>
+      row.published_at
+        ? [
+            {
+              id: row.id,
+              title: row.title,
+              author: null,
+              publishedAt: row.published_at,
+              excerpt: "",
+            },
+          ]
+        : []
+    )
+  }
+
+  private async assertAdmin(userId: string): Promise<void> {
+    const user = await this.users?.findById(userId)
+    if (user?.role !== "admin") {
+      throw new ForbiddenException("Administrator role required")
+    }
+  }
+
+  private toMetadata(row: DocumentRow, role: DocumentRole): DocumentMetadata {
+    // Old rows and test fixtures without the migration fields are drafts.
     return {
       id: row.id,
       workspaceId: row.workspace_id,
@@ -140,6 +190,10 @@ export class DocumentsService {
       role,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      publicationStatus: row.publication_status ?? "draft",
+      rejectionReason: row.rejection_reason ?? null,
+      publishedAt: row.published_at ?? null,
+      publishedBy: row.published_by ?? null,
     }
   }
 }

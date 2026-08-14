@@ -15,6 +15,7 @@ export type PublicUser = {
   email: string
   displayName: string
   color: string
+  role: "user" | "admin"
 }
 
 @Injectable()
@@ -76,6 +77,8 @@ export class AuthService {
       email: user.email,
       displayName: user.display_name,
       color: user.color,
+      // The role comes from the persisted user record, never client input.
+      role: user.role,
     }
   }
 
