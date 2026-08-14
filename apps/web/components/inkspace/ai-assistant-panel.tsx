@@ -38,7 +38,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   }, [props.open])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    messagesEndRef.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "end",
+    })
   }, [messages, streaming, error])
 
   if (!props.open) return null

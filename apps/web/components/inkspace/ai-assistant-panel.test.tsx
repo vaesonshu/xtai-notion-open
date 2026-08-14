@@ -73,7 +73,7 @@ describe("AiAssistantPanel", () => {
         )
     )
     render(<AiAssistantPanel {...props} />)
-    fireEvent.click(screen.getByRole("button", { name: "鎬荤粨鏂囨。" }))
+    fireEvent.click(screen.getByText("鎬荤粨鏂囨。"))
     await waitFor(() => expect(screen.getByText("回复")).toBeInTheDocument())
     expect(scrollIntoView).toHaveBeenCalled()
   })
