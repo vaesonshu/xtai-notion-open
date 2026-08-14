@@ -37,7 +37,7 @@ describe("AiAssistantPanel", () => {
     vi.stubGlobal("fetch", fetchMock)
     render(<AiAssistantPanel {...props} />)
     fireEvent.click(screen.getByRole("button", { name: "总结文档" }))
-    expect(screen.getByRole("status")).toHaveTextContent("AI")
+    expect(screen.getByRole("status")).toHaveTextContent("正在思考")
     await waitFor(() =>
       expect(screen.getByText("你好世界")).toBeInTheDocument()
     )
