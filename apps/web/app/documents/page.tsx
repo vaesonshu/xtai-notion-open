@@ -25,6 +25,7 @@ export default function DocumentsIndexPage() {
       router.replace("/login?returnTo=%2Fdocuments")
       return
     }
+    const currentUserId = user.id
 
     let cancelled = false
 
@@ -33,7 +34,7 @@ export default function DocumentsIndexPage() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
         const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
           credentials: "include",
-          headers: { "x-dev-user-id": user.id },
+          headers: { "x-dev-user-id": currentUserId },
         })
         if (!response.ok) {
           throw new Error(`Failed to load documents (${response.status})`)

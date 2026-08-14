@@ -41,9 +41,9 @@ describe("AiAssistantPanel", () => {
       expect(screen.getByText("你好世界")).toBeInTheDocument()
     )
     expect(props.getDocumentText).toHaveBeenCalled()
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).toMatchObject(
-      { documentText: "最新文档" }
-    )
+    expect(
+      JSON.parse(fetchMock.mock.calls[0]![1]!.body as string)
+    ).toMatchObject({ documentText: "最新文档" })
   })
 
   it("clears the conversation when closed and reopened", async () => {

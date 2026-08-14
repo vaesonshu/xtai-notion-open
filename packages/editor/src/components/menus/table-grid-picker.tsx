@@ -30,13 +30,13 @@ export function TableGridPicker({
   )
   const visibleCols = Math.min(
     maxCols,
-    Math.max(defaultCols, previewCols + (hover ? 1 : 0))
+    Math.max(5, defaultCols, previewCols + (hover ? 1 : 0))
   )
 
   return (
     <div
       // Extra breathing room keeps pointer movement inside the picker surface.
-      className="select-none p-4"
+      className="p-4 select-none"
       role="grid"
       aria-label="选择表格尺寸"
       onMouseLeave={() => setHover(null)}
@@ -58,9 +58,7 @@ export function TableGridPicker({
                   data-testid={`table-grid-cell-${row}-${col}`}
                   aria-label={`${row + 1} 行 ${col + 1} 列`}
                   className={`size-5 rounded-sm border transition-colors ${
-                    isActive
-                      ? "border-[#24866B]"
-                      : "border-[#D8D2C4]"
+                    isActive ? "border-[#24866B]" : "border-[#D8D2C4]"
                   }`}
                   style={{
                     backgroundColor: isActive ? "#BFE6D0" : "#FFFFFF",

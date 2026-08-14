@@ -230,9 +230,7 @@ export function SlashMenu() {
 
   const tableVirtualElement = useMemo<VirtualElement | null>(
     () =>
-      tableAnchorRect
-        ? { getBoundingClientRect: () => tableAnchorRect }
-        : null,
+      tableAnchorRect ? { getBoundingClientRect: () => tableAnchorRect } : null,
     [tableAnchorRect]
   )
   const { refs: tableRefs, floatingStyles: tableFloatingStyles } =
@@ -324,7 +322,7 @@ export function SlashMenu() {
       >
         <div
           ref={menuScrollRef}
-          className="max-h-72 overscroll-contain overflow-y-auto"
+          className="max-h-72 overflow-y-auto overscroll-contain bg-white"
           onWheel={(event) => {
             // Keep slash-menu scrolling from bubbling into the editor surface.
             event.stopPropagation()
@@ -342,7 +340,7 @@ export function SlashMenu() {
               data-slash-command={item.id}
               className={`flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm transition-colors ${
                 hoveredId === item.id || selectedId === item.id
-                  ? "text-[#24866B]"
+                  ? "text-[#24866B] data-[selected]:!bg-[#E6F3EC]"
                   : "bg-transparent text-[#242321]"
               }`}
               style={
@@ -361,8 +359,7 @@ export function SlashMenu() {
                 if (item.id === "table") {
                   tablePinnedRef.current = false
                   openTableSubmenu(event.currentTarget)
-                }
-                else {
+                } else {
                   tablePinnedRef.current = false
                   setTableAnchorRect(null)
                 }

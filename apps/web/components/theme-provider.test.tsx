@@ -41,7 +41,7 @@ describe("ThemeProvider hotkey handling", () => {
         metaKey: false,
         repeat: false,
         target: document.body,
-      } as KeyboardEvent)
+      } as unknown as KeyboardEvent)
     }).not.toThrow()
 
     expect(setTheme).not.toHaveBeenCalled()
