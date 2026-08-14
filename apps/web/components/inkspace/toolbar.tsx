@@ -208,14 +208,16 @@ export function EditorToolbar({
       <div className="flex items-center gap-2.5">
         <CollaborationPresence />
         <Button
-          aria-label="打开 AI 协作助手"
+          aria-label="AI 协作助手"
+          title="AI 协作助手"
           aria-expanded={aiOpen}
           onClick={onAiToggle}
           variant="ghost"
-          size="icon-sm"
-          className="!text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
+          size="sm"
+          className="gap-1.5 !text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
         >
           <PencilIcon icon={MessageSquareIcon} size={17} color="#615E58" />
+          <span className="font-medium">AI</span>
         </Button>
         <Button
           variant="ghost"

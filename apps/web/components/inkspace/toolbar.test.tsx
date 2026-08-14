@@ -12,6 +12,12 @@ vi.mock("../auth-menu", () => ({ AuthMenu: () => null }))
 vi.mock("./share-dialog", () => ({ ShareDialog: () => null }))
 
 describe("EditorToolbar", () => {
+  it("shows a clearly labeled AI assistant button", () => {
+    const { getByRole } = render(<EditorToolbar />)
+
+    expect(getByRole("button", { name: "AI 协作助手" })).toHaveTextContent("AI")
+  })
+
   it("does not nest buttons when collaborator avatars are visible", () => {
     const { container } = render(<EditorToolbar />)
 
