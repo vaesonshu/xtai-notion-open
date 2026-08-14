@@ -8,6 +8,7 @@ import { DatabaseModule } from "./database/database.module"
 import { DocumentsModule } from "./documents/documents.module"
 import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
+import { AiModule } from "./ai/ai.module"
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ImageUploadModule } from "./images/image-upload.module"
     CollaborationModule,
     CosModule,
     ImageUploadModule,
+    AiModule,
   ],
   providers: [
     // Register SessionInitGuard globally so every request will attempt to
