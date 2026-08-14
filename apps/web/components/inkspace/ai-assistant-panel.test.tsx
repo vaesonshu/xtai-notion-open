@@ -109,7 +109,10 @@ describe("AiAssistantPanel", () => {
 
   it("fills the workspace height so the composer stays at the panel bottom", () => {
     render(<AiAssistantPanel {...props} />)
-    expect(screen.getByRole("complementary")).toHaveClass("h-full")
+    expect(screen.getByRole("complementary")).toHaveClass("h-[100dvh]")
+    expect(screen.getByTestId("ai-message-scroll")).toHaveClass(
+      "overflow-y-auto"
+    )
   })
 
   it("highlights fenced code blocks and preserves their language label", async () => {
