@@ -31,7 +31,7 @@ export { insertTable } from "./core/table"
 export type {
   MentionContextValue,
   MentionNavigate,
-} from "./react/mention-provider"
+} from "./react/providers/mention-provider"
 export {
   IMAGE_MIME_TYPES,
   MAX_IMAGE_SIZE,

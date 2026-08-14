@@ -2,7 +2,7 @@
 
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert"
 import { Skeleton } from "@workspace/ui/components/skeleton"
-import { useCollaborationStatus } from "../react/use-collaboration-status"
+import { useCollaborationStatus } from "../react/hooks/use-collaboration-status"
 
 export function CollaborationStatus() {
   const status = useCollaborationStatus()

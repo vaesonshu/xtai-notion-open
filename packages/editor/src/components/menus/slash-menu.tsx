@@ -1,0 +1,274 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+import type { Editor, Range } from "@tiptap/core"
+import { PluginKey } from "@tiptap/pm/state"
+import Suggestion, {
+  exitSuggestion,
+  type SuggestionKeyDownProps,
+  type SuggestionProps,
+} from "@tiptap/suggestion"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@workspace/ui/components/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@workspace/ui/components/popover"
+import {
+  executeSlashCommand,
+  filterCommands,
+  getSlashCommands,
+  type SlashCommand,
+} from "../../core/slash-commands"
+import { insertTable } from "../../core/table"
+import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import { useImageUpload } from "../nodes/image-upload"
+import { TableGridPicker } from "./table-grid-picker"
+
+const slashMenuPluginKey = new PluginKey("slashMenu")
+
+type SlashSuggestionState = {
+  query: string
+  items: SlashCommand[]
+  range: Range
+  command: (item: SlashCommand) => void
+}
+
+function applySlashCommand(
+  editor: Editor,
+  range: Range,
+  item: SlashCommand,
+  insertImageUpload: () => void
+) {
+  editor.chain().focus().deleteRange(range).run()
+  if (item.id === "upload-image") {
+    insertImageUpload()
+    return
+  }
+  executeSlashCommand(editor, item.id)
+}
+
+export function SlashMenu() {
+  const editor = useEditorInstance()
+  const { canUpload, openFilePicker: insertImageUpload } = useImageUpload()
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [items, setItems] = useState<SlashCommand[]>([])
+  const [selectedId, setSelectedId] = useState("")
+  const suggestionRef = useRef<SlashSuggestionState | null>(null)
+  const insertImageUploadRef = useRef(insertImageUpload)
+  const selectedIdRef = useRef(selectedId)
+  const itemsRef = useRef(items)
+
+  useEffect(() => {
+    insertImageUploadRef.current = insertImageUpload
+    selectedIdRef.current = selectedId
+    itemsRef.current = items
+  }, [insertImageUpload, items, selectedId])
+
+  useEffect(() => {
+    if (!editor.isEditable) {
+      return
+    }
+
+    const plugin = Suggestion<SlashCommand, SlashCommand>({
+      pluginKey: slashMenuPluginKey,
+      editor,
+      char: "/",
+      startOfLine: true,
+      allowedPrefixes: null,
+      items: ({ query: nextQuery }) => {
+        return filterCommands(
+          getSlashCommands({ includeImageUpload: canUpload }),
+          nextQuery
+        )
+      },
+      command: ({ editor: activeEditor, range, props }) => {
+        applySlashCommand(
+          activeEditor,
+          range,
+          props,
+          insertImageUploadRef.current
+        )
+      },
+      render: () => {
+        const sync = (props: SuggestionProps<SlashCommand, SlashCommand>) => {
+          suggestionRef.current = {
+            query: props.query,
+            items: props.items,
+            range: props.range,
+            command: props.command,
+          }
+          setQuery(props.query)
+          setItems(props.items)
+          setSelectedId((current) =>
+            props.items.some((item) => item.id === current)
+              ? current
+              : (props.items[0]?.id ?? "")
+          )
+          setOpen(true)
+        }
+
+        return {
+          onStart: sync,
+          onUpdate: sync,
+          onExit: () => {
+            suggestionRef.current = null
+            setOpen(false)
+            setQuery("")
+            setItems([])
+            setSelectedId("")
+          },
+          onKeyDown: ({ event }: SuggestionKeyDownProps) => {
+            if (!suggestionRef.current) {
+              return false
+            }
+
+            if (event.key === "Escape") {
+              exitSuggestion(editor.view, slashMenuPluginKey)
+              return true
+            }
+
+            const currentItems = itemsRef.current
+            if (currentItems.length === 0) {
+              return false
+            }
+
+            if (event.key === "ArrowDown") {
+              const index = currentItems.findIndex(
+                (item) => item.id === selectedIdRef.current
+              )
+              const next = currentItems[(index + 1) % currentItems.length]
+              if (next) {
+                setSelectedId(next.id)
+              }
+              return true
+            }
+
+            if (event.key === "ArrowUp") {
+              const index = currentItems.findIndex(
+                (item) => item.id === selectedIdRef.current
+              )
+              const next =
+                currentItems[
+                  (index - 1 + currentItems.length) % currentItems.length
+                ]
+              if (next) {
+                setSelectedId(next.id)
+              }
+              return true
+            }
+
+            if (event.key === "Enter") {
+              const selected =
+                currentItems.find(
+                  (item) => item.id === selectedIdRef.current
+                ) ?? currentItems[0]
+              if (selected) {
+                suggestionRef.current.command(selected)
+              }
+              return true
+            }
+
+            return false
+          },
+        }
+      },
+    })
+
+    // Prepend so Arrow/Enter/Escape are handled before default keymap actions.
+    editor.registerPlugin(plugin, (nextPlugin, plugins) => [
+      nextPlugin,
+      ...plugins,
+    ])
+    return () => {
+      editor.unregisterPlugin(slashMenuPluginKey)
+    }
+  }, [canUpload, editor])
+
+  if (!editor.isEditable) {
+    return null
+  }
+
+  // 表格命令特殊处理：删除已输入的 "/" 范围后在光标处插入所选尺寸的表格。
+  function applyTable(rows: number, cols: number) {
+    const range = suggestionRef.current?.range
+    if (!range) return
+    editor.chain().focus().deleteRange(range).run()
+    insertTable(editor, rows, cols)
+    exitSuggestion(editor.view, slashMenuPluginKey)
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          exitSuggestion(editor.view, slashMenuPluginKey)
+        }
+        setOpen(nextOpen)
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+            aria-hidden
+            tabIndex={-1}
+          />
+        }
+      />
+      <PopoverContent
+        align="start"
+        side="bottom"
+        className="w-72 bg-white p-0 text-[#242321]"
+        data-testid="slash-menu"
+        initialFocus={false}
+        finalFocus={false}
+      >
+        <Command
+          shouldFilter={false}
+          value={selectedId}
+          className="bg-white text-[#242321]"
+          onValueChange={setSelectedId}
+        >
+          <CommandList>
+            <CommandEmpty>没有匹配的命令</CommandEmpty>
+            <CommandGroup heading={query ? `/${query}` : "插入块"}>
+              {items.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={item.id}
+                  keywords={item.keywords}
+                  className="hover:!bg-[#F3F2EF] hover:!text-[#242321] data-[selected]:!bg-[#E6F3EC] data-[selected]:!text-[#24866B]"
+                  onSelect={() => {
+                    if (item.id === "table") {
+                      // 展开内嵌网格，点击后通过 applyTable 插入，不直接执行命令。
+                      return
+                    }
+                    suggestionRef.current?.command(item)
+                  }}
+                >
+                  {item.id === "table" ? (
+                    <div onPointerDown={(event) => event.stopPropagation()}>
+                      <TableGridPicker onSelect={applyTable} />
+                    </div>
+                  ) : (
+                    item.label
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}

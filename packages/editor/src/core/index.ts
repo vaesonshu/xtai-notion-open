@@ -4,7 +4,7 @@ export type {
   EditorExtensionOptions,
 } from "./types"
 export { createEditorExtensions } from "./extensions"
-export { createInitialDocument } from "./initial-document"
+export { createInitialDocument } from "./document/initial-document"
 export {
   createEmptyDocument,
   createStarterDocument,

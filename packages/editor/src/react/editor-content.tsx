@@ -1,7 +1,7 @@
 "use client"
 
 import { EditorContent as TiptapEditorContent } from "@tiptap/react"
-import { useEditorInstance } from "./use-editor-instance"
+import { useEditorInstance } from "./hooks/use-editor-instance"
 
 export type EditorContentProps = { className?: string }
 
