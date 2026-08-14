@@ -21,11 +21,15 @@ export class AiService {
     userId: string,
     signal?: AbortSignal
   ): AsyncIterable<AiStreamEvent> {
+    if (!request || !Array.isArray(request.messages)) {
+      throw new BadRequestException("AI 请求格式无效")
+    }
     await this.documents.assertCanRead(request.documentId, userId)
     if (!request.documentId.trim() || !request.documentText.trim()) {
       throw new BadRequestException("文档和文档内容不能为空")
     }
     if (
+      typeof request.documentText !== "string" ||
       request.documentText.length > AI_LIMITS.documentText ||
       request.messages.length > AI_LIMITS.messages ||
       request.messages.some(
