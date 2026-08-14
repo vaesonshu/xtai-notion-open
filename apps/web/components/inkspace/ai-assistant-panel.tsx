@@ -21,6 +21,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
+  const [answerStarted, setAnswerStarted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -45,6 +46,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     setInput("")
     setError(null)
     setStreaming(true)
+    setAnswerStarted(false)
     const controller = new AbortController()
     abortRef.current = controller
     let answer = ""
@@ -86,6 +88,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             message?: string
           }
           if (payload.type === "token") {
+            setAnswerStarted(true)
             answer += payload.content ?? ""
             setMessages([
               ...history,
@@ -102,6 +105,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         setError(caught instanceof Error ? caught.message : "AI 服务暂不可用")
     } finally {
       setStreaming(false)
+      setAnswerStarted(false)
       abortRef.current = null
     }
   }
@@ -122,13 +126,15 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
           关闭
         </Button>
       </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-auto p-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-auto bg-[#FCFCFA] p-4">
         {messages.length === 0 && (
-          <div className="grid gap-2">
+          <div className="flex flex-wrap gap-2">
             {QUICK_ACTIONS.map((action) => (
               <Button
                 key={action}
                 variant="outline"
+                size="sm"
+                className="rounded-full border-[#D8D2C4] bg-white text-xs text-[#5E625D]"
                 onClick={() => void send(action)}
               >
                 {action}
@@ -139,13 +145,35 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         {messages.map((message, index) => (
           <div
             key={`${message.role}-${index}`}
-            className={
-              message.role === "user" ? "text-right" : "whitespace-pre-wrap"
-            }
+            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
-            {message.content}
+            <div
+              className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 whitespace-pre-wrap shadow-sm ${
+                message.role === "user"
+                  ? "rounded-br-md bg-[#D9F0E3] text-[#24543F]"
+                  : "rounded-bl-md border border-[#E8E6E1] bg-white text-[#373532]"
+              }`}
+            >
+              {message.content}
+            </div>
           </div>
         ))}
+        {streaming && !answerStarted && (
+          <div className="flex justify-start" role="status" aria-live="polite">
+            <div className="flex items-center gap-2 rounded-2xl rounded-bl-md border border-[#E8E6E1] bg-white px-3.5 py-2.5 text-sm text-[#8A857B] shadow-sm">
+              <span className="flex gap-1" aria-hidden="true">
+                {[0, 1, 2].map((dot) => (
+                  <span
+                    key={dot}
+                    className="size-1.5 animate-pulse rounded-full bg-[#78B596] motion-reduce:animate-none"
+                    style={{ animationDelay: `${dot * 150}ms` }}
+                  />
+                ))}
+              </span>
+              正在思考…
+            </div>
+          </div>
+        )}
         {error && (
           <div role="alert" className="text-sm text-red-600">
             {error}{" "}
