@@ -16,5 +16,8 @@ export {
   useMentionProvider,
   useMentionNavigate,
 } from "./providers/mention-provider"
-export type { MentionContextValue, MentionNavigate } from "./providers/mention-provider"
+export type {
+  MentionContextValue,
+  MentionNavigate,
+} from "./providers/mention-provider"
 export type { Editor } from "@tiptap/core"

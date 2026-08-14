@@ -8,7 +8,20 @@ describe("getEditorText", () => {
         type: "doc",
         content: [
           { type: "paragraph", content: [{ type: "text", text: "标题" }] },
-          { type: "bulletList", content: [{ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "待办" }] }] }] },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "待办" }],
+                  },
+                ],
+              },
+            ],
+          },
         ],
       })),
     }

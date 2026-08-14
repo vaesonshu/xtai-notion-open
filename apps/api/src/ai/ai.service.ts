@@ -3,7 +3,11 @@ import { DocumentsService } from "../documents/documents.service"
 import { AiAgent } from "./ai.agent"
 import type { AiChatRequest, AiStreamEvent } from "./ai.types"
 
-export const AI_LIMITS = { documentText: 100_000, messages: 40, message: 10_000 }
+export const AI_LIMITS = {
+  documentText: 100_000,
+  messages: 40,
+  message: 10_000,
+}
 
 @Injectable()
 export class AiService {

@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-} from "@nestjs/common"
+import { Body, Controller, Post, Req, Res, UseGuards } from "@nestjs/common"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import { CurrentUser, type DevUser } from "../auth/current-user.decorator"
 import { AiService } from "./ai.service"
@@ -30,9 +23,15 @@ export class AiController {
     const controller = new AbortController()
     request.on("close", () => controller.abort())
     try {
-      for await (const event of this.ai.chat(body, user.id, controller.signal)) {
+      for await (const event of this.ai.chat(
+        body,
+        user.id,
+        controller.signal
+      )) {
         if (controller.signal.aborted || response.writableEnded) break
-        response.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
+        response.write(
+          `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`
+        )
       }
     } finally {
       if (!response.writableEnded) response.end()
