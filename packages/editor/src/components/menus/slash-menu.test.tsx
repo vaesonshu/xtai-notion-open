@@ -331,10 +331,10 @@ describe("SlashMenu", () => {
 
     const option = await screen.findByRole("option", { name: /表格/ })
     await act(async () => {
-      fireEvent.click(option)
+      fireEvent.mouseEnter(option)
     })
 
-    // 表格项展开内嵌网格，点击 2×2 的单元格提交。
+    // 表格项悬浮后在右侧展开网格，点击 2×2 的单元格提交。
     const cell = await screen.findByTestId("table-grid-cell-1-1")
     await act(async () => {
       fireEvent.click(cell)
