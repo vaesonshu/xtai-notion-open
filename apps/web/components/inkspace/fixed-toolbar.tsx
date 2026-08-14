@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useRef, useState } from "react"
+import { use, useEffect, useRef, useState, type ReactElement } from "react"
 import {
   BoldIcon,
   CodeIcon,
@@ -21,10 +21,7 @@ import {
   UndoIcon,
 } from "@workspace/icons"
 import { EditorContext, type Editor } from "@workspace/editor/react"
-import {
-  TableGridPicker,
-  useImageUpload,
-} from "@workspace/editor/components"
+import { TableGridPicker, useImageUpload } from "@workspace/editor/components"
 import { insertTable } from "@workspace/editor/core"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
@@ -41,15 +38,30 @@ import {
 } from "@workspace/ui/components/popover"
 
 const marks = [
-  ["Bold", BoldIcon, "bold"],
-  ["Italic", ItalicIcon, "italic"],
-  ["Underline", UnderlineIcon, "underline"],
-  ["Strike", StrikethroughIcon, "strike"],
-  ["Inline code", CodeIcon, "code"],
+  ["粗体", BoldIcon, "bold"],
+  ["斜体", ItalicIcon, "italic"],
+  ["下划线", UnderlineIcon, "underline"],
+  ["删除线", StrikethroughIcon, "strike"],
+  ["行内代码", CodeIcon, "code"],
 ] as const
 
 export function insertEmoji(editor: Editor, emoji: string): boolean {
   return editor.chain().focus().insertContent(emoji).run()
+}
+
+function ToolbarTooltip({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactElement
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
 }
 
 function EmojiPicker({
@@ -137,15 +149,18 @@ export function FixedEditorToolbar() {
       aria-label="Editor toolbar"
     >
       {marks.map(([label, Icon, mark], index) => (
-        <Toggle
-          key={mark}
-          size="sm"
-          pressed={state.active[index] ?? false}
-          aria-label={label}
-          onPressedChange={() => editor.chain().focus().toggleMark(mark).run()}
-        >
-          <Icon />
-        </Toggle>
+        <ToolbarTooltip key={mark} label={label}>
+          <Toggle
+            size="sm"
+            pressed={state.active[index] ?? false}
+            aria-label={label}
+            onPressedChange={() =>
+              editor.chain().focus().toggleMark(mark).run()
+            }
+          >
+            <Icon />
+          </Toggle>
+        </ToolbarTooltip>
       ))}
       <Separator orientation="vertical" className="mx-1 h-6" />
       {canUpload ? (
@@ -165,73 +180,106 @@ export function FixedEditorToolbar() {
           <TooltipContent>上传图片</TooltipContent>
         </Tooltip>
       ) : null}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Paragraph"
-        onClick={() => editor.chain().focus().setParagraph().run()}
-      >
-        <PilcrowIcon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Heading 1"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-      >
-        <Heading1Icon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Heading 2"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-      >
-        <Heading2Icon />
-      </Button>
-      <Toggle
-        size="sm"
-        aria-label="Bullet list"
-        onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-      >
-        <ListIcon />
-      </Toggle>
-      <Toggle
-        size="sm"
-        aria-label="Numbered list"
-        onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
-      >
-        <ListOrderedIcon />
-      </Toggle>
-      <Toggle
-        size="sm"
-        aria-label="Task list"
-        onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
-      >
-        <ListTodoIcon />
-      </Toggle>
-      <Toggle
-        size="sm"
-        aria-label="Blockquote"
-        onPressedChange={() => editor.chain().focus().toggleBlockquote().run()}
-      >
-        <QuoteIcon />
-      </Toggle>
-      <Toggle
-        size="sm"
-        aria-label="Code block"
-        onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
-      >
-        <CodeIcon />
-      </Toggle>
-      <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
-        <PopoverTrigger
-          render={
-            <Button variant="ghost" size="icon-sm" aria-label="插入表格">
-              <TableIcon />
-            </Button>
+      <ToolbarTooltip label="正文">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="正文"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+        >
+          <PilcrowIcon />
+        </Button>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="一级标题">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="一级标题"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
           }
-        />
+        >
+          <Heading1Icon />
+        </Button>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="二级标题">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="二级标题"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+        >
+          <Heading2Icon />
+        </Button>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="项目符号列表">
+        <Toggle
+          size="sm"
+          aria-label="Bullet list"
+          onPressedChange={() =>
+            editor.chain().focus().toggleBulletList().run()
+          }
+        >
+          <ListIcon />
+        </Toggle>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="编号列表">
+        <Toggle
+          size="sm"
+          aria-label="Numbered list"
+          onPressedChange={() =>
+            editor.chain().focus().toggleOrderedList().run()
+          }
+        >
+          <ListOrderedIcon />
+        </Toggle>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="待办列表">
+        <Toggle
+          size="sm"
+          aria-label="Task list"
+          onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
+        >
+          <ListTodoIcon />
+        </Toggle>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="引用">
+        <Toggle
+          size="sm"
+          aria-label="Blockquote"
+          onPressedChange={() =>
+            editor.chain().focus().toggleBlockquote().run()
+          }
+        >
+          <QuoteIcon />
+        </Toggle>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="代码块">
+        <Toggle
+          size="sm"
+          aria-label="Code block"
+          onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
+        >
+          <CodeIcon />
+        </Toggle>
+      </ToolbarTooltip>
+      <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <PopoverTrigger
+                render={
+                  <Button variant="ghost" size="icon-sm" aria-label="插入表格">
+                    <TableIcon />
+                  </Button>
+                }
+              />
+            }
+          />
+          <TooltipContent>插入表格</TooltipContent>
+        </Tooltip>
         <PopoverContent align="start" className="w-auto p-0">
           <TableGridPicker
             onSelect={(rows, cols) => {
@@ -242,13 +290,20 @@ export function FixedEditorToolbar() {
         </PopoverContent>
       </Popover>
       <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-        <PopoverTrigger
-          render={
-            <Button variant="ghost" size="icon-sm" aria-label="Insert emoji">
-              <SmileIcon />
-            </Button>
-          }
-        />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <PopoverTrigger
+                render={
+                  <Button variant="ghost" size="icon-sm" aria-label="插入表情">
+                    <SmileIcon />
+                  </Button>
+                }
+              />
+            }
+          />
+          <TooltipContent>插入表情</TooltipContent>
+        </Tooltip>
         <PopoverContent align="start" className="w-auto p-0">
           {emojiPickerOpen && (
             <EmojiPicker
@@ -259,24 +314,28 @@ export function FixedEditorToolbar() {
         </PopoverContent>
       </Popover>
       <Separator orientation="vertical" className="mx-1 h-6" />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Undo"
-        disabled={!state.canUndo}
-        onClick={() => editor.chain().focus().undo().run()}
-      >
-        <UndoIcon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Redo"
-        disabled={!state.canRedo}
-        onClick={() => editor.chain().focus().redo().run()}
-      >
-        <RedoIcon />
-      </Button>
+      <ToolbarTooltip label="撤销">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="撤销"
+          disabled={!state.canUndo}
+          onClick={() => editor.chain().focus().undo().run()}
+        >
+          <UndoIcon />
+        </Button>
+      </ToolbarTooltip>
+      <ToolbarTooltip label="重做">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="重做"
+          disabled={!state.canRedo}
+          onClick={() => editor.chain().focus().redo().run()}
+        >
+          <RedoIcon />
+        </Button>
+      </ToolbarTooltip>
     </div>
   )
 }
