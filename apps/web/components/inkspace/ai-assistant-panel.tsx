@@ -12,7 +12,7 @@ type Message = { role: "user" | "assistant"; content: string }
 
 function AssistantMarkdown({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm prose-headings:mb-2 prose-headings:mt-3 prose-p:my-2 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-[#242321] prose-pre:p-3 prose-pre:text-[#F7F5EF] prose-a:text-[#24866B] prose-a:underline max-w-none text-[#373532]">
+    <div className="prose prose-sm prose-headings:my-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-pre:my-2 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-[#242321] prose-pre:p-3 prose-pre:text-[#F7F5EF] prose-a:text-[#24866B] prose-a:underline max-w-none text-[#373532]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
@@ -189,7 +189,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         </Button>
       </div>
       <div
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#FCFCFA] p-4"
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#FCFCFA] p-4"
         data-testid="ai-message-scroll"
       >
         {messages.length === 0 && (
@@ -213,9 +213,9 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 whitespace-pre-wrap shadow-sm ${
+              className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 shadow-sm ${
                 message.role === "user"
-                  ? "rounded-br-md bg-[#D9F0E3] text-[#24543F]"
+                  ? "rounded-br-md bg-[#D9F0E3] whitespace-pre-wrap text-[#24543F]"
                   : "rounded-bl-md border border-[#E8E6E1] bg-white text-[#373532]"
               }`}
             >
