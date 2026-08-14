@@ -1,6 +1,7 @@
 "use client"
 
 import type { CollaborationUser } from "@workspace/editor"
+import { useEditorText } from "@workspace/editor/react"
 import type { CreateProvider } from "@workspace/editor/collaboration"
 import { DocumentEditor } from "@workspace/editor/components"
 import type { MentionProvider, MentionNavigate } from "@workspace/editor"
@@ -14,6 +15,7 @@ import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
 import { createDocumentImageUploader } from "./image-upload"
+import { AiAssistantPanel } from "./ai-assistant-panel"
 
 export type DocumentWorkspaceUser = CollaborationUser
 
@@ -137,6 +139,10 @@ export function DocumentWorkspace({
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [aiOpen, setAiOpen] = useState(false)
+  const [getDocumentText, setGetDocumentText] = useState<() => string>(
+    () => () => ""
+  )
 
   const configured = isConfigured(apiUrl, collaborationUrl)
   const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
@@ -229,29 +235,53 @@ export function DocumentWorkspace({
     : undefined
 
   return (
-    <DocumentEditor
-      collaboration={{
-        documentId,
-        websocketUrl: collaborationUrl,
-        token: user.id,
-        user,
-      }}
-      editable={editable}
-      imageUpload={imageUpload}
-      createProvider={createProvider}
-      mentionProvider={mentionProvider}
-      mentionNavigate={mentionNavigate}
-      renderToolbar={() => <FixedEditorToolbar />}
-      className="flex min-h-0 flex-1 flex-col"
-      renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
-    >
-      <EditorToolbar
-        title={title}
-        parentTitle={parentTitle}
+    <div className="flex min-h-0 flex-1">
+      <DocumentEditor
+        collaboration={{
+          documentId,
+          websocketUrl: collaborationUrl,
+          token: user.id,
+          user,
+        }}
+        editable={editable}
+        imageUpload={imageUpload}
+        createProvider={createProvider}
+        mentionProvider={mentionProvider}
+        mentionNavigate={mentionNavigate}
+        renderToolbar={() => (
+          <WorkspaceToolbarBridge onTextReady={setGetDocumentText} />
+        )}
+        className="flex min-h-0 flex-1 flex-col"
+        renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
+      >
+        <EditorToolbar
+          title={title}
+          parentTitle={parentTitle}
+          apiUrl={apiUrl}
+          documentId={documentId}
+          canShare={editable}
+          aiOpen={aiOpen}
+          onAiToggle={() => setAiOpen((open) => !open)}
+        />
+      </DocumentEditor>
+      <AiAssistantPanel
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
         apiUrl={apiUrl}
         documentId={documentId}
-        canShare={editable}
+        userId={user.id}
+        getDocumentText={getDocumentText}
       />
-    </DocumentEditor>
+    </div>
   )
+}
+
+function WorkspaceToolbarBridge({
+  onTextReady,
+}: {
+  onTextReady: (reader: () => string) => void
+}) {
+  const getText = useEditorText()
+  useEffect(() => onTextReady(() => getText()), [getText, onTextReady])
+  return <FixedEditorToolbar />
 }

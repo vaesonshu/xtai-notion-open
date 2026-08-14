@@ -40,6 +40,8 @@ export type EditorToolbarProps = {
   apiUrl?: string
   documentId?: string
   canShare?: boolean
+  aiOpen?: boolean
+  onAiToggle?: () => void
 }
 
 function StatusBadge({ status }: { status: CollaborationStatus }) {
@@ -189,6 +191,8 @@ export function EditorToolbar({
   apiUrl,
   documentId,
   canShare = true,
+  aiOpen = false,
+  onAiToggle,
 }: EditorToolbarProps) {
   return (
     <header className="flex h-[68px] shrink-0 items-center justify-between border-b border-[#E8E6E1] px-6">
@@ -204,6 +208,9 @@ export function EditorToolbar({
       <div className="flex items-center gap-2.5">
         <CollaborationPresence />
         <Button
+          aria-label="打开 AI 协作助手"
+          aria-expanded={aiOpen}
+          onClick={onAiToggle}
           variant="ghost"
           size="icon-sm"
           className="!text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
