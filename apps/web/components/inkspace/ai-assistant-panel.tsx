@@ -2,9 +2,31 @@
 
 import { Button } from "@workspace/ui/components/button"
 import { Textarea } from "@workspace/ui/components/textarea"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { useEffect, useRef, useState } from "react"
 
 type Message = { role: "user" | "assistant"; content: string }
+
+function AssistantMarkdown({ content }: { content: string }) {
+  return (
+    <div className="prose prose-sm prose-headings:mb-2 prose-headings:mt-3 prose-p:my-2 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-[#242321] prose-pre:p-3 prose-pre:text-[#F7F5EF] prose-a:text-[#24866B] prose-a:underline max-w-none text-[#373532]">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        skipHtml
+        components={{
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noreferrer">
+              {children}
+            </a>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  )
+}
 
 export type AiAssistantPanelProps = {
   open: boolean
@@ -165,7 +187,11 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
                   : "rounded-bl-md border border-[#E8E6E1] bg-white text-[#373532]"
               }`}
             >
-              {message.content}
+              {message.role === "assistant" ? (
+                <AssistantMarkdown content={message.content} />
+              ) : (
+                message.content
+              )}
             </div>
           </div>
         ))}

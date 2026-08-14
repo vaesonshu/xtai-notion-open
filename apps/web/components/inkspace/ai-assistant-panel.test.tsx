@@ -77,4 +77,33 @@ describe("AiAssistantPanel", () => {
     await waitFor(() => expect(screen.getByText("回复")).toBeInTheDocument())
     expect(scrollIntoView).toHaveBeenCalled()
   })
+
+  it("renders assistant Markdown while keeping raw HTML out of the DOM", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          streamResponse([
+            'event: token\ndata: {"type":"token","content":"## 标题\\n\\n**重点** [链接](https://example.com)\\n\\n<script>alert(1)</script>"}\n\n',
+          ])
+        )
+    )
+    render(<AiAssistantPanel {...props} />)
+    fireEvent.click(screen.getByRole("button", { name: /总结/ }))
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { level: 2, name: "标题" })
+      ).toBeInTheDocument()
+    )
+    expect(screen.getByText("重点")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "链接" })).toHaveAttribute(
+      "target",
+      "_blank"
+    )
+    expect(
+      screen.queryByText("<script>alert(1)</script>")
+    ).not.toBeInTheDocument()
+    expect(document.querySelector("script")).toBeNull()
+  })
 })
