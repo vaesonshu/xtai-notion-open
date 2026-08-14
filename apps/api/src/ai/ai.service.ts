@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common"
+import { BadRequestException, Inject, Injectable } from "@nestjs/common"
 import { DocumentsService } from "../documents/documents.service"
 import { AiAgent } from "./ai.agent"
 import type { AiChatRequest, AiStreamEvent } from "./ai.types"
@@ -12,8 +12,8 @@ export const AI_LIMITS = {
 @Injectable()
 export class AiService {
   constructor(
-    private readonly documents: DocumentsService,
-    private readonly agent: AiAgent
+    @Inject(DocumentsService) private readonly documents: DocumentsService,
+    @Inject(AiAgent) private readonly agent: AiAgent
   ) {}
 
   async *chat(

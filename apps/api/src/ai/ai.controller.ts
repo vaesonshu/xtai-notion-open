@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, Res, UseGuards } from "@nestjs/common"
+import {
+  Body,
+  Controller,
+  Inject,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import { CurrentUser, type DevUser } from "../auth/current-user.decorator"
 import { AiService } from "./ai.service"
@@ -7,7 +15,7 @@ import type { AiChatRequest } from "./ai.types"
 @Controller("ai")
 @UseGuards(AuthenticatedIdentityGuard)
 export class AiController {
-  constructor(private readonly ai: AiService) {}
+  constructor(@Inject(AiService) private readonly ai: AiService) {}
 
   @Post("chat")
   async chat(
