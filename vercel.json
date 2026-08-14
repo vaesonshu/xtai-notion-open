@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/api/src/serverless.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "apps/api/prisma/schema.prisma",
+          "apps/api/src/generated/prisma/**",
+          "apps/api/.env*"
+        ],
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [{ "src": "/(.*)", "dest": "/apps/api/src/serverless.ts" }],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

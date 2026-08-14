@@ -5,7 +5,8 @@ import { randomUUID } from "node:crypto"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import * as Y from "yjs"
 import { AppModule } from "../app.module"
-import { DatabaseService } from "../database/database.service"
+import { PrismaService } from "../database/prisma.module"
+import type { PrismaClient } from "../generated/prisma/client"
 import { CollaborationService } from "./collaboration.service"
 import { YjsPersistenceService } from "./yjs-persistence.service"
 
@@ -40,7 +41,7 @@ function waitFor(
 
 describe("collaboration (integration)", () => {
   let app: INestApplication
-  let db: DatabaseService
+  let prisma: PrismaClient
   let persistence: YjsPersistenceService
   let collaboration: CollaborationService
   let workspaceId: string
@@ -51,25 +52,21 @@ describe("collaboration (integration)", () => {
     workspaceId = randomUUID()
     documentId = randomUUID()
 
-    await db.query(`INSERT INTO workspace (id, name) VALUES ($1, $2)`, [
-      workspaceId,
-      "Collaboration Workspace",
-    ])
-    await db.query(
-      `INSERT INTO document (id, workspace_id, title) VALUES ($1, $2, $3)`,
-      [documentId, workspaceId, "Collaboration Document"]
-    )
+    await prisma.workspace.create({
+      data: { id: workspaceId, name: "Collaboration Workspace" },
+    })
+    await prisma.document.create({
+      data: { id: documentId, workspaceId, title: "Collaboration Document" },
+    })
 
     for (const [userId, role] of [
       [USERS.owner, "owner"],
       [USERS.editor, "editor"],
       [USERS.viewer, "viewer"],
     ] as const) {
-      await db.query(
-        `INSERT INTO document_member (document_id, user_id, role)
-         VALUES ($1, $2, $3)`,
-        [documentId, userId, role]
-      )
+      await prisma.documentMember.create({
+        data: { documentId, userId, role },
+      })
     }
   }
 
@@ -82,7 +79,7 @@ describe("collaboration (integration)", () => {
     await app.init()
     await app.listen(0)
 
-    db = app.get(DatabaseService)
+    prisma = app.get(PrismaService).client
     persistence = app.get(YjsPersistenceService)
     collaboration = app.get(CollaborationService)
 
@@ -97,15 +94,18 @@ describe("collaboration (integration)", () => {
 
   afterAll(async () => {
     try {
-      if (db && workspaceId) {
-        await db.query(`DELETE FROM workspace WHERE id = $1`, [workspaceId])
+      if (prisma && workspaceId) {
+        await prisma.workspace.delete({ where: { id: workspaceId } })
       }
     } finally {
       await app?.close()
     }
   })
 
-  function connect(userId: string, ydoc = new Y.Doc()): {
+  function connect(
+    userId: string,
+    ydoc = new Y.Doc()
+  ): {
     document: Y.Doc
     provider: HocuspocusProvider
   } {
@@ -141,22 +141,20 @@ describe("collaboration (integration)", () => {
 
     await persistence.compactDocument(documentId)
 
-    const updateCount = await db.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM yjs_update WHERE document_id = $1`,
-      [documentId]
-    )
-    expect(Number(updateCount.rows[0]?.count ?? "0")).toBe(0)
+    // After compact all per-document updates should be folded into a
+    // snapshot, so the update table is empty and a snapshot exists.
+    const updateCount = await prisma.yjsUpdate.count({
+      where: { documentId },
+    })
+    expect(updateCount).toBe(0)
 
-    const snapshotCount = await db.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM yjs_snapshot WHERE document_id = $1`,
-      [documentId]
-    )
-    expect(Number(snapshotCount.rows[0]?.count ?? "0")).toBeGreaterThan(0)
+    const snapshotCount = await prisma.yjsSnapshot.count({
+      where: { documentId },
+    })
+    expect(snapshotCount).toBeGreaterThan(0)
 
     const loadedAfterCompact = await persistence.loadDocument(documentId)
-    expect(loadedAfterCompact.getText("content").toString()).toBe(
-      "Hello world"
-    )
+    expect(loadedAfterCompact.getText("content").toString()).toBe("Hello world")
     loadedAfterCompact.destroy()
     first.destroy()
     second.destroy()
@@ -173,8 +171,8 @@ describe("collaboration (integration)", () => {
 
     a.document.getText("content").insert(0, "pair-sync")
 
-    await waitFor(
-      () => b.document.getText("content").toString().includes("pair-sync")
+    await waitFor(() =>
+      b.document.getText("content").toString().includes("pair-sync")
     )
 
     expect(b.document.getText("content").toString()).toContain("pair-sync")
@@ -263,7 +261,7 @@ describe("collaboration (integration)", () => {
     await app.init()
     await app.listen(0)
 
-    db = app.get(DatabaseService)
+    prisma = app.get(PrismaService).client
     persistence = app.get(YjsPersistenceService)
     collaboration = app.get(CollaborationService)
     const server = collaboration.getServer()

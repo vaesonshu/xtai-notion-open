@@ -1,194 +1,180 @@
 import { Inject, Injectable } from "@nestjs/common"
-import { DatabaseService } from "../database/database.service"
+import type { Document } from "../generated/prisma/client"
+import { PrismaService } from "../database/prisma.module"
 import type {
   DocumentListRow,
   DocumentRole,
   DocumentRow,
+  PublicationStatus,
 } from "./document-types"
 import { isDocumentRole } from "./document-types"
 
 @Injectable()
 export class DocumentsRepository {
-  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  // Prisma 以 camelCase 返回模型，映射回调用方依赖的 snake_case 行形状，
+  // 让 service 层无需感知底层 ORM 的变化。
+  private toDocumentRow(document: Document): DocumentRow {
+    return {
+      id: document.id,
+      workspace_id: document.workspaceId,
+      parent_id: document.parentId,
+      depth: document.depth,
+      title: document.title,
+      created_at: document.createdAt,
+      updated_at: document.updatedAt,
+      publication_status: document.publicationStatus as PublicationStatus,
+      rejection_reason: document.rejectionReason,
+      published_at: document.publishedAt,
+      published_by: document.publishedBy,
+    }
+  }
 
   async getMemberRole(
     documentId: string,
     userId: string
   ): Promise<DocumentRole | null> {
-    const result = await this.db.query<{ role: string }>(
-      `SELECT role FROM document_member
-       WHERE document_id = $1 AND user_id = $2
-       LIMIT 1`,
-      [documentId, userId]
-    )
-    const role = result.rows[0]?.role
-    return isDocumentRole(role) ? role : null
+    const member = await this.prisma.client.documentMember.findFirst({
+      where: { documentId, userId },
+      select: { role: true },
+    })
+    return isDocumentRole(member?.role) ? (member.role as DocumentRole) : null
   }
 
   async findById(documentId: string): Promise<DocumentRow | null> {
-    const result = await this.db.query<DocumentRow>(
-      `SELECT id, workspace_id, title, parent_id, depth, created_at, updated_at,
-              publication_status, rejection_reason, published_at, published_by
-       FROM document
-       WHERE id = $1
-       LIMIT 1`,
-      [documentId]
-    )
-    return result.rows[0] ?? null
+    const document = await this.prisma.client.document.findUnique({
+      where: { id: documentId },
+    })
+    return document ? this.toDocumentRow(document) : null
   }
 
   async listForUser(userId: string): Promise<DocumentListRow[]> {
-    const result = await this.db.query<DocumentListRow>(
-      `SELECT d.id, d.workspace_id, d.title, d.parent_id, d.depth, d.created_at, d.updated_at,
-              d.publication_status, d.rejection_reason, d.published_at, d.published_by, dm.role
-       FROM document d
-       INNER JOIN document_member dm ON dm.document_id = d.id
-       WHERE dm.user_id = $1
-       ORDER BY d.updated_at DESC, d.created_at DESC`,
-      [userId]
-    )
-    return result.rows
+    const documents = await this.prisma.client.document.findMany({
+      where: { members: { some: { userId } } },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      include: { members: { where: { userId }, select: { role: true } } },
+    })
+    return documents.map((document) => ({
+      ...this.toDocumentRow(document),
+      role: isDocumentRole(document.members[0]?.role)
+        ? (document.members[0]?.role as DocumentRole)
+        : "viewer",
+    }))
   }
 
   async rename(documentId: string, title: string): Promise<DocumentRow | null> {
-    const result = await this.db.query<DocumentRow>(
-      `UPDATE document SET title = $2, updated_at = NOW() WHERE id = $1
-       RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
-                 publication_status, rejection_reason, published_at, published_by`,
-      [documentId, title]
-    )
-    return result.rows[0] ?? null
+    // updateMany 无 RETURNING；先更新再按影响行数决定是否回读，保持返回 null 语义。
+    const result = await this.prisma.client.document.updateMany({
+      where: { id: documentId },
+      data: { title, updatedAt: new Date() },
+    })
+    if (result.count === 0) return null
+    const document = await this.prisma.client.document.findUnique({
+      where: { id: documentId },
+    })
+    return document ? this.toDocumentRow(document) : null
   }
 
   async remove(documentId: string): Promise<boolean> {
-    const result = await this.db.query(`DELETE FROM document WHERE id = $1`, [
-      documentId,
-    ])
-    return (result.rowCount ?? 0) > 0
+    const result = await this.prisma.client.document.deleteMany({
+      where: { id: documentId },
+    })
+    return result.count > 0
   }
 
   async createForOwner(userId: string): Promise<DocumentRow> {
-    return this.db.withTransaction(async (client) => {
-      const workspaceResult = await client.query<{ id: string }>(
-        "INSERT INTO workspace (name) VALUES ($1) RETURNING id",
-        ["个人空间"]
-      )
-      const workspaceId = workspaceResult.rows[0]?.id
-      if (!workspaceId) {
-        throw new Error("Failed to create workspace")
-      }
-
-      const documentResult = await client.query<DocumentRow>(
-        `INSERT INTO document (workspace_id, title, depth, owner_id) VALUES ($1, $2, 1, $3)
-         RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
-                   publication_status, rejection_reason, published_at, published_by`,
-        [workspaceId, "未命名文档", userId]
-      )
-      const document = documentResult.rows[0]
-      if (!document) {
-        throw new Error("Failed to create document")
-      }
-
-      await client.query(
-        `INSERT INTO document_member (document_id, user_id, role)
-         VALUES ($1, $2, 'owner')`,
-        [document.id, userId]
-      )
-      return document
+    return this.prisma.client.$transaction(async (tx) => {
+      const workspace = await tx.workspace.create({
+        data: { name: "个人空间" },
+      })
+      const document = await tx.document.create({
+        data: {
+          workspaceId: workspace.id,
+          title: "未命名文档",
+          depth: 1,
+          ownerId: userId,
+        },
+      })
+      await tx.documentMember.create({
+        data: { documentId: document.id, userId, role: "owner" },
+      })
+      return this.toDocumentRow(document)
     })
   }
 
   async createChild(parent: DocumentRow, userId: string): Promise<DocumentRow> {
-    return this.db.withTransaction(async (client) => {
-      const result = await client.query<DocumentRow>(
-        `INSERT INTO document (workspace_id, parent_id, depth, title, owner_id)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
-                   publication_status, rejection_reason, published_at, published_by`,
-        [
-          parent.workspace_id,
-          parent.id,
-          (parent.depth ?? 1) + 1,
-          "未命名文档",
-          userId,
-        ]
-      )
-      const document = result.rows[0]
-      if (!document) throw new Error("Failed to create child document")
-      await client.query(
-        `INSERT INTO document_member (document_id, user_id, role)
-         VALUES ($1, $2, 'owner')`,
-        [document.id, userId]
-      )
-      return document
+    return this.prisma.client.$transaction(async (tx) => {
+      const document = await tx.document.create({
+        data: {
+          workspaceId: parent.workspace_id,
+          parentId: parent.id,
+          depth: (parent.depth ?? 1) + 1,
+          title: "未命名文档",
+          ownerId: userId,
+        },
+      })
+      await tx.documentMember.create({
+        data: { documentId: document.id, userId, role: "owner" },
+      })
+      return this.toDocumentRow(document)
     })
   }
 
   async submitPublication(documentId: string): Promise<DocumentRow | null> {
-    const result = await this.db.query<DocumentRow>(
-      // The state predicate makes duplicate submissions and stale requests harmless.
-      `UPDATE document
-       SET publication_status = 'pending', rejection_reason = NULL, updated_at = NOW()
-       WHERE id = $1 AND publication_status = 'draft'
-       RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
-                 publication_status, rejection_reason, published_at, published_by`,
-      [documentId]
-    )
-    return result.rows[0] ?? null
+    // compare-and-set：仅 draft 可进入 pending。保留原生 SQL 使“条件更新 +
+    // 返回新行”保持原子，避免先读后写的竞态。
+    const rows = await this.prisma.client.$queryRaw<DocumentRow[]>`
+      UPDATE document
+      SET publication_status = 'pending', rejection_reason = NULL, updated_at = NOW()
+      WHERE id = ${documentId} AND publication_status = 'draft'
+      RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
+                publication_status, rejection_reason, published_at, published_by`
+    return rows[0] ?? null
   }
 
   async approvePublication(
     documentId: string,
     adminUserId: string
   ): Promise<DocumentRow | null> {
-    const result = await this.db.query<DocumentRow>(
-      // Compare-and-set prevents a second admin from approving stale work.
-      `UPDATE document
-       SET publication_status = 'published', published_at = NOW(),
-           published_by = $2, rejection_reason = NULL, updated_at = NOW()
-       WHERE id = $1 AND publication_status = 'pending'
-       RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
-                 publication_status, rejection_reason, published_at, published_by`,
-      [documentId, adminUserId]
-    )
-    return result.rows[0] ?? null
+    // compare-and-set 防止第二个管理员基于过期的 pending 状态重复审批。
+    const rows = await this.prisma.client.$queryRaw<DocumentRow[]>`
+      UPDATE document
+      SET publication_status = 'published', published_at = NOW(),
+          published_by = ${adminUserId}, rejection_reason = NULL, updated_at = NOW()
+      WHERE id = ${documentId} AND publication_status = 'pending'
+      RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
+                publication_status, rejection_reason, published_at, published_by`
+    return rows[0] ?? null
   }
 
   async rejectPublication(
     documentId: string,
     reason: string
   ): Promise<DocumentRow | null> {
-    const result = await this.db.query<DocumentRow>(
-      // Only the pending revision can be returned to a writable draft.
-      `UPDATE document
-       SET publication_status = 'draft', rejection_reason = $2, updated_at = NOW()
-       WHERE id = $1 AND publication_status = 'pending'
-       RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
-                 publication_status, rejection_reason, published_at, published_by`,
-      [documentId, reason]
-    )
-    return result.rows[0] ?? null
+    // compare-and-set：只有 pending 的版本能被退回为可写 draft。
+    const rows = await this.prisma.client.$queryRaw<DocumentRow[]>`
+      UPDATE document
+      SET publication_status = 'draft', rejection_reason = ${reason}, updated_at = NOW()
+      WHERE id = ${documentId} AND publication_status = 'pending'
+      RETURNING id, workspace_id, title, parent_id, depth, created_at, updated_at,
+                publication_status, rejection_reason, published_at, published_by`
+    return rows[0] ?? null
   }
 
   async listPendingPublications(): Promise<DocumentRow[]> {
-    const result = await this.db.query<DocumentRow>(
-      `SELECT id, workspace_id, title, parent_id, depth, created_at, updated_at,
-              publication_status, rejection_reason, published_at, published_by
-       FROM document
-       WHERE publication_status = 'pending'
-       ORDER BY updated_at ASC`
-    )
-    return result.rows
+    const documents = await this.prisma.client.document.findMany({
+      where: { publicationStatus: "pending" },
+      orderBy: { updatedAt: "asc" },
+    })
+    return documents.map((document) => this.toDocumentRow(document))
   }
 
   async listPublishedArticles(): Promise<DocumentRow[]> {
-    const result = await this.db.query<DocumentRow>(
-      `SELECT id, workspace_id, title, parent_id, depth, created_at, updated_at,
-              publication_status, rejection_reason, published_at, published_by
-       FROM document
-       WHERE publication_status = 'published'
-       ORDER BY published_at DESC`
-    )
-    return result.rows
+    const documents = await this.prisma.client.document.findMany({
+      where: { publicationStatus: "published" },
+      orderBy: { publishedAt: "desc" },
+    })
+    return documents.map((document) => this.toDocumentRow(document))
   }
 }

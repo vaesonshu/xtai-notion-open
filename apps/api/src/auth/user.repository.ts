@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
-import { Pool } from "pg"
-import { DATABASE_POOL } from "../database/database.tokens"
+import type { AppUser } from "../generated/prisma/client"
+import { PrismaService } from "../database/prisma.module"
 
 export type UserRecord = {
   id: string
@@ -9,13 +9,28 @@ export type UserRecord = {
   display_name: string
   color: string
   role: "user" | "admin"
-  created_at: string
-  updated_at: string
+  created_at: Date
+  updated_at: Date
 }
 
 @Injectable()
 export class UserRepository {
-  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  // Prisma 以 camelCase 返回模型，repository 层映射回调用方依赖的
+  // snake_case 记录形状，使 service 层无需感知底层 ORM 的变化。
+  private toRecord(user: AppUser): UserRecord {
+    return {
+      id: user.id,
+      email: user.email,
+      password_hash: user.passwordHash,
+      display_name: user.displayName,
+      color: user.color,
+      role: user.role === "admin" ? "admin" : "user",
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+    }
+  }
 
   async createUser(
     email: string,
@@ -23,27 +38,28 @@ export class UserRepository {
     display_name: string,
     color: string
   ): Promise<UserRecord> {
-    const result = await this.pool.query<UserRecord>(
-      `INSERT INTO app_user (email, password_hash, display_name, color) VALUES ($1,$2,$3,$4) RETURNING *`,
-      [email, password_hash, display_name, color]
-    )
-    if (!result.rows[0]) throw new Error("Failed to create user")
-    return result.rows[0]
+    const user = await this.prisma.client.appUser.create({
+      data: {
+        email,
+        passwordHash: password_hash,
+        displayName: display_name,
+        color,
+      },
+    })
+    return this.toRecord(user)
   }
 
   async findByEmail(email: string): Promise<UserRecord | null> {
-    const result = await this.pool.query<UserRecord>(
-      `SELECT * FROM app_user WHERE email = $1`,
-      [email]
-    )
-    return result.rows[0] ?? null
+    const user = await this.prisma.client.appUser.findUnique({
+      where: { email },
+    })
+    return user ? this.toRecord(user) : null
   }
 
   async findById(id: string): Promise<UserRecord | null> {
-    const result = await this.pool.query<UserRecord>(
-      `SELECT * FROM app_user WHERE id = $1`,
-      [id]
-    )
-    return result.rows[0] ?? null
+    const user = await this.prisma.client.appUser.findUnique({
+      where: { id },
+    })
+    return user ? this.toRecord(user) : null
   }
 }

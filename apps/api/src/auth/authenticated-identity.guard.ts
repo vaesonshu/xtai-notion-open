@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common"
 import type { Environment } from "../config/environment"
-import { ENVIRONMENT } from "../database/database.tokens"
+import { ENVIRONMENT } from "../config/tokens"
 import { DEV_USER_HEADER, DEV_USER_REQUEST_KEY } from "./dev-user"
 import { AuthService } from "./auth.service"
 

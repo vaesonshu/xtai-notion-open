@@ -1,11 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common"
-import { Pool } from "pg"
-import { DATABASE_POOL } from "../database/database.tokens"
 import { createHash } from "crypto"
+import { PrismaService } from "../database/prisma.module"
+
+type SessionRow = {
+  id: string
+  user_id: string
+  token_hash: string
+  expires_at: Date
+  created_at: Date
+  last_seen_at: Date
+}
 
 @Injectable()
 export class SessionRepository {
-  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   // Store only hash of session token for safety
   private hashToken(token: string) {
@@ -18,26 +26,34 @@ export class SessionRepository {
     expiresAt: Date
   ): Promise<{ id: string; token_hash: string }> {
     const token_hash = this.hashToken(token)
-    const result = await this.pool.query(
-      `INSERT INTO user_session (user_id, token_hash, expires_at) VALUES ($1,$2,$3) RETURNING id, token_hash`,
-      [userId, token_hash, expiresAt]
-    )
-    return result.rows[0]
+    const session = await this.prisma.client.userSession.create({
+      data: { userId, tokenHash: token_hash, expiresAt },
+      select: { id: true, tokenHash: true },
+    })
+    return { id: session.id, token_hash: session.tokenHash }
   }
 
-  async findByToken(token: string) {
+  async findByToken(token: string): Promise<SessionRow | null> {
     const token_hash = this.hashToken(token)
-    const result = await this.pool.query(
-      `SELECT * FROM user_session WHERE token_hash = $1 AND expires_at > now()`,
-      [token_hash]
-    )
-    return result.rows[0] ?? null
+    // Prisma 以 camelCase 返回，这里映射回 service 层依赖的 snake_case 字段。
+    const session = await this.prisma.client.userSession.findFirst({
+      where: { tokenHash: token_hash, expiresAt: { gt: new Date() } },
+    })
+    if (!session) return null
+    return {
+      id: session.id,
+      user_id: session.userId,
+      token_hash: session.tokenHash,
+      expires_at: session.expiresAt,
+      created_at: session.createdAt,
+      last_seen_at: session.lastSeenAt,
+    }
   }
 
   async revoke(token: string) {
     const token_hash = this.hashToken(token)
-    await this.pool.query(`DELETE FROM user_session WHERE token_hash = $1`, [
-      token_hash,
-    ])
+    await this.prisma.client.userSession.deleteMany({
+      where: { tokenHash: token_hash },
+    })
   }
 }

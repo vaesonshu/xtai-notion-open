@@ -2,21 +2,25 @@ import { Test } from "@nestjs/testing"
 import type { INestApplication } from "@nestjs/common"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../app.module"
-import { DatabaseService } from "../database/database.service"
+import { PrismaService } from "../database/prisma.module"
+import type { PrismaClient } from "../generated/prisma/client"
 
 describe("documents create (integration)", () => {
   let app: INestApplication
-  let db: DatabaseService
+  let prisma: PrismaClient
   let baseUrl: string
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile()
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile()
     app = moduleRef.createNestApplication()
     await app.listen(0)
     const address = app.getHttpServer().address()
-    if (address === null || typeof address === "string") throw new Error("Expected TCP address")
+    if (address === null || typeof address === "string")
+      throw new Error("Expected TCP address")
     baseUrl = `http://127.0.0.1:${address.port}`
-    db = app.get(DatabaseService)
+    prisma = app.get(PrismaService).client
   })
 
   afterAll(async () => {
@@ -59,14 +63,15 @@ describe("documents create (integration)", () => {
     const meta = await createRes.json()
     expect(meta).toHaveProperty("id")
 
-    // Verify owner_id in DB
-    const row = await db.query<{ owner_id: string }>(
-      `SELECT owner_id FROM document WHERE id = $1 LIMIT 1`,
-      [meta.id]
-    )
-    expect(row.rows[0]?.owner_id).toBeDefined()
+    // Verify owner_id was populated — documents.create assigns the
+    // authenticated user as owner when creating the first document.
+    const doc = await prisma.document.findFirst({
+      where: { id: meta.id },
+      select: { ownerId: true },
+    })
+    expect(doc?.ownerId).toBeDefined()
 
-    // Cleanup created document (and workspace cascade)
-    await db.query(`DELETE FROM document WHERE id = $1`, [meta.id])
+    // Cleanup: delete the created document (workspace cascades via FK).
+    await prisma.document.delete({ where: { id: meta.id } })
   })
 })

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
-import type { DatabaseClient } from "../database/database.service"
-import { DatabaseService } from "../database/database.service"
+import type { Prisma } from "../generated/prisma/client"
+import { PrismaService } from "../database/prisma.module"
 
 export type YjsSnapshotRow = {
   snapshot: Buffer
@@ -21,25 +21,20 @@ function toNumber(value: string | number | bigint): number {
 
 @Injectable()
 export class YjsPersistenceRepository {
-  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getLatestSnapshot(
     documentId: string
   ): Promise<{ snapshot: Buffer; sequence: number } | null> {
-    const result = await this.db.query<YjsSnapshotRow>(
-      `SELECT snapshot, sequence
-       FROM yjs_snapshot
-       WHERE document_id = $1
-       ORDER BY sequence DESC
-       LIMIT 1`,
-      [documentId]
-    )
-    const row = result.rows[0]
+    const row = await this.prisma.client.yjsSnapshot.findFirst({
+      where: { documentId },
+      orderBy: { sequence: "desc" },
+    })
     if (!row) {
       return null
     }
     return {
-      snapshot: row.snapshot,
+      snapshot: Buffer.from(row.snapshot),
       sequence: toNumber(row.sequence),
     }
   }
@@ -48,41 +43,40 @@ export class YjsPersistenceRepository {
     documentId: string,
     afterSequence: number
   ): Promise<Array<{ update: Buffer; sequence: number }>> {
-    const result = await this.db.query<YjsUpdateRow>(
-      `SELECT "update", sequence
-       FROM yjs_update
-       WHERE document_id = $1 AND sequence > $2
-       ORDER BY sequence ASC`,
-      [documentId, afterSequence]
-    )
-    return result.rows.map((row) => ({
-      update: row.update,
+    const rows = await this.prisma.client.yjsUpdate.findMany({
+      where: { documentId, sequence: { gt: afterSequence } },
+      orderBy: { sequence: "asc" },
+    })
+    return rows.map((row) => ({
+      update: Buffer.from(row.update),
       sequence: toNumber(row.sequence),
     }))
   }
 
   async getMaxSequence(documentId: string): Promise<number> {
-    const result = await this.db.query<{ max: string | number | bigint | null }>(
-      `SELECT GREATEST(
-         COALESCE((SELECT MAX(sequence) FROM yjs_snapshot WHERE document_id = $1), 0),
-         COALESCE((SELECT MAX(sequence) FROM yjs_update WHERE document_id = $1), 0)
-       ) AS max`,
-      [documentId]
+    const [snapshotMax, updateMax] = await Promise.all([
+      this.prisma.client.yjsSnapshot.aggregate({
+        where: { documentId },
+        _max: { sequence: true },
+      }),
+      this.prisma.client.yjsUpdate.aggregate({
+        where: { documentId },
+        _max: { sequence: true },
+      }),
+    ])
+    return Math.max(
+      toNumber(snapshotMax._max.sequence ?? 0),
+      toNumber(updateMax._max.sequence ?? 0)
     )
-    return toNumber(result.rows[0]?.max ?? 0)
   }
 
   async countUpdatesAfterSequence(
     documentId: string,
     sequence: number
   ): Promise<number> {
-    const result = await this.db.query<{ count: string | number | bigint }>(
-      `SELECT COUNT(*)::bigint AS count
-       FROM yjs_update
-       WHERE document_id = $1 AND sequence > $2`,
-      [documentId, sequence]
-    )
-    return toNumber(result.rows[0]?.count ?? 0)
+    return this.prisma.client.yjsUpdate.count({
+      where: { documentId, sequence: { gt: sequence } },
+    })
   }
 
   async insertUpdates(
@@ -94,24 +88,20 @@ export class YjsPersistenceRepository {
       return { lastSequence: max }
     }
 
-    return this.db.withTransaction(async (client) => {
+    return this.prisma.client.$transaction(async (tx) => {
       // 对同一文档加事务级 advisory 锁，串行化 sequence 的“读 MAX + 1”与
       // 插入，避免并发 flush 读到相同起始 sequence 而触发唯一约束冲突。
       // hashtext 碰撞只会导致不同文档偶发串行化（仅轻微影响性能），不会漏锁。
-      await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [
-        documentId,
-      ])
-      const start = await this.nextSequence(client, documentId)
-      let sequence = start
-      for (const update of updates) {
-        await client.query(
-          `INSERT INTO yjs_update (document_id, sequence, "update")
-           VALUES ($1, $2, $3)`,
-          [documentId, sequence, Buffer.from(update)]
-        )
-        sequence += 1
-      }
-      return { lastSequence: sequence - 1 }
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${documentId}))`
+      const start = await this.nextSequenceIn(tx, documentId)
+      await tx.yjsUpdate.createMany({
+        data: updates.map((update, index) => ({
+          documentId,
+          sequence: BigInt(start + index),
+          update: Buffer.from(update),
+        })),
+      })
+      return { lastSequence: start + updates.length - 1 }
     })
   }
 
@@ -120,35 +110,43 @@ export class YjsPersistenceRepository {
     snapshot: Uint8Array,
     sequence: number
   ): Promise<void> {
-    await this.db.query(
-      `INSERT INTO yjs_snapshot (document_id, snapshot, sequence)
-       VALUES ($1, $2, $3)`,
-      [documentId, Buffer.from(snapshot), sequence]
-    )
+    await this.prisma.client.yjsSnapshot.create({
+      data: {
+        documentId,
+        snapshot: Buffer.from(snapshot),
+        sequence: BigInt(sequence),
+      },
+    })
   }
 
   async deleteUpdatesUpTo(
     documentId: string,
     sequence: number
   ): Promise<void> {
-    await this.db.query(
-      `DELETE FROM yjs_update
-       WHERE document_id = $1 AND sequence <= $2`,
-      [documentId, sequence]
-    )
+    await this.prisma.client.yjsUpdate.deleteMany({
+      where: { documentId, sequence: { lte: sequence } },
+    })
   }
 
-  private async nextSequence(
-    client: DatabaseClient,
+  private async nextSequenceIn(
+    tx: Prisma.TransactionClient,
     documentId: string
   ): Promise<number> {
-    const result = await client.query<{ max: string | number | bigint | null }>(
-      `SELECT GREATEST(
-         COALESCE((SELECT MAX(sequence) FROM yjs_snapshot WHERE document_id = $1), 0),
-         COALESCE((SELECT MAX(sequence) FROM yjs_update WHERE document_id = $1), 0)
-       ) AS max`,
-      [documentId]
+    const [snapshotMax, updateMax] = await Promise.all([
+      tx.yjsSnapshot.aggregate({
+        where: { documentId },
+        _max: { sequence: true },
+      }),
+      tx.yjsUpdate.aggregate({
+        where: { documentId },
+        _max: { sequence: true },
+      }),
+    ])
+    return (
+      Math.max(
+        toNumber(snapshotMax._max.sequence ?? 0),
+        toNumber(updateMax._max.sequence ?? 0)
+      ) + 1
     )
-    return toNumber(result.rows[0]?.max ?? 0) + 1
   }
 }

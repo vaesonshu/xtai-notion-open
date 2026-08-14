@@ -1,118 +1,132 @@
 import { describe, expect, it, vi } from "vitest"
-import type { DatabaseService } from "../database/database.service"
+import type { PrismaService } from "../database/prisma.module"
 import { DocumentsRepository } from "./documents.repository"
 
-function createDb(queryImpl?: DatabaseService["query"]): DatabaseService {
+// 构造最小可用的 Prisma mock；每个用例按需覆写对应 model 方法。
+// 返回未断言类型的 client，保留 vi.fn() 的 mock 方法；构造 repository 时再
+// 转成 PrismaService，避免 cast 抹掉 mock 类型。
+function createPrisma() {
+  const client = {
+    documentMember: { findFirst: vi.fn(), create: vi.fn() },
+    document: {
+      findUnique: vi.fn(),
+      updateMany: vi.fn(),
+      deleteMany: vi.fn(),
+      create: vi.fn(),
+    },
+    workspace: { create: vi.fn() },
+    $queryRaw: vi.fn(),
+    $transaction: vi.fn(
+      async (callback: (tx: unknown) => Promise<unknown>) => callback(client)
+    ),
+  }
+  return client
+}
+
+function makeRepo(prisma: ReturnType<typeof createPrisma>): DocumentsRepository {
+  // PrismaService 持有 client 属性；将 mock 包装成 { client } 后再断言为
+  // PrismaService，保留 prisma.* 上的 vi.fn() mock 类型。
+  return new DocumentsRepository({
+    client: prisma,
+  } as unknown as PrismaService)
+}
+
+function camelDocument(overrides: Record<string, unknown> = {}) {
   return {
-    query: queryImpl ?? vi.fn(),
-    withTransaction: vi.fn(),
-    onModuleDestroy: vi.fn(),
-  } as unknown as DatabaseService
+    id: "doc-1",
+    workspaceId: "ws-1",
+    title: "Demo",
+    parentId: null,
+    depth: 1,
+    ownerId: "user-1",
+    publicationStatus: "draft",
+    rejectionReason: null,
+    publishedAt: null,
+    publishedBy: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    ...overrides,
+  }
 }
 
 describe("DocumentsRepository", () => {
   it("getMemberRole returns role when membership exists", async () => {
-    const db = createDb(
-      vi.fn().mockResolvedValue({
-        rows: [{ role: "editor" }],
-        rowCount: 1,
-        command: "SELECT",
-        oid: 0,
-        fields: [],
-      })
-    )
-    const repo = new DocumentsRepository(db)
+    const prisma = createPrisma()
+    prisma.documentMember.findFirst.mockResolvedValue({ role: "editor" })
+    const repo = makeRepo(prisma)
 
     await expect(repo.getMemberRole("doc-1", "user-1")).resolves.toBe("editor")
-    expect(db.query).toHaveBeenCalledWith(
-      expect.stringMatching(/document_member/i),
-      ["doc-1", "user-1"]
-    )
+    expect(prisma.documentMember.findFirst).toHaveBeenCalledWith({
+      where: { documentId: "doc-1", userId: "user-1" },
+      select: { role: true },
+    })
   })
 
   it("getMemberRole returns null when user is not a member", async () => {
-    const db = createDb(
-      vi.fn().mockResolvedValue({
-        rows: [],
-        rowCount: 0,
-        command: "SELECT",
-        oid: 0,
-        fields: [],
-      })
-    )
-    const repo = new DocumentsRepository(db)
+    const prisma = createPrisma()
+    prisma.documentMember.findFirst.mockResolvedValue(null)
+    const repo = makeRepo(prisma)
 
     await expect(repo.getMemberRole("doc-1", "stranger")).resolves.toBeNull()
   })
 
   it("findById returns document metadata row", async () => {
-    const row = {
+    const prisma = createPrisma()
+    prisma.document.findUnique.mockResolvedValue(camelDocument())
+    const repo = makeRepo(prisma)
+
+    await expect(repo.findById("doc-1")).resolves.toEqual({
       id: "doc-1",
       workspace_id: "ws-1",
       title: "Demo",
+      parent_id: null,
+      depth: 1,
       created_at: new Date("2026-01-01T00:00:00.000Z"),
       updated_at: new Date("2026-01-02T00:00:00.000Z"),
-    }
-    const db = createDb(
-      vi.fn().mockResolvedValue({
-        rows: [row],
-        rowCount: 1,
-        command: "SELECT",
-        oid: 0,
-        fields: [],
-      })
-    )
-    const repo = new DocumentsRepository(db)
-
-    await expect(repo.findById("doc-1")).resolves.toEqual(row)
-    expect(db.query).toHaveBeenCalledWith(
-      expect.stringMatching(/from\s+document/i),
-      ["doc-1"]
-    )
+      publication_status: "draft",
+      rejection_reason: null,
+      published_at: null,
+      published_by: null,
+    })
+    expect(prisma.document.findUnique).toHaveBeenCalledWith({
+      where: { id: "doc-1" },
+    })
   })
 
   it("findById returns null when document is missing", async () => {
-    const db = createDb(
-      vi.fn().mockResolvedValue({
-        rows: [],
-        rowCount: 0,
-        command: "SELECT",
-        oid: 0,
-        fields: [],
-      })
-    )
-    const repo = new DocumentsRepository(db)
+    const prisma = createPrisma()
+    prisma.document.findUnique.mockResolvedValue(null)
+    const repo = makeRepo(prisma)
 
     await expect(repo.findById("missing")).resolves.toBeNull()
   })
 
   it("createForOwner creates a workspace, document, and owner membership", async () => {
-    const transactionQuery = vi
-      .fn()
-      .mockResolvedValueOnce({ rows: [{ id: "ws-1" }] })
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            id: "doc-1",
-            workspace_id: "ws-1",
-            title: "未命名文档",
-            created_at: new Date("2026-01-01T00:00:00.000Z"),
-            updated_at: new Date("2026-01-01T00:00:00.000Z"),
-          },
-        ],
-      })
-      .mockResolvedValueOnce({ rows: [] })
-    const db = createDb()
-    db.withTransaction = vi.fn(async (callback) =>
-      callback({ query: transactionQuery })
+    const prisma = createPrisma()
+    prisma.workspace.create.mockResolvedValue({ id: "ws-1" })
+    prisma.document.create.mockResolvedValue(
+      camelDocument({ title: "未命名文档" })
     )
-    const repo = new DocumentsRepository(db)
+    prisma.documentMember.create.mockResolvedValue({})
+    const repo = makeRepo(prisma)
 
     await expect(repo.createForOwner("user-1")).resolves.toMatchObject({
       id: "doc-1",
       title: "未命名文档",
     })
-    expect(transactionQuery).toHaveBeenCalledTimes(3)
-    expect(transactionQuery.mock.calls[2]?.[1]).toEqual(["doc-1", "user-1"])
+    expect(prisma.workspace.create).toHaveBeenCalledWith({
+      data: { name: "个人空间" },
+    })
+    expect(prisma.document.create).toHaveBeenCalledWith({
+      data: {
+        workspaceId: "ws-1",
+        title: "未命名文档",
+        depth: 1,
+        ownerId: "user-1",
+      },
+    })
+    expect(prisma.documentMember.create).toHaveBeenCalledWith({
+      data: { documentId: "doc-1", userId: "user-1", role: "owner" },
+    })
   })
 })

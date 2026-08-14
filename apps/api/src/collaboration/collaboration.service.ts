@@ -1,4 +1,4 @@
-import {
+﻿import {
   Inject,
   Injectable,
   Logger,
@@ -7,9 +7,15 @@ import {
 } from "@nestjs/common"
 import type { Server } from "@hocuspocus/server"
 import type { Environment } from "../config/environment"
-import { ENVIRONMENT } from "../database/database.tokens"
+import { ENVIRONMENT } from "../config/tokens"
 import { HocuspocusFactory } from "./hocuspocus.factory"
 import { YjsPersistenceService } from "./yjs-persistence.service"
+
+// Hocuspocus binds a long-lived WebSocket/TCP port on init; serverless
+// runtimes (e.g. Vercel) cannot own a listening port, so the WS server is
+// skipped there and real-time collaboration is served by a separate
+// long-running deployment instead.
+const isServerless = process.env.VERCEL === "1"
 
 @Injectable()
 export class CollaborationService implements OnModuleInit, OnModuleDestroy {
@@ -25,6 +31,14 @@ export class CollaborationService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     this.server = this.factory.create()
+    if (isServerless) {
+      // No listening port is available inside a serverless function; real-time
+      // collaboration WS is provided by a dedicated (non-serverless) deploy.
+      this.logger.warn(
+        "Collaboration WebSocket server disabled in serverless runtime"
+      )
+      return
+    }
     await this.server.listen()
     this.logger.log(
       `Collaboration server listening on port ${this.env.COLLABORATION_PORT}`

@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { AppModule } from "../app.module"
 import { DEV_USER_HEADER } from "../auth/dev-user"
-import { DatabaseService } from "../database/database.service"
+import { PrismaService } from "../database/prisma.module"
+import type { PrismaClient } from "../generated/prisma/client"
 import { DocumentsService } from "./documents.service"
 
 const USERS = {
@@ -16,7 +17,7 @@ const USERS = {
 
 describe("document authorization (integration)", () => {
   let app: INestApplication
-  let db: DatabaseService
+  let prisma: PrismaClient
   let documents: DocumentsService
   let baseUrl: string
   let workspaceId: string
@@ -35,20 +36,22 @@ describe("document authorization (integration)", () => {
     }
     baseUrl = `http://127.0.0.1:${address.port}`
 
-    db = app.get(DatabaseService)
+    prisma = app.get(PrismaService).client
     documents = app.get(DocumentsService)
 
     workspaceId = randomUUID()
     documentId = randomUUID()
 
-    await db.query(`INSERT INTO workspace (id, name) VALUES ($1, $2)`, [
-      workspaceId,
-      "Integration Auth Workspace",
-    ])
-    await db.query(
-      `INSERT INTO document (id, workspace_id, title) VALUES ($1, $2, $3)`,
-      [documentId, workspaceId, "Integration Auth Document"]
-    )
+    await prisma.workspace.create({
+      data: { id: workspaceId, name: "Integration Auth Workspace" },
+    })
+    await prisma.document.create({
+      data: {
+        id: documentId,
+        workspaceId,
+        title: "Integration Auth Document",
+      },
+    })
 
     const members: Array<[string, string]> = [
       [USERS.owner, "owner"],
@@ -56,18 +59,16 @@ describe("document authorization (integration)", () => {
       [USERS.viewer, "viewer"],
     ]
     for (const [userId, role] of members) {
-      await db.query(
-        `INSERT INTO document_member (document_id, user_id, role)
-         VALUES ($1, $2, $3)`,
-        [documentId, userId, role]
-      )
+      await prisma.documentMember.create({
+        data: { documentId, userId, role },
+      })
     }
   })
 
   afterAll(async () => {
     try {
-      if (db && workspaceId) {
-        await db.query(`DELETE FROM workspace WHERE id = $1`, [workspaceId])
+      if (prisma && workspaceId) {
+        await prisma.workspace.delete({ where: { id: workspaceId } })
       }
     } finally {
       await app?.close()
@@ -119,12 +120,12 @@ describe("document authorization (integration)", () => {
       [USERS.owner, "owner"],
       [USERS.editor, "editor"],
     ] as const) {
-      await expect(
-        documents.assertCanRead(documentId, userId)
-      ).resolves.toBe(role)
-      await expect(
-        documents.assertCanWrite(documentId, userId)
-      ).resolves.toBe(role)
+      await expect(documents.assertCanRead(documentId, userId)).resolves.toBe(
+        role
+      )
+      await expect(documents.assertCanWrite(documentId, userId)).resolves.toBe(
+        role
+      )
 
       const metadata = await documents.getDocument(documentId, userId)
       expect(metadata.role).toBe(role)

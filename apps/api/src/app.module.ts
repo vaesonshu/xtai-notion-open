@@ -4,7 +4,8 @@ import { SessionInitGuard } from "./auth/session-init.guard"
 import { AuthModule } from "./auth/auth.module"
 import { CosModule } from "./storage/cos.module"
 import { CollaborationModule } from "./collaboration/collaboration.module"
-import { DatabaseModule } from "./database/database.module"
+import { ConfigModule } from "./config/config.module"
+import { PrismaModule } from "./database/prisma.module"
 import { DocumentsModule } from "./documents/documents.module"
 import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
@@ -12,7 +13,8 @@ import { AiModule } from "./ai/ai.module"
 
 @Module({
   imports: [
-    DatabaseModule,
+    ConfigModule,
+    PrismaModule,
     AuthModule,
     DocumentsModule,
     CollaborationModule,

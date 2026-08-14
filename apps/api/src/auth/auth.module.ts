@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common"
-import { DatabaseModule } from "../database/database.module"
+import { ConfigModule } from "../config/config.module"
 import { DevelopmentIdentityGuard } from "./development-identity.guard"
 import { UserRepository } from "./user.repository"
 import { SessionRepository } from "./session.repository"
@@ -8,7 +8,7 @@ import { AuthController } from "./auth.controller"
 import { SessionInitGuard } from "./session-init.guard"
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [ConfigModule],
   providers: [
     DevelopmentIdentityGuard,
     UserRepository,

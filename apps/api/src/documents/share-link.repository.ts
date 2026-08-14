@@ -1,33 +1,37 @@
 import { Inject, Injectable } from "@nestjs/common"
-import { DatabaseService } from "../database/database.service"
+import type { DocumentShareLink } from "../generated/prisma/client"
+import { PrismaService } from "../database/prisma.module"
 import type { ShareLinkRow } from "./share-link-types"
 
 @Injectable()
 export class ShareLinkRepository {
-  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  // Prisma 返回 camelCase 模型，映射回调用方依赖的 snake_case 行形状。
+  private toRow(link: DocumentShareLink): ShareLinkRow {
+    return {
+      token: link.token,
+      document_id: link.documentId,
+      created_by: link.createdBy,
+      created_at: link.createdAt,
+      revoked_at: link.revokedAt,
+    }
+  }
 
   async findActiveByDocumentId(
     documentId: string
   ): Promise<ShareLinkRow | null> {
-    const result = await this.db.query<ShareLinkRow>(
-      `SELECT token, document_id, created_by, created_at, revoked_at
-       FROM document_share_link
-       WHERE document_id = $1 AND revoked_at IS NULL
-       LIMIT 1`,
-      [documentId]
-    )
-    return result.rows[0] ?? null
+    const link = await this.prisma.client.documentShareLink.findFirst({
+      where: { documentId, revokedAt: null },
+    })
+    return link ? this.toRow(link) : null
   }
 
   async findActiveByToken(token: string): Promise<ShareLinkRow | null> {
-    const result = await this.db.query<ShareLinkRow>(
-      `SELECT token, document_id, created_by, created_at, revoked_at
-       FROM document_share_link
-       WHERE token = $1 AND revoked_at IS NULL
-       LIMIT 1`,
-      [token]
-    )
-    return result.rows[0] ?? null
+    const link = await this.prisma.client.documentShareLink.findFirst({
+      where: { token, revokedAt: null },
+    })
+    return link ? this.toRow(link) : null
   }
 
   async create(
@@ -35,35 +39,29 @@ export class ShareLinkRepository {
     createdBy: string,
     token: string
   ): Promise<ShareLinkRow> {
-    const result = await this.db.query<ShareLinkRow>(
-      `INSERT INTO document_share_link (token, document_id, created_by)
-       VALUES ($1, $2, $3)
-       RETURNING token, document_id, created_by, created_at, revoked_at`,
-      [token, documentId, createdBy]
-    )
-    const row = result.rows[0]
-    if (!row) throw new Error("Failed to create share link")
-    return row
+    const link = await this.prisma.client.documentShareLink.create({
+      data: { token, documentId, createdBy },
+    })
+    return this.toRow(link)
   }
 
   async upsertMemberAsEditor(
     documentId: string,
     userId: string
   ): Promise<"owner" | "editor"> {
-    // Keep membership insertion and promotion atomic with the existing row.
-    return this.db.withTransaction(async (client) => {
-      const result = await client.query<{ role: "owner" | "editor" }>(
-        `INSERT INTO document_member (document_id, user_id, role)
-         VALUES ($1, $2, 'editor')
-         ON CONFLICT (document_id, user_id) DO UPDATE
-         SET role = CASE
-           WHEN document_member.role = 'viewer' THEN 'editor'
-           ELSE document_member.role
-         END
-         RETURNING role`,
-        [documentId, userId]
-      )
-      const role = result.rows[0]?.role
+    // 该 upsert 的 role 升级规则（viewer 升 editor、owner/editor 保持）无法用
+    // Prisma 的通用 upsert 表达，保留原生 SQL 以保证“插入或按规则升级”原子。
+    return this.prisma.client.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<Array<{ role: string }>>`
+        INSERT INTO document_member (document_id, user_id, role)
+        VALUES (${documentId}, ${userId}, 'editor')
+        ON CONFLICT (document_id, user_id) DO UPDATE
+        SET role = CASE
+          WHEN document_member.role = 'viewer' THEN 'editor'
+          ELSE document_member.role
+        END
+        RETURNING role`
+      const role = rows[0]?.role
       if (role !== "owner" && role !== "editor") {
         throw new Error("Failed to update document membership")
       }

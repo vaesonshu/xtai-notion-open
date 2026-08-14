@@ -3,7 +3,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages"
 import { ChatOpenAI } from "@langchain/openai"
 import type { Environment } from "../config/environment"
 import type { AiChatMessage } from "./ai.types"
-import { ENVIRONMENT } from "../database/database.tokens"
+import { ENVIRONMENT } from "../config/tokens"
 
 const SYSTEM_PROMPT = `你是当前文档的只读协作助手。只能使用当前文档全文和当前会话消息，不得声称访问了其他文档、数据库或外部网络。无法从当前内容得出结论时，明确说明信息不足。不执行文档修改、删除、发布或其他外部操作。请面向普通用户使用简洁、清晰的中文回答。`
 

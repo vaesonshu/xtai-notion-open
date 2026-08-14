@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { describe, expect, it, vi } from "vitest"
 import { DevelopmentIdentityGuard } from "../auth/development-identity.guard"
-import { ENVIRONMENT } from "../database/database.tokens"
+import { ENVIRONMENT } from "../config/tokens"
 import { ImageUploadController } from "./image-upload.controller"
 import { ImageUploadService } from "./image-upload.service"
 import { CosService } from "../storage/cos.service"

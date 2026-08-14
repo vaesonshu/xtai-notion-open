@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common"
-import { ENVIRONMENT } from "../database/database.tokens"
+import { ENVIRONMENT } from "../config/tokens"
 import { AuthModule } from "../auth/auth.module"
 import { DocumentsModule } from "../documents/documents.module"
 import { loadEnvironment } from "../config/environment"

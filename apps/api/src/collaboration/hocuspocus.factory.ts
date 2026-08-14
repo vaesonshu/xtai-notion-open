@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { Server } from "@hocuspocus/server"
 import type { Environment } from "../config/environment"
-import { ENVIRONMENT } from "../database/database.tokens"
+import { ENVIRONMENT } from "../config/tokens"
 import { CollaborationAuthService } from "./collaboration-auth.service"
 import { createHocuspocusHooks } from "./hocuspocus-hooks"
 import { YjsPersistenceService } from "./yjs-persistence.service"

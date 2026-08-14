@@ -1,0 +1,132 @@
+// schema.prisma — Prisma 基线，由 apps/api/migrations/001..006 手动整理而来。
+// 基线与已应用的 node-pg-migrate 迁移（真实 Neon 库）对齐：UUID 列使用
+// @db.Uuid、时间戳使用 @db.Timestamptz(6)（Postgres 默认微秒精度），
+// role/publication_status 等保持 TEXT 方式（沿用现有应用层 string 校验）。
+// 校验方式：`prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma`
+// （node-pg-migrate 留下的 pgmigrations 表不会进入 Prisma 托管，忽略即可）。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Workspace {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  documents Document[]
+
+  @@map("workspace")
+}
+
+model Document {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  title             String    @default("")
+  parentId          String?   @map("parent_id") @db.Uuid
+  depth             Int       @default(1)
+  ownerId           String?   @map("owner_id") @db.Uuid
+  publicationStatus String    @default("draft") @map("publication_status")
+  rejectionReason   String?   @map("rejection_reason")
+  publishedAt       DateTime? @map("published_at") @db.Timestamptz(6)
+  publishedBy       String?   @map("published_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parent            Document? @relation("DocumentHierarchy", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  children          Document[] @relation("DocumentHierarchy")
+  owner             AppUser? @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  publishedByUser   AppUser? @relation("PublishedBy", fields: [publishedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  members           DocumentMember[]
+  yjsSnapshots      YjsSnapshot[]
+  yjsUpdates        YjsUpdate[]
+  shareLinks        DocumentShareLink[]
+
+  @@index([workspaceId])
+  @@index([parentId])
+  @@index([ownerId])
+  @@index([publicationStatus, updatedAt(sort: Desc)], map: "document_publication_status_idx")
+  @@map("document")
+}
+
+model DocumentMember {
+  documentId String   @map("document_id") @db.Uuid
+  userId     String   @map("user_id")
+  role       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([documentId, userId])
+  @@index([userId])
+  @@map("document_member")
+}
+
+model AppUser {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String            @unique
+  passwordHash String            @map("password_hash")
+  displayName  String            @map("display_name")
+  color        String
+  role         String            @default("user")
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
+  sessions         UserSession[]
+  ownedDocuments   Document[] @relation("DocumentOwner")
+  publishedDocuments Document[] @relation("PublishedBy")
+  shareLinks       DocumentShareLink[]
+
+  @@map("app_user")
+}
+
+model UserSession {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  user       AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId])
+  @@map("user_session")
+}
+
+model DocumentShareLink {
+  token      String    @id
+  documentId String    @map("document_id") @db.Uuid
+  createdBy  String    @map("created_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(6)
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  creator    AppUser   @relation(fields: [createdBy], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("document_share_link")
+}
+
+model YjsSnapshot {
+  id         BigInt   @id @default(autoincrement())
+  documentId String   @map("document_id") @db.Uuid
+  snapshot   Bytes
+  sequence   BigInt
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([documentId, sequence(sort: Desc)])
+  @@map("yjs_snapshot")
+}
+
+model YjsUpdate {
+  id         BigInt   @id @default(autoincrement())
+  documentId String   @map("document_id") @db.Uuid
+  sequence   BigInt
+  update     Bytes    @map("update")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([documentId, sequence])
+  @@map("yjs_update")
+}
