@@ -1,6 +1,11 @@
+import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { filterArticles, type Article } from "./article-management-page"
+import {
+  ArticleManagementPage,
+  filterArticles,
+  type Article,
+} from "./article-management-page"
 
 const articles: Article[] = [
   {
@@ -52,5 +57,18 @@ describe("filterArticles", () => {
         status: "全部",
       })
     ).toHaveLength(0)
+  })
+})
+
+describe("ArticleManagementPage", () => {
+  it("renders the Pencil source labels and all six table columns", () => {
+    render(<ArticleManagementPage />)
+
+    expect(
+      screen.getByText("统一管理内容发布、审核与运营表现")
+    ).toBeInTheDocument()
+    expect(screen.getByText("待审核")).toBeInTheDocument()
+    expect(screen.getByText("更新时间")).toBeInTheDocument()
+    expect(screen.getByText("操作")).toBeInTheDocument()
   })
 })

@@ -1,38 +1,51 @@
+import {
+  ChartNoAxesColumnIncreasingIcon,
+  Clock3Icon,
+  FileTextIcon,
+  SquarePenIcon,
+} from "@workspace/icons"
+
+const icons = [
+  FileTextIcon,
+  SquarePenIcon,
+  ChartNoAxesColumnIncreasingIcon,
+  Clock3Icon,
+]
+
 export function ArticleStatCard({
+  index,
   label,
   value,
-  trend,
-  highlighted = false,
+  note,
 }: {
+  index: number
   label: string
   value: string
-  trend: string
-  highlighted?: boolean
+  note: string
 }) {
+  const Icon = icons[index]!
+  const featured = index === 0
   return (
     <section
-      className={`flex h-[78px] flex-1 flex-col justify-between border p-3 ${
-        highlighted
-          ? "border-[#268568] bg-[#258268] text-white"
-          : "border-[#e7ebe8] bg-white text-[#344039]"
-      }`}
+      className={`flex h-[104px] flex-1 flex-col justify-between rounded-lg p-[14px_16px] ${featured ? "bg-[#0f766e] text-white" : "border border-[#e5e5e1] bg-white text-[#242522]"}`}
     >
-      {/* The compact label/value pairing mirrors the Pencil dashboard cards. */}
-      <div className="flex items-center justify-between">
-        <span
-          className={`text-[10px] ${highlighted ? "text-[#d8f0e4]" : "text-[#8b9690]"}`}
-        >
+      {/* The token values come directly from the selected Pencil metric nodes. */}
+      <div className="flex items-center justify-between text-[13px] font-medium">
+        <span className={featured ? "text-[#d9f0ea]" : "text-[#73766f]"}>
           {label}
         </span>
+        <Icon
+          className={featured ? "size-4 text-white" : "size-4 text-[#0f766e]"}
+        />
+      </div>
+      <div className="flex items-end justify-between">
+        <span className="text-[28px] leading-none">{value}</span>
         <span
-          className={`text-[9px] ${highlighted ? "text-[#d8f0e4]" : "text-[#5ca987]"}`}
+          className={`text-[12px] font-medium ${featured ? "text-[#d9f0ea]" : index === 3 ? "text-[#a06d22]" : index === 2 ? "text-[#0f766e]" : "text-[#73766f]"}`}
         >
-          {trend}
+          {note}
         </span>
       </div>
-      <strong className="text-[20px] leading-none font-semibold tracking-[-0.04em]">
-        {value}
-      </strong>
     </section>
   )
 }

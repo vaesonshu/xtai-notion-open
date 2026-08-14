@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { PlusIcon } from "@workspace/icons"
+import { Button } from "@workspace/ui/components/button"
 
 import { AdminSidebar } from "./admin-sidebar"
 import { ArticleFilters, type ArticleFiltersValue } from "./article-filters"
@@ -20,58 +21,49 @@ export type Article = {
 
 const articles: Article[] = [
   {
-    id: "a1",
-    title: "从灵感到发布：内容工作流全面升级",
-    category: "产品动态",
-    author: "林默",
+    id: "ART-1024",
+    title: "从零构建内容运营体系",
+    category: "内容策略",
+    author: "陈曦",
     status: "已发布",
-    publishedAt: "2026-08-12 14:20",
-    views: 128,
+    publishedAt: "2025-08-12 14:30",
+    views: 0,
   },
   {
-    id: "a2",
-    title: "2026 内容运营趋势报告",
-    category: "行业观察",
-    author: "严冬",
+    id: "ART-1023",
+    title: "2025 年产品设计趋势观察",
+    category: "设计趋势",
+    author: "林予",
     status: "已发布",
-    publishedAt: "2026-08-10 10:30",
-    views: 86,
+    publishedAt: "2025-08-11 11:20",
+    views: 0,
   },
   {
-    id: "a3",
-    title: "如何构建高效的知识库",
-    category: "使用指南",
-    author: "陆子衿",
-    status: "草稿",
-    publishedAt: "2026-08-09 16:40",
-    views: 24,
-  },
-  {
-    id: "a4",
-    title: "设计系统 2.0：更轻、更快、更统一",
-    category: "设计规范",
-    author: "周宁",
+    id: "ART-1022",
+    title: "如何用数据驱动选题决策",
+    category: "数据分析",
+    author: "周启",
     status: "已发布",
-    publishedAt: "2026-08-08 09:15",
-    views: 64,
+    publishedAt: "2025-08-11 09:45",
+    views: 0,
   },
   {
-    id: "a5",
-    title: "小团队如何做出专业内容",
-    category: "使用指南",
-    author: "林默",
+    id: "ART-1021",
+    title: "新用户留存：从第一次体验开始",
+    category: "用户研究",
+    author: "陈曦",
     status: "已发布",
-    publishedAt: "2026-08-06 11:05",
-    views: 47,
+    publishedAt: "2025-08-11 09:30",
+    views: 0,
   },
   {
-    id: "a6",
-    title: "八月产品更新预告",
-    category: "产品动态",
-    author: "严冬",
-    status: "草稿",
-    publishedAt: "2026-08-04 08:30",
-    views: 9,
+    id: "ART-1020",
+    title: "内容团队的协作工作流",
+    category: "团队管理",
+    author: "林予",
+    status: "已发布",
+    publishedAt: "2025-08-10 16:15",
+    views: 0,
   },
 ]
 
@@ -80,105 +72,83 @@ export function filterArticles(
   filters: ArticleFiltersValue
 ) {
   const query = filters.query.trim().toLowerCase()
-  // Filtering stays local so the design remains functional without inventing an API.
-  return source.filter((article) => {
-    const searchable =
-      `${article.title} ${article.category} ${article.author}`.toLowerCase()
-    return (
-      (!query || searchable.includes(query)) &&
-      (filters.category === "全部" || article.category === filters.category) &&
-      (filters.status === "全部" || article.status === filters.status)
-    )
-  })
+  // The selection's appearance is static; filtering only changes which source rows are shown.
+  return source.filter(
+    (article) =>
+      (!query ||
+        `${article.title} ${article.author} ${article.id}`
+          .toLowerCase()
+          .includes(query)) &&
+      (filters.category === "全部分类" ||
+        filters.category === "全部" ||
+        article.category === filters.category) &&
+      (filters.status === "全部状态" ||
+        filters.status === "全部" ||
+        article.status === filters.status)
+  )
 }
 
 export function ArticleManagementPage() {
   const [filters, setFilters] = useState<ArticleFiltersValue>({
     query: "",
-    category: "全部",
-    status: "全部",
+    category: "全部分类",
+    status: "全部状态",
   })
-  const [page, setPage] = useState(1)
-  const pageSize = 5
-  const filteredArticles = useMemo(
-    () => filterArticles(articles, filters),
-    [filters]
-  )
-  const pageCount = Math.max(1, Math.ceil(filteredArticles.length / pageSize))
-  const visibleArticles = filteredArticles.slice(
-    (page - 1) * pageSize,
-    page * pageSize
-  )
-
-  function updateFilters(nextFilters: ArticleFiltersValue) {
-    setFilters(nextFilters)
-    setPage(1)
-  }
-
+  const filtered = useMemo(() => filterArticles(articles, filters), [filters])
   return (
-    <main className="flex min-h-svh bg-[#f8faf8] font-sans text-[#344039]">
-      <AdminSidebar />
-      <section className="min-w-0 flex-1 p-4 sm:p-7">
-        <div className="mx-auto max-w-[1120px]">
-          <header className="mb-5 flex items-start justify-between">
+    <main className="h-[900px] w-[1440px] overflow-hidden bg-[#f8faf8] font-[Inter,system-ui,sans-serif] text-[#242522]">
+      <div className="flex h-full">
+        <AdminSidebar />
+        <section className="flex h-full flex-1 flex-col gap-5 p-[28px_34px]">
+          <header className="flex items-center justify-between">
             <div>
-              <h1 className="text-[18px] font-semibold tracking-[-0.04em]">
-                文章管理
-              </h1>
-              <p className="mt-1 text-[10px] text-[#97a19b]">
-                管理、发布和追踪你的所有内容
+              <h1 className="text-[26px] font-bold text-[#183e31]">文章管理</h1>
+              <p className="mt-[5px] text-[13px] text-[#718179]">
+                统一管理内容发布、审核与运营表现
               </p>
             </div>
-            <button
-              className="flex h-7 items-center gap-1 rounded bg-[#258268] px-2 text-[10px] font-medium text-white hover:bg-[#1f7059]"
-              aria-label="新建文章（即将支持）"
+            {/* Shared Button preserves the project's focus behavior without changing the Pencil dimensions. */}
+            <Button
+              type="button"
+              variant="default"
+              className="h-auto gap-[7px] rounded-[7px] bg-[#167251] px-[14px] py-[10px] text-[13px] font-semibold text-white hover:bg-[#167251]"
             >
-              <PlusIcon className="size-3" /> 新建文章
-            </button>
+              <PlusIcon className="size-[15px]" />
+              新增文章
+            </Button>
           </header>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <div className="flex h-[104px] gap-3">
             <ArticleStatCard
+              index={0}
               label="已发布文章"
               value="128"
-              trend="较上月 +12%"
-              highlighted
+              note="本月新增 18 篇"
             />
-            <ArticleStatCard label="草稿箱" value="24" trend="待完善" />
             <ArticleStatCard
+              index={1}
+              label="草稿箱"
+              value="24"
+              note="待完善 7 篇"
+            />
+            <ArticleStatCard
+              index={2}
               label="总阅读量"
               value="86.4K"
-              trend="较上月 +8.4%"
+              note="较上月 +12.8%"
             />
-            <ArticleStatCard label="本月新增" value="9" trend="较上月 +2" />
+            <ArticleStatCard
+              index={3}
+              label="待审核"
+              value="9"
+              note="3 篇今日提交"
+            />
           </div>
-          <ArticleFilters value={filters} onChange={updateFilters} />
-          <div className="border border-[#e7ebe8] bg-white">
-            <ArticleTable articles={visibleArticles} />
-            <footer className="flex items-center justify-between border-t border-[#edf0ee] px-3 py-2 text-[10px] text-[#8d9892]">
-              <span>共 {filteredArticles.length} 篇文章</span>
-              <div className="flex items-center gap-1">
-                <button
-                  className="h-6 border border-[#e2e7e4] px-2 disabled:opacity-40"
-                  disabled={page === 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  上一页
-                </button>
-                <span className="px-1">
-                  {page} / {pageCount}
-                </span>
-                <button
-                  className="h-6 border border-[#e2e7e4] px-2 disabled:opacity-40"
-                  disabled={page === pageCount}
-                  onClick={() => setPage(page + 1)}
-                >
-                  下一页
-                </button>
-              </div>
-            </footer>
-          </div>
-        </div>
-      </section>
+          <ArticleFilters value={filters} onChange={setFilters} />
+          <section className="flex min-h-0 flex-1 flex-col">
+            <ArticleTable articles={filtered} />
+          </section>
+        </section>
+      </div>
     </main>
   )
 }
