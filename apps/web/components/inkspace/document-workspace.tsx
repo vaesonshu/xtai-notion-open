@@ -143,6 +143,10 @@ export function DocumentWorkspace({
   const [getDocumentText, setGetDocumentText] = useState<() => string>(
     () => () => ""
   )
+  const handleTextReady = useCallback(
+    (reader: () => string) => setGetDocumentText(() => reader),
+    []
+  )
 
   const configured = isConfigured(apiUrl, collaborationUrl)
   const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
@@ -249,7 +253,7 @@ export function DocumentWorkspace({
         mentionProvider={mentionProvider}
         mentionNavigate={mentionNavigate}
         renderToolbar={() => (
-          <WorkspaceToolbarBridge onTextReady={setGetDocumentText} />
+          <WorkspaceToolbarBridge onTextReady={handleTextReady} />
         )}
         className="flex min-h-0 flex-1 flex-col"
         renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
