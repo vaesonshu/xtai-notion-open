@@ -10,6 +10,9 @@ export interface Environment {
   COS_BUCKET?: string
   COS_REGION?: string
   COS_PUBLIC_BASE_URL?: string
+  OPENAI_API_KEY?: string
+  OPENAI_BASE_URL?: string
+  OPENAI_MODEL?: string
 }
 
 function requireValue(
@@ -58,5 +61,8 @@ export function loadEnvironment(
     COS_BUCKET: source.COS_BUCKET,
     COS_REGION: source.COS_REGION,
     COS_PUBLIC_BASE_URL: source.COS_PUBLIC_BASE_URL,
+    OPENAI_API_KEY: source.OPENAI_API_KEY,
+    OPENAI_BASE_URL: source.OPENAI_BASE_URL,
+    OPENAI_MODEL: source.OPENAI_MODEL,
   }
 }
