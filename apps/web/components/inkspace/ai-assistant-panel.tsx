@@ -4,6 +4,8 @@ import { Button } from "@workspace/ui/components/button"
 import { Textarea } from "@workspace/ui/components/textarea"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { useEffect, useRef, useState } from "react"
 
 type Message = { role: "user" | "assistant"; content: string }
@@ -20,6 +22,36 @@ function AssistantMarkdown({ content }: { content: string }) {
               {children}
             </a>
           ),
+          code: ({ className, children }) => {
+            const language = /language-(\w+)/.exec(className ?? "")?.[1]
+            if (!language) {
+              return <code className={className}>{children}</code>
+            }
+            return (
+              <div
+                data-testid="ai-code-block"
+                className="overflow-hidden rounded-lg"
+              >
+                <div
+                  data-testid="ai-code-language"
+                  className="bg-[#30302E] px-3 py-1 text-[11px] text-[#B8B5AC]"
+                >
+                  {language}
+                </div>
+                <SyntaxHighlighter
+                  language={language}
+                  style={oneDark}
+                  customStyle={{
+                    margin: 0,
+                    borderRadius: 0,
+                    padding: "0.75rem",
+                  }}
+                >
+                  {String(children).replace(/\n$/, "")}
+                </SyntaxHighlighter>
+              </div>
+            )
+          },
         }}
       >
         {content}

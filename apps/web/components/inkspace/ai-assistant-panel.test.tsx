@@ -111,4 +111,26 @@ describe("AiAssistantPanel", () => {
     render(<AiAssistantPanel {...props} />)
     expect(screen.getByRole("complementary")).toHaveClass("h-full")
   })
+
+  it("highlights fenced code blocks and preserves their language label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          streamResponse([
+            'event: token\ndata: {"type":"token","content":"```ts\\nconst answer: string = \\\"ok\\\"\\n```"}\n\n',
+          ])
+        )
+    )
+    render(<AiAssistantPanel {...props} />)
+    fireEvent.click(screen.getByRole("button", { name: /总结/ }))
+    await waitFor(() =>
+      expect(screen.getByTestId("ai-code-block")).toBeInTheDocument()
+    )
+    expect(screen.getByTestId("ai-code-language")).toHaveTextContent("ts")
+    expect(screen.getByTestId("ai-code-block")).toHaveTextContent(
+      "const answer"
+    )
+  })
 })
