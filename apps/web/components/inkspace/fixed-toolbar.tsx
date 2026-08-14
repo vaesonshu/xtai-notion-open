@@ -38,11 +38,11 @@ import {
 } from "@workspace/ui/components/popover"
 
 const marks = [
-  ["粗体", BoldIcon, "bold"],
-  ["斜体", ItalicIcon, "italic"],
-  ["下划线", UnderlineIcon, "underline"],
-  ["删除线", StrikethroughIcon, "strike"],
-  ["行内代码", CodeIcon, "code"],
+  ["Bold", BoldIcon, "bold"],
+  ["Italic", ItalicIcon, "italic"],
+  ["Underline", UnderlineIcon, "underline"],
+  ["Strike", StrikethroughIcon, "strike"],
+  ["Inline code", CodeIcon, "code"],
 ] as const
 
 export function insertEmoji(editor: Editor, emoji: string): boolean {
@@ -149,7 +149,20 @@ export function FixedEditorToolbar() {
       aria-label="Editor toolbar"
     >
       {marks.map(([label, Icon, mark], index) => (
-        <ToolbarTooltip key={mark} label={label}>
+        <ToolbarTooltip
+          key={mark}
+          label={
+            label === "Bold"
+              ? "粗体"
+              : label === "Italic"
+                ? "斜体"
+                : label === "Underline"
+                  ? "下划线"
+                  : label === "Strike"
+                    ? "删除线"
+                    : "行内代码"
+          }
+        >
           <Toggle
             size="sm"
             pressed={state.active[index] ?? false}
@@ -184,7 +197,7 @@ export function FixedEditorToolbar() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="正文"
+          aria-label="Paragraph"
           onClick={() => editor.chain().focus().setParagraph().run()}
         >
           <PilcrowIcon />
@@ -194,7 +207,7 @@ export function FixedEditorToolbar() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="一级标题"
+          aria-label="Heading 1"
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 1 }).run()
           }
@@ -206,7 +219,7 @@ export function FixedEditorToolbar() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="二级标题"
+          aria-label="Heading 2"
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 2 }).run()
           }
@@ -318,7 +331,7 @@ export function FixedEditorToolbar() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="撤销"
+          aria-label="Undo"
           disabled={!state.canUndo}
           onClick={() => editor.chain().focus().undo().run()}
         >
@@ -329,7 +342,7 @@ export function FixedEditorToolbar() {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="重做"
+          aria-label="Redo"
           disabled={!state.canRedo}
           onClick={() => editor.chain().focus().redo().run()}
         >
