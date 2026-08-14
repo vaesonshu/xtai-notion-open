@@ -308,7 +308,11 @@ export function FixedEditorToolbar() {
             render={
               <PopoverTrigger
                 render={
-                  <Button variant="ghost" size="icon-sm" aria-label="插入表情">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Insert emoji"
+                  >
                     <SmileIcon />
                   </Button>
                 }
