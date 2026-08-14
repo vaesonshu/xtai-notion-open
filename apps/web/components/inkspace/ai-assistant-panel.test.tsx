@@ -58,4 +58,23 @@ describe("AiAssistantPanel", () => {
     rerender(<AiAssistantPanel {...props} open />)
     expect(screen.getByRole("button", { name: "总结文档" })).toBeInTheDocument()
   })
+
+  it("scrolls the message viewport to the newest streamed content", async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          streamResponse([
+            'event: token\ndata: {"type":"token","content":"回复"}\n\n',
+          ])
+        )
+    )
+    render(<AiAssistantPanel {...props} />)
+    fireEvent.click(screen.getByRole("button", { name: "鎬荤粨鏂囨。" }))
+    await waitFor(() => expect(screen.getByText("回复")).toBeInTheDocument())
+    expect(scrollIntoView).toHaveBeenCalled()
+  })
 })

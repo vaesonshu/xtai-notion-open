@@ -25,6 +25,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (props.open) inputRef.current?.focus()
@@ -35,6 +36,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       setInput("")
     }
   }, [props.open])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+  }, [messages, streaming, error])
 
   if (!props.open) return null
 
@@ -112,7 +117,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
 
   return (
     <aside
-      className="flex w-[min(420px,100vw)] min-w-0 flex-col border-l border-[#E8E6E1] bg-white"
+      className="flex h-[min(720px,calc(100vh-68px))] w-[min(420px,100vw)] min-w-0 flex-col border-l border-[#E8E6E1] bg-white"
       aria-label="AI 协作助手"
     >
       <div className="flex items-center justify-between border-b p-4">
@@ -126,7 +131,10 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
           关闭
         </Button>
       </div>
-      <div className="min-h-0 flex-1 space-y-4 overflow-auto bg-[#FCFCFA] p-4">
+      <div
+        className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[#FCFCFA] p-4"
+        data-testid="ai-message-scroll"
+      >
         {messages.length === 0 && (
           <div className="flex flex-wrap gap-2">
             {QUICK_ACTIONS.map((action) => (
@@ -187,6 +195,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
             </Button>
           </div>
         )}
+        <div ref={messagesEndRef} aria-hidden="true" />
       </div>
       <div className="border-t p-4">
         <Textarea
