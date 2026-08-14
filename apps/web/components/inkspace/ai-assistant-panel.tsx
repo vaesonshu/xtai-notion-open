@@ -142,7 +142,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
 
   return (
     <aside
-      className="flex h-[min(720px,calc(100vh-68px))] w-[min(420px,100vw)] min-w-0 flex-col border-l border-[#E8E6E1] bg-white"
+      className="flex h-full min-h-0 w-[min(420px,100vw)] min-w-0 flex-col border-l border-[#E8E6E1] bg-white"
       aria-label="AI 协作助手"
     >
       <div className="flex items-center justify-between border-b p-4">

@@ -106,4 +106,9 @@ describe("AiAssistantPanel", () => {
     ).not.toBeInTheDocument()
     expect(document.querySelector("script")).toBeNull()
   })
+
+  it("fills the workspace height so the composer stays at the panel bottom", () => {
+    render(<AiAssistantPanel {...props} />)
+    expect(screen.getByRole("complementary")).toHaveClass("h-full")
+  })
 })
