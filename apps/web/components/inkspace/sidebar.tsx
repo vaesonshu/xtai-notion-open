@@ -12,6 +12,7 @@ import {
   SearchIcon,
   SquarePenIcon,
   StarIcon,
+  WaypointsIcon,
 } from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import {
@@ -88,6 +89,8 @@ export function WorkspaceSidebar({
   onDeleteDocument,
   onCreateChildDocument,
   onOpenSquare,
+  onOpenGraph,
+  activeNav = "editor",
 }: {
   onCreateDocument?: () => void
   onCreateChildDocument?: (id: string) => void
@@ -95,10 +98,12 @@ export function WorkspaceSidebar({
   documents?: SidebarDocument[]
   collaborativeDocuments?: SidebarDocument[]
   selectedDocumentId?: string
+  activeNav?: "editor" | "graph" | "square"
   onSelectDocument?: (id: string) => void
   onRenameDocument?: (id: string, title: string) => Promise<void>
   onDeleteDocument?: (id: string) => Promise<void>
   onOpenSquare?: () => void
+  onOpenGraph?: () => void
 }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const select = (key: string, action?: () => void) => {
@@ -157,11 +162,19 @@ export function WorkspaceSidebar({
           />
           <SideAction
             itemKey="square"
-            selectedKey={selectedKey}
+            selectedKey={activeNav === "square" ? "square" : selectedKey}
             onSelect={select}
             icon={SquarePenIcon}
             label="写作广场"
             onClick={onOpenSquare}
+          />
+          <SideAction
+            itemKey="graph"
+            selectedKey={activeNav === "graph" ? "graph" : selectedKey}
+            onSelect={select}
+            icon={WaypointsIcon}
+            label="文档图谱"
+            onClick={onOpenGraph}
           />
         </div>
         <SideAction

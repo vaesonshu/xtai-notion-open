@@ -6,13 +6,18 @@ import {
   NotFoundException,
   Optional,
 } from "@nestjs/common"
-import { documentFromYjs, documentToPlainText } from "@workspace/editor/core"
+import {
+  documentFromYjs,
+  documentToPlainText,
+  collectMentionIds,
+} from "@workspace/editor/core"
 import { UserRepository } from "../auth/user.repository"
 import { YjsPersistenceService } from "../collaboration/yjs-persistence.service"
 import type {
   DocumentMetadata,
   DocumentRole,
   DocumentRow,
+  DocumentGraphNode,
   PublishedArticle,
   PublishedArticleDetail,
 } from "./document-types"
@@ -75,6 +80,33 @@ export class DocumentsService {
   async listDocuments(userId: string): Promise<DocumentMetadata[]> {
     const rows = await this.documents.listForUser(userId)
     return rows.map((row) => this.toMetadata(row, row.role))
+  }
+
+  /** 聚合用户可见文档及其 @mention 引用关系，供关系图谱可视化。 */
+  async listDocumentGraph(userId: string): Promise<DocumentGraphNode[]> {
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+
+    const rows = await this.documents.listForUser(userId)
+    const accessibleIds = new Set(rows.map((row) => row.id))
+    const nodes: DocumentGraphNode[] = []
+
+    for (const row of rows) {
+      const yDoc = await this.yjsPersistence.loadDocument(row.id)
+      try {
+        const content = documentFromYjs(yDoc)
+        const mentionIds = collectMentionIds(content)
+        const links = [...new Set(mentionIds)].filter(
+          (id) => accessibleIds.has(id) && id !== row.id
+        )
+        nodes.push({ id: row.id, title: row.title, links })
+      } finally {
+        yDoc.destroy()
+      }
+    }
+
+    return nodes
   }
 
   async createDocument(userId: string): Promise<DocumentMetadata> {

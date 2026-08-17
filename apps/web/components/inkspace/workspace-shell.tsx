@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import {
   DocumentWorkspace,
@@ -51,11 +51,15 @@ export function getDocumentIdAfterDeletion(
 }
 
 export type WorkspaceShellProps = {
-  documentId: string
+  documentId?: string
   openFirstDocument?: boolean
   user: DocumentWorkspaceProps["user"]
   apiUrl: string
   collaborationUrl: string
+  /** 覆盖主内容区，用于文档图谱等全页视图 */
+  children?: ReactNode
+  /** 侧边栏高亮：文档编辑 / 图谱 / 广场 */
+  activeNav?: "editor" | "graph" | "square"
 }
 
 function getCreationError(error: unknown): string {
@@ -84,6 +88,8 @@ export function WorkspaceShell({
   user,
   apiUrl,
   collaborationUrl,
+  children,
+  activeNav = "editor",
 }: WorkspaceShellProps) {
   const router = useRouter()
   const [creating, setCreating] = useState(false)
@@ -242,6 +248,7 @@ export function WorkspaceShell({
         documents={personalDocuments}
         collaborativeDocuments={collaborativeDocuments}
         selectedDocumentId={documentId}
+        activeNav={activeNav}
         onSelectDocument={(id) => router.push(`/documents/${id}`)}
         onCreateDocument={createDocument}
         creatingDocument={creating}
@@ -249,23 +256,28 @@ export function WorkspaceShell({
         onDeleteDocument={deleteDocument}
         onCreateChildDocument={(id) => void createChildDocument(id)}
         onOpenSquare={() => router.push("/square")}
+        onOpenGraph={() => router.push("/documents/graph")}
       />
       <main className="flex min-w-0 flex-1 flex-col bg-[#FCFCFA] !text-[#242321]">
-        <DocumentWorkspace
-          key={documentId}
-          documentId={documentId}
-          user={user}
-          apiUrl={apiUrl}
-          collaborationUrl={collaborationUrl}
-          mentionNavigate={(href) => router.push(href)}
-          title={documents.find((item) => item.id === documentId)?.title}
-          parentTitle={(() => {
-            const current = documents.find((item) => item.id === documentId)
-            return current?.parentId
-              ? documents.find((item) => item.id === current.parentId)?.title
-              : undefined
-          })()}
-        />
+        {children ??
+          (documentId ? (
+            <DocumentWorkspace
+              key={documentId}
+              documentId={documentId}
+              user={user}
+              apiUrl={apiUrl}
+              collaborationUrl={collaborationUrl}
+              mentionNavigate={(href) => router.push(href)}
+              title={documents.find((item) => item.id === documentId)?.title}
+              parentTitle={(() => {
+                const current = documents.find((item) => item.id === documentId)
+                return current?.parentId
+                  ? documents.find((item) => item.id === current.parentId)
+                      ?.title
+                  : undefined
+              })()}
+            />
+          ) : null)}
       </main>
     </>
   )

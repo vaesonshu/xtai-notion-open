@@ -68,3 +68,10 @@ export interface PublishedArticleSource {
   authorColor: string | null
   workspaceName: string
 }
+
+/** 文档图谱节点：links 为文档内 @mention 引用的其他文档 id。 */
+export interface DocumentGraphNode {
+  id: string
+  title: string
+  links: string[]
+}

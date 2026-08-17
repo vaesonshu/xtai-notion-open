@@ -13,7 +13,12 @@ import {
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
-import type { DocumentMetadata, PublishedArticle, PublishedArticleDetail } from "./document-types"
+import type {
+  DocumentMetadata,
+  PublishedArticle,
+  PublishedArticleDetail,
+  DocumentGraphNode,
+} from "./document-types"
 import { DocumentsService } from "./documents.service"
 import { ShareLinkService } from "./share-link.service"
 
@@ -50,6 +55,13 @@ export class DocumentsController {
   @Get()
   listDocuments(@CurrentUser() user: DevUser): Promise<DocumentMetadata[]> {
     return this.documents.listDocuments(user.id)
+  }
+
+  @Get("graph")
+  listDocumentGraph(
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentGraphNode[]> {
+    return this.documents.listDocumentGraph(user.id)
   }
 
   @Get(":documentId")

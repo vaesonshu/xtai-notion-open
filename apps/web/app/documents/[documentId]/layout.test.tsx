@@ -25,7 +25,7 @@ vi.mock("../../../components/inkspace/workspace-shell", () => ({
 
 describe("DocumentWorkspaceLayout", () => {
   it("renders the workspace for the document identified by the route parameter", () => {
-    render(<DocumentWorkspaceLayout />)
+    render(<DocumentWorkspaceLayout>{null}</DocumentWorkspaceLayout>)
 
     expect(screen.getByTestId("workspace-document")).toHaveAttribute(
       "data-workspace-document-id",

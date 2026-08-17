@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
+import * as Y from "yjs"
 import * as editorCore from "@workspace/editor/core"
 import type { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
@@ -349,5 +350,72 @@ describe("DocumentsService", () => {
     await expect(service.getPublishedArticle("missing")).rejects.toBeInstanceOf(
       NotFoundException
     )
+  })
+
+  it("aggregates mention links for the document graph", async () => {
+    const yDoc = new Y.Doc()
+    let loadCount = 0
+    vi.spyOn(editorCore, "documentFromYjs").mockImplementation(() => {
+      loadCount += 1
+      if (loadCount === 1) {
+        return {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "mention",
+                  attrs: { id: "doc-2", label: "Other" },
+                },
+              ],
+            },
+          ],
+        }
+      }
+      return { type: "doc", content: [] }
+    })
+    const repo = createRepo({
+      listForUser: vi.fn().mockResolvedValue([
+        {
+          id: "doc-1",
+          workspace_id: "ws-1",
+          title: "Source",
+          role: "owner",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: "doc-2",
+          workspace_id: "ws-1",
+          title: "Target",
+          role: "owner",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: "doc-3",
+          workspace_id: "ws-1",
+          title: "Private",
+          role: "owner",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ]),
+    })
+    const persistence = {
+      loadDocument: vi.fn().mockResolvedValue(yDoc),
+    }
+    const service = new DocumentsService(
+      repo,
+      undefined,
+      persistence as never
+    )
+
+    await expect(service.listDocumentGraph("user-1")).resolves.toEqual([
+      { id: "doc-1", title: "Source", links: ["doc-2"] },
+      { id: "doc-2", title: "Target", links: [] },
+      { id: "doc-3", title: "Private", links: [] },
+    ])
   })
 })

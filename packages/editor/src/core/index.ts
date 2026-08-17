@@ -36,6 +36,7 @@ export {
   validateImageFile,
 } from "./image-upload"
 export { documentFromYjs, documentToPlainText } from "./yjs-document"
+export { collectMentionIds } from "./mention-collect"
 export type {
   ImageMimeType,
   ImageUploadConfig,

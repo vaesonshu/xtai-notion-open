@@ -24,6 +24,7 @@ export {
   Folder as FolderIcon,
   FolderOpen as FolderOpenIcon,
   FolderTree as FolderTreeIcon,
+  Waypoints as WaypointsIcon,
   GripVertical as GripVerticalIcon,
   Heading1 as Heading1Icon,
   Heading2 as Heading2Icon,
