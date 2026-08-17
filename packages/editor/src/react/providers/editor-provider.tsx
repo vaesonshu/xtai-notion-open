@@ -42,19 +42,16 @@ export function EditorProvider({
   children,
 }: EditorProviderProps) {
   const editorRef = useRef<Editor | null>(null)
-  const [editor, setEditor] = useState<Editor | null>(() => {
-    if (typeof window === "undefined") {
-      return null
-    }
-    // 软导航纯客户端挂载时首帧即可创建，正文无需等待 useEffect
-    const instance = createLocalEditor({ initialContent, editable, imageUpload })
-    editorRef.current = instance
-    return instance
-  })
+  // 首帧保持 null，与服务端 SSR 一致，避免水合时骨架屏与正文 DOM 不匹配
+  const [editor, setEditor] = useState<Editor | null>(null)
 
   useEffect(() => {
     if (!editorRef.current) {
-      const instance = createLocalEditor({ initialContent, editable, imageUpload })
+      const instance = createLocalEditor({
+        initialContent,
+        editable,
+        imageUpload,
+      })
       editorRef.current = instance
       setEditor(instance)
     }

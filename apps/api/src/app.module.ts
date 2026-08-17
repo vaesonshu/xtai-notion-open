@@ -7,6 +7,7 @@ import { CollaborationModule } from "./collaboration/collaboration.module"
 import { ConfigModule } from "./config/config.module"
 import { PrismaModule } from "./database/prisma.module"
 import { DocumentsModule } from "./documents/documents.module"
+import { CommentsModule } from "./comments/comments.module"
 import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
 import { AiModule } from "./ai/ai.module"
@@ -17,6 +18,7 @@ import { AiModule } from "./ai/ai.module"
     PrismaModule,
     AuthModule,
     DocumentsModule,
+    CommentsModule,
     CollaborationModule,
     CosModule,
     ImageUploadModule,

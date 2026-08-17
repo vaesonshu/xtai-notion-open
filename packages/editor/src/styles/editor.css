@@ -469,3 +469,7 @@
 .article-reader .ProseMirror h3:first-child {
   margin-top: 0;
 }
+
+.article-reader .ProseMirror img {
+  cursor: zoom-in;
+}

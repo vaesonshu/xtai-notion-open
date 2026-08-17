@@ -45,6 +45,7 @@ model Document {
   yjsSnapshots      YjsSnapshot[]
   yjsUpdates        YjsUpdate[]
   shareLinks        DocumentShareLink[]
+  comments          ArticleComment[]
 
   @@index([workspaceId])
   @@index([parentId])
@@ -78,8 +79,29 @@ model AppUser {
   ownedDocuments   Document[] @relation("DocumentOwner")
   publishedDocuments Document[] @relation("PublishedBy")
   shareLinks       DocumentShareLink[]
+  articleComments  ArticleComment[]
 
   @@map("app_user")
+}
+
+// 广场已发布文章下的评论；parentId 自引用实现多级嵌套回复。
+model ArticleComment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  articleId String   @map("article_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  parentId  String?  @map("parent_id") @db.Uuid
+  depth     Int      @default(0)
+  body      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  article Document         @relation(fields: [articleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user    AppUser          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parent  ArticleComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies ArticleComment[] @relation("CommentReplies")
+
+  @@index([articleId, createdAt])
+  @@map("article_comment")
 }
 
 model UserSession {

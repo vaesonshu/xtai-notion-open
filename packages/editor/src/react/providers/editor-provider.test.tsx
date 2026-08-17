@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
-import { StrictMode } from "react"
+import { StrictMode, use } from "react"
 import { Editor } from "@tiptap/core"
 import { describe, expect, it, vi } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
@@ -10,19 +10,33 @@ import type { CollaborationConfig } from "../../collaboration/types"
 import type { CollaborationUser } from "../../core/types"
 import { CollaborationEditorProvider } from "./collaboration-editor-provider"
 import { EditorProvider } from "./editor-provider"
+import { EditorContext } from "../context/editor-context"
 import { useCollaborationStatus } from "../hooks/use-collaboration-status"
 import { useCollaborators } from "../hooks/use-collaborators"
 import { useEditorChange } from "../hooks/use-editor-change"
 import { useEditorInstance } from "../hooks/use-editor-instance"
 
 function EditorName() {
-  const editor = useEditorInstance()
-  return <span>{editor.options.editable ? "editable" : "readonly"}</span>
+  const context = use(EditorContext)
+  if (!context?.editor) {
+    return <span>loading</span>
+  }
+  return (
+    <span>{context.editor.options.editable ? "editable" : "readonly"}</span>
+  )
 }
 
 function InsertContentButton() {
-  const editor = useEditorInstance()
-  return <button onClick={() => editor.commands.insertContent("新内容")}>insert</button>
+  const context = use(EditorContext)
+  if (!context?.editor) {
+    return null
+  }
+  const editor = context.editor
+  return (
+    <button onClick={() => editor.commands.insertContent("新内容")}>
+      insert
+    </button>
+  )
 }
 
 function CollaborationStatusLabel() {
@@ -32,7 +46,11 @@ function CollaborationStatusLabel() {
 
 function CollaboratorsLabel() {
   const collaborators = useCollaborators()
-  return <span data-testid="collaborators">{collaborators.map(user => user.id).join(",")}</span>
+  return (
+    <span data-testid="collaborators">
+      {collaborators.map((user) => user.id).join(",")}
+    </span>
+  )
 }
 
 function EditorWhenSynced() {
@@ -137,7 +155,7 @@ function createMockProvider(clientID = 1): MockProvider {
       },
       getStates: () => states,
       getLocalState: () => states.get(clientID) ?? null,
-      setStates: next => {
+      setStates: (next) => {
         states = next
       },
       setLocalStateField,
@@ -174,7 +192,7 @@ const baseConfig: CollaborationConfig = {
 function seedRemoteDocument(
   document: Y.Doc,
   provider: HocuspocusProvider,
-  text: string,
+  text: string
 ) {
   const seed = new Editor({
     extensions: createEditorExtensions({
@@ -196,18 +214,34 @@ function seedRemoteDocument(
 }
 
 describe("EditorProvider", () => {
-  it("provides an editable editor instance to descendants", () => {
-    render(<EditorProvider><EditorName /></EditorProvider>)
+  it("provides an editable editor instance to descendants", async () => {
+    render(
+      <EditorProvider>
+        <EditorName />
+      </EditorProvider>
+    )
 
-    expect(screen.getByText("editable")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText("editable")).toBeInTheDocument()
+    })
   })
 
-  it("emits the latest JSON document after an edit", () => {
+  it("emits the latest JSON document after an edit", async () => {
     const onChange = vi.fn()
-    render(<EditorProvider onChange={onChange}><InsertContentButton /></EditorProvider>)
+    render(
+      <EditorProvider onChange={onChange}>
+        <InsertContentButton />
+      </EditorProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "insert" })).toBeInTheDocument()
+    })
     screen.getByRole("button", { name: "insert" }).click()
 
-    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ type: "doc" }))
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "doc" })
+    )
   })
 
   it("keeps the editor available across StrictMode effect remounts", async () => {
@@ -216,7 +250,7 @@ describe("EditorProvider", () => {
         <EditorProvider>
           <EditorName />
         </EditorProvider>
-      </StrictMode>,
+      </StrictMode>
     )
 
     await waitFor(() => {
@@ -226,10 +260,10 @@ describe("EditorProvider", () => {
 
   it("throws when collaboration hooks are used outside collaboration provider", () => {
     expect(() => render(<CollaborationStatusLabel />)).toThrow(
-      /useCollaborationStatus must be used inside .*CollaborationEditorProvider/,
+      /useCollaborationStatus must be used inside .*CollaborationEditorProvider/
     )
     expect(() => render(<CollaboratorsLabel />)).toThrow(
-      /useCollaborators must be used inside .*CollaborationEditorProvider/,
+      /useCollaborators must be used inside .*CollaborationEditorProvider/
     )
   })
 })
@@ -246,7 +280,7 @@ describe("CollaborationEditorProvider", () => {
         >
           <CollaborationStatusLabel />
         </CollaborationEditorProvider>
-      </StrictMode>,
+      </StrictMode>
     )
 
     expect(provider.destroy).not.toHaveBeenCalled()
@@ -268,7 +302,7 @@ describe("CollaborationEditorProvider", () => {
       >
         <CollaborationStatusLabel />
         <EditorWhenSynced />
-      </CollaborationEditorProvider>,
+      </CollaborationEditorProvider>
     )
 
     expect(screen.getByTestId("collab-status")).toHaveTextContent("connecting")
@@ -279,11 +313,13 @@ describe("CollaborationEditorProvider", () => {
     const provider = createMockProvider()
     const starter = createStarterDocument()
     const starterText = starter.content
-      .map(node => {
+      .map((node) => {
         if (!node.content) {
           return ""
         }
-        return node.content.map(child => ("text" in child ? child.text : "")).join("")
+        return node.content
+          .map((child) => ("text" in child ? child.text : ""))
+          .join("")
       })
       .join("")
 
@@ -294,7 +330,7 @@ describe("CollaborationEditorProvider", () => {
       >
         <CollaborationStatusLabel />
         <EditorWhenSynced />
-      </CollaborationEditorProvider>,
+      </CollaborationEditorProvider>
     )
 
     expect(screen.getByTestId("editor-slot")).toHaveTextContent("waiting")
@@ -305,11 +341,13 @@ describe("CollaborationEditorProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("collab-status")).toHaveTextContent("synced")
-      expect(screen.getByTestId("editor-slot").textContent).toContain("让知识真正流动起来")
+      expect(screen.getByTestId("editor-slot").textContent).toContain(
+        "让知识真正流动起来"
+      )
     })
 
     expect(screen.getByTestId("editor-slot").textContent).toContain(
-      starterText.slice(0, 8),
+      starterText.slice(0, 8)
     )
     expect(provider.setAwarenessField).toHaveBeenCalledWith("user", baseUser)
   })
@@ -322,20 +360,20 @@ describe("CollaborationEditorProvider", () => {
       <CollaborationEditorProvider
         collaboration={baseConfig}
         initialContent={createStarterDocument()}
-        createProvider={options => {
+        createProvider={(options) => {
           captured.document = options.document
           return provider as unknown as HocuspocusProvider
         }}
       >
         <EditorWhenSynced />
-      </CollaborationEditorProvider>,
+      </CollaborationEditorProvider>
     )
 
     expect(captured.document).toBeInstanceOf(Y.Doc)
     seedRemoteDocument(
       captured.document!,
       provider as unknown as HocuspocusProvider,
-      "远端已有正文",
+      "远端已有正文"
     )
 
     await act(async () => {
@@ -343,11 +381,13 @@ describe("CollaborationEditorProvider", () => {
     })
 
     await waitFor(() => {
-      expect(screen.getByTestId("editor-slot")).toHaveTextContent("远端已有正文")
+      expect(screen.getByTestId("editor-slot")).toHaveTextContent(
+        "远端已有正文"
+      )
     })
 
     expect(screen.getByTestId("editor-slot").textContent).not.toContain(
-      "让知识真正流动起来",
+      "让知识真正流动起来"
     )
   })
 
@@ -360,7 +400,7 @@ describe("CollaborationEditorProvider", () => {
         createProvider={() => provider as unknown as HocuspocusProvider}
       >
         <CollaborationStatusLabel />
-      </CollaborationEditorProvider>,
+      </CollaborationEditorProvider>
     )
 
     expect(screen.getByTestId("collab-status")).toHaveTextContent("connecting")
@@ -385,7 +425,7 @@ describe("CollaborationEditorProvider", () => {
         createProvider={() => provider as unknown as HocuspocusProvider}
       >
         <CollaboratorsLabel />
-      </CollaborationEditorProvider>,
+      </CollaborationEditorProvider>
     )
 
     await act(async () => {
@@ -393,13 +433,15 @@ describe("CollaborationEditorProvider", () => {
         new Map([
           [7, { user: baseUser }],
           [8, { user: { id: "user-2", name: "Grace", color: "#16a34a" } }],
-        ]),
+        ])
       )
       provider.emit("awarenessUpdate", {})
     })
 
     expect(screen.getByTestId("collaborators")).toHaveTextContent("user-2")
-    expect(screen.getByTestId("collaborators").textContent).not.toContain("user-1")
+    expect(screen.getByTestId("collaborators").textContent).not.toContain(
+      "user-1"
+    )
   })
 
   it("destroys editor, provider, and Y.Doc exactly once on unmount", async () => {
@@ -410,13 +452,13 @@ describe("CollaborationEditorProvider", () => {
     const { unmount } = render(
       <CollaborationEditorProvider
         collaboration={baseConfig}
-        createProvider={options => {
+        createProvider={(options) => {
           captured.document = options.document
           return provider as unknown as HocuspocusProvider
         }}
       >
         <EditorWhenSynced />
-      </CollaborationEditorProvider>,
+      </CollaborationEditorProvider>
     )
 
     await act(async () => {
@@ -436,7 +478,9 @@ describe("CollaborationEditorProvider", () => {
 
     expect(provider.destroy).toHaveBeenCalledTimes(1)
     expect(captured.document?.isDestroyed).toBe(true)
-    expect(editorDestroy.mock.calls.length - editorDestroyCallsBeforeUnmount).toBe(1)
+    expect(
+      editorDestroy.mock.calls.length - editorDestroyCallsBeforeUnmount
+    ).toBe(1)
 
     editorDestroy.mockRestore()
   })
