@@ -11,6 +11,7 @@ import {
   AlertTitle,
 } from "@workspace/ui/components/alert"
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
@@ -155,20 +156,35 @@ export function DocumentWorkspace({
   const configured = isConfigured(apiUrl, collaborationUrl)
   const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
   const submitPublication = useCallback(async () => {
-    const response = await fetch(
-      `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/submit-publication`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "x-dev-user-id": user.id },
+    try {
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/submit-publication`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "x-dev-user-id": user.id },
+        }
+      )
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          message?: string
+        } | null
+        throw new Error(body?.message || `发布失败 (${response.status})`)
       }
-    )
-    if (!response.ok) {
-      throw new Error(`Failed to submit publication (${response.status})`)
+      // The post response is authoritative, avoiding a local-only pending state.
+      const body = (await response.json()) as DocumentMetadataResponse
+      const nextStatus = body.publicationStatus ?? "pending"
+      setPublicationStatus(nextStatus)
+      if (nextStatus === "published") {
+        toast.success("发布成功，文章已上线")
+      } else if (nextStatus === "pending") {
+        toast.success("已提交发布申请，等待审批")
+      } else {
+        toast.success("发布成功")
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "发布失败，请稍后重试")
     }
-    // The post response is authoritative, avoiding a local-only pending state.
-    const body = (await response.json()) as DocumentMetadataResponse
-    setPublicationStatus(body.publicationStatus ?? "pending")
   }, [apiUrl, documentId, user.id])
 
   useEffect(() => {

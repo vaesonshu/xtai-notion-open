@@ -30,6 +30,20 @@ describe("EditorToolbar", () => {
     expect(getByRole("button", { name: "待审批" })).toBeDisabled()
   })
 
+  it("uses distinct publish button colors for each publication status", () => {
+    const { getByRole, rerender } = render(
+      <EditorToolbar publicationStatus="draft" onPublish={() => undefined} />
+    )
+
+    expect(getByRole("button", { name: "发布" })).toHaveClass("!bg-[#E64B3C]")
+
+    rerender(<EditorToolbar publicationStatus="pending" />)
+    expect(getByRole("button", { name: "待审批" })).toHaveClass("!bg-[#D97706]")
+
+    rerender(<EditorToolbar publicationStatus="published" />)
+    expect(getByRole("button", { name: "已发布" })).toHaveClass("!bg-[#24866B]")
+  })
+
   it("submits a draft publication through the toolbar callback", () => {
     const onPublish = vi.fn()
     const { getByRole } = render(

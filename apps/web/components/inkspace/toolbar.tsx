@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip"
+import { cn } from "@workspace/ui/lib/utils"
 import { PencilIcon } from "./icon"
 import { AuthMenu } from "../auth-menu"
 import { ShareDialog } from "./share-dialog"
@@ -45,6 +46,16 @@ export type EditorToolbarProps = {
   publicationStatus?: "draft" | "pending" | "published"
   onPublish?: () => void
 }
+
+// 发布按钮用背景色区分草稿、待审批与已上线三种状态。
+const PUBLICATION_BUTTON_STYLES = {
+  draft: "!bg-[#E64B3C] hover:!bg-[#D94335]",
+  pending: "!bg-[#D97706] hover:!bg-[#B45309]",
+  published: "!bg-[#24866B] hover:!bg-[#1F745C]",
+} as const satisfies Record<
+  NonNullable<EditorToolbarProps["publicationStatus"]>,
+  string
+>
 
 function StatusBadge({ status }: { status: CollaborationStatus }) {
   if (status === "synced") {
@@ -260,7 +271,10 @@ export function EditorToolbar({
           aria-label={publicationLabel}
           disabled={publicationDisabled}
           onClick={onPublish}
-          className="!bg-[#E64B3C] !text-[0px] !text-white hover:!bg-[#D94335] hover:!text-white"
+          className={cn(
+            "!text-[0px] !text-white hover:!text-white",
+            PUBLICATION_BUTTON_STYLES[publicationStatus]
+          )}
         >
           <PencilIcon icon={SendIcon} color="white" />
           <span className="text-[13px]">{publicationLabel}</span>
