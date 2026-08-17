@@ -12,6 +12,7 @@ import { ImageUploadService } from "./image-upload.service"
 function createService() {
   const documents = {
     assertCanWrite: vi.fn().mockResolvedValue("editor"),
+    assertCanRead: vi.fn().mockResolvedValue("viewer"),
   } as unknown as DocumentsService
   const cos = {
     createPutPresign: vi.fn((input) => ({
@@ -23,6 +24,7 @@ function createService() {
       publicUrl: `https://cdn.example.com/${input.objectKey}`,
       ...input,
     })),
+    resolveHostedImageObjectKey: vi.fn(),
   } as unknown as CosService
 
   return { service: new ImageUploadService(documents, cos), documents, cos }
@@ -131,5 +133,33 @@ describe("ImageUploadService", () => {
       })
     ).rejects.toBeInstanceOf(ForbiddenException)
     expect(cos.createPutPresign).not.toHaveBeenCalled()
+  })
+
+  it("proxies hosted document images for canvas export", async () => {
+    const { service, documents, cos } = createService()
+    vi.mocked(cos.resolveHostedImageObjectKey).mockReturnValue(
+      "documents/doc-1/image.png"
+    )
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("image-bytes", {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        })
+      )
+    )
+
+    await expect(
+      service.proxyImage(
+        "doc-1",
+        "viewer-1",
+        "https://cdn.example.com/documents/doc-1/image.png"
+      )
+    ).resolves.toEqual({
+      buffer: Buffer.from("image-bytes"),
+      contentType: "image/png",
+    })
+    expect(documents.assertCanRead).toHaveBeenCalledWith("doc-1", "viewer-1")
   })
 })

@@ -20,6 +20,7 @@ import { Button } from "@workspace/ui/components/button"
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
 import type { ImageUploadHandler } from "../../core/image-upload"
+import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
 import { useCanvasCollaborationLock } from "../../react/hooks/use-canvas-collaboration-lock"
 import { useInView } from "../../react/hooks/use-in-view"
 import type { ExcalidrawCanvasEditorHandle } from "./excalidraw-canvas-editor"
@@ -27,6 +28,12 @@ import type { ExcalidrawCanvasEditorHandle } from "./excalidraw-canvas-editor"
 const ExcalidrawCanvasEditor = lazy(() =>
   import("./excalidraw-canvas-editor").then((module) => ({
     default: module.ExcalidrawCanvasEditor,
+  }))
+)
+
+const CanvasThumbnailPreview = lazy(() =>
+  import("./canvas-thumbnail-preview").then((module) => ({
+    default: module.CanvasThumbnailPreview,
   }))
 )
 
@@ -55,6 +62,13 @@ export function CanvasBlockNode({
       (item) => item.name === "canvasBlock"
     )
     return extension?.options.upload as ImageUploadHandler | undefined
+  }, [editor])
+
+  const imageFetch = useMemo(() => {
+    const extension = editor.extensionManager.extensions.find(
+      (item) => item.name === "canvasBlock"
+    )
+    return extension?.options.fetchImage as CanvasImageFetchHandler | undefined
   }, [editor])
 
   const effectiveReadOnly = readOnly || isLockedByOther
@@ -172,14 +186,24 @@ export function CanvasBlockNode({
               snapshot={snapshot}
               readOnly={effectiveReadOnly}
               imageUpload={imageUpload}
+              imageFetch={imageFetch}
               onEditingStart={claim}
               onSnapshotChange={(next) => updateAttributes({ snapshot: next })}
             />
           </Suspense>
         ) : (
-          <div className="editor-canvas-block__placeholder" role="status">
-            画板将在滚动到此处时加载
-          </div>
+          <Suspense
+            fallback={
+              <div className="editor-canvas-block__placeholder" role="status">
+                预览加载中…
+              </div>
+            }
+          >
+            <CanvasThumbnailPreview
+              snapshot={snapshot}
+              imageFetch={imageFetch}
+            />
+          </Suspense>
         )}
       </div>
 

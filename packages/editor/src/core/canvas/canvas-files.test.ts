@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { BinaryFiles } from "@excalidraw/excalidraw/types"
-import { externalizeCanvasFiles } from "./canvas-files"
+import { externalizeCanvasFiles, inlineRemoteCanvasFiles } from "./canvas-files"
 
 describe("externalizeCanvasFiles", () => {
   it("uploads data URL files and replaces with public URLs", async () => {
@@ -42,5 +42,27 @@ describe("externalizeCanvasFiles", () => {
 
     expect(upload).not.toHaveBeenCalled()
     expect(result).toBe(files)
+  })
+
+  it("inlines remote image URLs before export", async () => {
+    const fetchRemote = vi.fn().mockResolvedValue(
+      new Blob(["pixels"], { type: "image/png" })
+    )
+    const files = {
+      "file-1": {
+        id: "file-1",
+        mimeType: "image/png",
+        created: 1,
+        dataURL: "https://cdn.example.com/existing.png",
+      },
+    } as BinaryFiles
+
+    const result = await inlineRemoteCanvasFiles(files, fetchRemote)
+
+    expect(fetchRemote).toHaveBeenCalledWith(
+      "https://cdn.example.com/existing.png",
+      undefined
+    )
+    expect(result["file-1"]?.dataURL).toMatch(/^data:image\/png;base64,/)
   })
 })

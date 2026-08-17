@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
-import { createDocumentImageUploader } from "./image-upload"
+import {
+  createDocumentCanvasImageFetcher,
+  createDocumentImageUploader,
+} from "./image-upload"
 
 const file = new File(["image"], "image.png", { type: "image/png" })
 
@@ -66,5 +69,29 @@ describe("createDocumentImageUploader", () => {
     await expect(uploader(file)).rejects.toThrow(
       "无法连接到图片上传服务。请检查 API 是否已启动或网络连接。"
     )
+  })
+})
+
+describe("createDocumentCanvasImageFetcher", () => {
+  it("fetches canvas images through the API proxy", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("image-bytes", { status: 200 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const blob = await createDocumentCanvasImageFetcher({
+      apiUrl: "https://api.example.test",
+      documentId: "document-1",
+      userId: "user-1",
+    })("https://cdn.example.test/documents/document-1/image.png")
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/documents/document-1/images/proxy?url=https%3A%2F%2Fcdn.example.test%2Fdocuments%2Fdocument-1%2Fimage.png",
+      expect.objectContaining({
+        credentials: "include",
+        headers: { "x-dev-user-id": "user-1" },
+      })
+    )
+    expect(await blob.text()).toBe("image-bytes")
   })
 })

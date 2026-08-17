@@ -111,4 +111,24 @@ describe("CosService", () => {
     expect(output).not.toContain(environment.COS_SECRET_KEY)
     expect(output).not.toContain("q-sign=signature")
   })
+
+  it("resolves hosted image object keys from CDN and COS URLs", () => {
+    const service = new CosService(environment, {
+      getAuthorization: () => "q-sign=signature",
+    })
+
+    expect(
+      service.resolveHostedImageObjectKey(
+        "https://cdn.example.com/images/documents/document-1/asset.png"
+      )
+    ).toBe("documents/document-1/asset.png")
+    expect(
+      service.resolveHostedImageObjectKey(
+        "https://examplebucket-1250000000.cos.ap-guangzhou.myqcloud.com/documents/document-1/asset.png"
+      )
+    ).toBe("documents/document-1/asset.png")
+    expect(
+      service.resolveHostedImageObjectKey("https://evil.example.com/asset.png")
+    ).toBeNull()
+  })
 })

@@ -134,6 +134,54 @@ export class CosService {
     }
   }
 
+  resolveHostedImageObjectKey(publicUrl: string): string | null {
+    let parsed: URL
+    try {
+      parsed = new URL(publicUrl)
+    } catch {
+      return null
+    }
+
+    if (parsed.protocol !== "https:") {
+      return null
+    }
+
+    const bucket = this.source.COS_BUCKET?.trim()
+    const region = this.source.COS_REGION?.trim()
+    if (!bucket || !region) {
+      return null
+    }
+
+    const publicBaseUrl = this.source.COS_PUBLIC_BASE_URL?.trim()
+    if (publicBaseUrl) {
+      try {
+        const base = new URL(publicBaseUrl)
+        const basePath = base.pathname.replace(/\/+$/, "")
+        const objectPath = parsed.pathname.replace(/\/+$/, "")
+        if (
+          parsed.host === base.host &&
+          (objectPath === basePath ||
+            objectPath.startsWith(`${basePath}/`))
+        ) {
+          const objectKey = objectPath
+            .slice(basePath.length)
+            .replace(/^\/+/, "")
+          return objectKey || null
+        }
+      } catch {
+        // 忽略无效 CDN 配置
+      }
+    }
+
+    const cosHost = `${bucket}.cos.${region}.myqcloud.com`
+    if (parsed.host !== cosHost) {
+      return null
+    }
+
+    const objectKey = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""))
+    return objectKey || null
+  }
+
   async putObject(input: CosPutObjectInput): Promise<CosPutObjectResult> {
     const bucket = requireValue(this.source, "COS_BUCKET")
     const region = requireValue(this.source, "COS_REGION")

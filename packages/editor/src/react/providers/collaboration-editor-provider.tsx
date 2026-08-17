@@ -16,6 +16,7 @@ import { createEditorExtensions } from "../../core/extensions"
 import { createStarterDocument } from "../../core/document"
 import type { CollaborationUser, EditorDocument } from "../../core/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
+import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
 import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 import { EditorContext } from "../context/editor-context"
@@ -105,6 +106,7 @@ function createSyncedEditor(options: {
   editable: boolean
   initialContent?: EditorDocument
   imageUpload?: ImageUploadHandler
+  canvasImageFetch?: CanvasImageFetchHandler
 }): Editor {
   const wasEmpty = isRemoteDocumentEmpty(options.document)
   const editor = new Editor({
@@ -113,6 +115,7 @@ function createSyncedEditor(options: {
       provider: options.provider,
       user: options.user,
       imageUpload: options.imageUpload,
+      canvasImageFetch: options.canvasImageFetch,
       imageUploadNode: ImageUploadNode,
       canvasBlockNode: CanvasBlockNode,
     }),
@@ -134,6 +137,7 @@ export function CollaborationEditorProvider({
   createProvider,
   initialContent,
   imageUpload,
+  canvasImageFetch,
   editable = true,
   onChange,
   children,
@@ -150,12 +154,22 @@ export function CollaborationEditorProvider({
   >(new Map())
   const [editor, setEditor] = useState<Editor | null>(null)
   const editorRef = useRef<Editor | null>(null)
-  const createOptionsRef = useRef({ editable, initialContent, imageUpload })
+  const createOptionsRef = useRef({
+    editable,
+    initialContent,
+    imageUpload,
+    canvasImageFetch,
+  })
   const mountGenerationRef = useRef(0)
 
   useEffect(() => {
-    createOptionsRef.current = { editable, initialContent, imageUpload }
-  }, [editable, imageUpload, initialContent])
+    createOptionsRef.current = {
+      editable,
+      initialContent,
+      imageUpload,
+      canvasImageFetch,
+    }
+  }, [canvasImageFetch, editable, imageUpload, initialContent])
 
   useEffect(() => {
     const provider = session.provider
@@ -172,6 +186,7 @@ export function CollaborationEditorProvider({
         editable: createOptionsRef.current.editable,
         initialContent: createOptionsRef.current.initialContent,
         imageUpload: createOptionsRef.current.imageUpload,
+        canvasImageFetch: createOptionsRef.current.canvasImageFetch,
       })
       editorRef.current = nextEditor
       setEditor(nextEditor)

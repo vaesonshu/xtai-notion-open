@@ -85,6 +85,7 @@ export function createEditorExtensions(
     }),
     (options.canvasBlockNode ?? CanvasBlockNode).configure({
       upload: options.imageUpload,
+      fetchImage: options.canvasImageFetch,
     }),
     MentionNode,
     // 表格：官方 Table/Row/Header/Cell 四件套，StarterKit 不含表格需显式注册。

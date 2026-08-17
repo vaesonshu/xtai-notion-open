@@ -6,6 +6,9 @@ export type CreateDocumentImageUploaderOptions = {
   userId: string
 }
 
+export type CreateDocumentCanvasImageFetcherOptions =
+  CreateDocumentImageUploaderOptions
+
 type PresignResponse = {
   publicUrl: string
 }
@@ -67,5 +70,30 @@ export function createDocumentImageUploader({
     }
 
     return { publicUrl: result.publicUrl, contentType: file.type }
+  }
+}
+
+/** 通过 API 同源代理拉取 COS 图片，供画板导出/预览内联为 data URL。 */
+export function createDocumentCanvasImageFetcher({
+  apiUrl,
+  documentId,
+  userId,
+}: CreateDocumentCanvasImageFetcherOptions) {
+  return async (url: string, signal?: AbortSignal): Promise<Blob> => {
+    const proxyUrl = `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/images/proxy?url=${encodeURIComponent(url)}`
+    let response: Response
+    try {
+      response = await fetch(proxyUrl, {
+        credentials: "include",
+        signal,
+        headers: {
+          "x-dev-user-id": userId,
+        },
+      })
+    } catch (error) {
+      throw getUploadError(error)
+    }
+    assertOk(response, "Canvas image fetch")
+    return response.blob()
   }
 }

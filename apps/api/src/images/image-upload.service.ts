@@ -68,6 +68,31 @@ export class ImageUploadService {
     })
   }
 
+  async proxyImage(
+    documentId: string,
+    userId: string,
+    publicUrl: string
+  ): Promise<{ buffer: Buffer; contentType: string }> {
+    await this.documents.assertCanRead(documentId, userId)
+
+    const objectKey = this.cos.resolveHostedImageObjectKey(publicUrl)
+    if (!objectKey?.startsWith(`documents/${documentId}/`)) {
+      throw new BadRequestException("Invalid image url")
+    }
+
+    const response = await fetch(publicUrl)
+    if (!response.ok) {
+      throw new BadRequestException("Image not found")
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer())
+    const contentType =
+      response.headers.get("content-type")?.split(";")[0]?.trim() ||
+      "application/octet-stream"
+
+    return { buffer, contentType }
+  }
+
   async upload(
     documentId: string,
     userId: string,

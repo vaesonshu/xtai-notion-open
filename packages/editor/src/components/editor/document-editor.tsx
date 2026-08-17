@@ -5,6 +5,7 @@ import type { CreateProvider } from "../../collaboration/create-collaboration-se
 import type { CollaborationConfig } from "../../collaboration/types"
 import type { EditorDocument } from "../../core/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
+import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
 import { CollaborationEditorProvider } from "../../react/providers/collaboration-editor-provider"
 import { EditorProvider } from "../../react/providers/editor-provider"
 import { EditorContext } from "../../react/context/editor-context"
@@ -22,6 +23,7 @@ type DocumentEditorSharedProps = {
   renderToolbar?: () => ReactNode
   renderSurface?: (surface: ReactNode) => ReactNode
   imageUpload?: ImageUploadHandler
+  canvasImageFetch?: CanvasImageFetchHandler
   /** 提供 @ 提及的候选文档；省略时提及菜单不显示任何结果。 */
   mentionProvider?: MentionProvider
   /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
@@ -90,6 +92,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
         collaboration={props.collaboration}
         editable={editable}
         imageUpload={props.imageUpload}
+        canvasImageFetch={props.canvasImageFetch}
         onChange={onChange}
         createProvider={props.createProvider}
       >
@@ -103,6 +106,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       initialContent={props.content}
       editable={editable}
       imageUpload={props.imageUpload}
+      canvasImageFetch={props.canvasImageFetch}
       onChange={onChange}
     >
       {framedContent}

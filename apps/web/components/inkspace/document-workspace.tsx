@@ -15,7 +15,7 @@ import { toast } from "sonner"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
-import { createDocumentImageUploader } from "./image-upload"
+import { createDocumentCanvasImageFetcher, createDocumentImageUploader } from "./image-upload"
 import { AiAssistantPanel } from "./ai-assistant-panel"
 
 export type DocumentWorkspaceUser = CollaborationUser
@@ -274,6 +274,11 @@ export function DocumentWorkspace({
   const imageUpload = editable
     ? createDocumentImageUploader({ apiUrl, documentId, userId: user.id })
     : undefined
+  const canvasImageFetch = createDocumentCanvasImageFetcher({
+    apiUrl,
+    documentId,
+    userId: user.id,
+  })
 
   return (
     <div className="flex min-h-0 flex-1">
@@ -286,6 +291,7 @@ export function DocumentWorkspace({
         }}
         editable={editable}
         imageUpload={imageUpload}
+        canvasImageFetch={canvasImageFetch}
         createProvider={createProvider}
         mentionProvider={mentionProvider}
         mentionNavigate={mentionNavigate}

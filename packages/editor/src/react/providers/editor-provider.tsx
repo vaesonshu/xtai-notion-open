@@ -7,6 +7,7 @@ import { createEditorExtensions } from "../../core/extensions"
 import { createInitialDocument } from "../../core/document/initial-document"
 import type { EditorDocument } from "../../core/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
+import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
 import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 
@@ -15,6 +16,7 @@ export type EditorProviderProps = {
   editable?: boolean
   onChange?: (document: EditorDocument) => void
   imageUpload?: ImageUploadHandler
+  canvasImageFetch?: CanvasImageFetchHandler
   children: ReactNode
 }
 
@@ -22,10 +24,12 @@ function createLocalEditor(options: {
   initialContent?: EditorDocument
   editable: boolean
   imageUpload?: ImageUploadHandler
+  canvasImageFetch?: CanvasImageFetchHandler
 }): Editor {
   return new Editor({
     extensions: createEditorExtensions({
       imageUpload: options.imageUpload,
+      canvasImageFetch: options.canvasImageFetch,
       imageUploadNode: ImageUploadNode,
       canvasBlockNode: CanvasBlockNode,
     }),
@@ -40,6 +44,7 @@ export function EditorProvider({
   initialContent,
   editable = true,
   imageUpload,
+  canvasImageFetch,
   onChange,
   children,
 }: EditorProviderProps) {
@@ -53,6 +58,7 @@ export function EditorProvider({
         initialContent,
         editable,
         imageUpload,
+        canvasImageFetch,
       })
       editorRef.current = instance
       setEditor(instance)

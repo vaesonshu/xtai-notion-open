@@ -30,6 +30,12 @@ export function parseCanvasSnapshot(raw: unknown): CanvasSnapshot | null {
   }
 }
 
+/** 快照是否包含可渲染的画板元素（用于占位预览）。 */
+export function hasCanvasContent(raw: unknown): boolean {
+  const parsed = parseCanvasSnapshot(raw)
+  return Boolean(parsed?.elements.some((element) => !element.isDeleted))
+}
+
 /** 将画板快照序列化进 TipTap attrs，供 Yjs 协作同步。 */
 export function stringifyCanvasSnapshot(snapshot: CanvasSnapshot): string {
   return JSON.stringify({

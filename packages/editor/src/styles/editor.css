@@ -540,9 +540,42 @@
   align-items: center;
   color: #78746c;
   display: flex;
+  flex-direction: column;
   font-size: 0.875rem;
+  gap: 0.35rem;
   height: 28rem;
   justify-content: center;
+}
+
+.editor-canvas-block__placeholder-hint {
+  color: #a8a29e;
+  font-size: 0.75rem;
+}
+
+.editor-canvas-block__preview {
+  align-items: center;
+  background: #fafaf9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 28rem;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-canvas-block__preview-image {
+  display: block;
+  max-height: calc(100% - 1.5rem);
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.editor-canvas-block__preview-hint {
+  bottom: 0.5rem;
+  color: #a8a29e;
+  font-size: 0.75rem;
+  position: absolute;
 }
 
 .editor-canvas-block__title {

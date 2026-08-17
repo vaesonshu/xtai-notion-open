@@ -1,6 +1,6 @@
 "use client"
 
-import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw"
+import { Excalidraw } from "@excalidraw/excalidraw"
 // CSS 必须在 JS 中 import：包 exports 未声明 style 条件，editor.css 里 @import 会失败
 import "@excalidraw/excalidraw/index.css"
 import type {
@@ -18,7 +18,12 @@ import {
   useMemo,
   useRef,
 } from "react"
-import { externalizeCanvasFiles } from "../../core/canvas/canvas-files"
+import { toast } from "sonner"
+import { exportCanvasToBlob } from "../../core/canvas/canvas-export"
+import {
+  externalizeCanvasFiles,
+  type CanvasImageFetchHandler,
+} from "../../core/canvas/canvas-files"
 import {
   parseCanvasSnapshot,
   stringifyCanvasSnapshot,
@@ -35,8 +40,13 @@ type ExcalidrawCanvasEditorProps = {
   snapshot: string
   readOnly: boolean
   imageUpload?: ImageUploadHandler
+  imageFetch?: CanvasImageFetchHandler
   onSnapshotChange: (snapshot: string) => void
   onEditingStart?: () => void
+}
+
+function getPersistErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "画板保存失败，请稍后重试"
 }
 
 /** 嵌入式 Excalidraw 画板：快照写入 TipTap 节点 attrs，随文档 Yjs 同步。 */
@@ -44,15 +54,25 @@ export const ExcalidrawCanvasEditor = forwardRef<
   ExcalidrawCanvasEditorHandle,
   ExcalidrawCanvasEditorProps
 >(function ExcalidrawCanvasEditor(
-  { snapshot, readOnly, imageUpload, onSnapshotChange, onEditingStart },
+  {
+    snapshot,
+    readOnly,
+    imageUpload,
+    imageFetch,
+    onSnapshotChange,
+    onEditingStart,
+  },
   ref
 ) {
   const theme = useDocumentTheme()
   const apiRef = useRef<ExcalidrawImperativeAPI | null>(null)
+  const snapshotRef = useRef(snapshot)
   const lastPersistedRef = useRef(snapshot)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingElementsRef = useRef<readonly ExcalidrawElement[] | null>(null)
   const pendingFilesRef = useRef<BinaryFiles | null>(null)
+
+  snapshotRef.current = snapshot
 
   // initialData 仅在挂载时生效，后续远端更新走 excalidrawAPI.updateScene
   const initialData = useMemo((): ExcalidrawInitialDataState => {
@@ -66,6 +86,52 @@ export const ExcalidrawCanvasEditor = forwardRef<
     }
   }, [])
 
+  const applySnapshot = useCallback(
+    (api: ExcalidrawImperativeAPI, raw: string) => {
+      if (raw === lastPersistedRef.current) {
+        return
+      }
+      const parsed = parseCanvasSnapshot(raw)
+      if (!parsed) {
+        return
+      }
+      api.updateScene({
+        elements: parsed.elements,
+        ...(parsed.files ? { files: parsed.files } : {}),
+      })
+      lastPersistedRef.current = raw
+    },
+    []
+  )
+
+  const showPersistError = useCallback(
+    (
+      error: unknown,
+      elements: readonly ExcalidrawElement[],
+      files: BinaryFiles
+    ) => {
+      const retry = () => {
+        void persistSceneRef.current(elements, files, { force: true })
+      }
+      toast.error("画板保存失败", {
+        description: getPersistErrorMessage(error),
+        action: {
+          label: "重试",
+          onClick: retry,
+        },
+      })
+    },
+    []
+  )
+
+  const persistSceneRef = useRef<
+    (
+      elements: readonly ExcalidrawElement[],
+      files: BinaryFiles,
+      options?: { force?: boolean }
+    ) => Promise<void>
+  >(async () => undefined)
+
   const persistScene = useCallback(
     async (
       elements: readonly ExcalidrawElement[],
@@ -76,19 +142,27 @@ export const ExcalidrawCanvasEditor = forwardRef<
         return
       }
 
-      const externalized = await externalizeCanvasFiles(files, imageUpload)
-      const next = stringifyCanvasSnapshot({
-        elements: [...elements],
-        files: externalized,
-      })
-      if (!force && next === lastPersistedRef.current) {
-        return
+      try {
+        const externalized = await externalizeCanvasFiles(files, imageUpload)
+        const next = stringifyCanvasSnapshot({
+          elements: [...elements],
+          files: externalized,
+        })
+        if (!force && next === lastPersistedRef.current) {
+          return
+        }
+        lastPersistedRef.current = next
+        onSnapshotChange(next)
+      } catch (error) {
+        pendingElementsRef.current = elements
+        pendingFilesRef.current = files
+        showPersistError(error, elements, files)
       }
-      lastPersistedRef.current = next
-      onSnapshotChange(next)
     },
-    [imageUpload, onSnapshotChange, readOnly]
+    [imageUpload, onSnapshotChange, readOnly, showPersistError]
   )
+
+  persistSceneRef.current = persistScene
 
   const flushPending = useCallback(async () => {
     if (saveTimerRef.current) {
@@ -117,24 +191,34 @@ export const ExcalidrawCanvasEditor = forwardRef<
       return
     }
 
-    const blob = await exportToBlob({
-      elements: api.getSceneElements(),
-      appState: {
-        ...api.getAppState(),
-        exportBackground: true,
-        exportWithDarkMode: theme === "dark",
-      },
-      files: api.getFiles(),
-      mimeType: "image/png",
-    })
+    try {
+      const blob = await exportCanvasToBlob(
+        {
+          elements: api.getSceneElements(),
+          appState: {
+            ...api.getAppState(),
+            exportBackground: true,
+            exportWithDarkMode: theme === "dark",
+          },
+          files: api.getFiles(),
+          mimeType: "image/png",
+        },
+        imageFetch
+      )
 
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = `canvas-${Date.now()}.png`
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }, [theme])
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = `canvas-${Date.now()}.png`
+      anchor.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      toast.error("导出 PNG 失败", {
+        description:
+          error instanceof Error ? error.message : "画板包含无法导出的远程图片",
+      })
+    }
+  }, [imageFetch, theme])
 
   useImperativeHandle(ref, () => ({ flushPending, exportPng }), [
     exportPng,
@@ -168,19 +252,11 @@ export const ExcalidrawCanvasEditor = forwardRef<
   // 远端协作者更新 snapshot 时重载画板内容
   useEffect(() => {
     const api = apiRef.current
-    if (!api || snapshot === lastPersistedRef.current) {
+    if (!api) {
       return
     }
-    const parsed = parseCanvasSnapshot(snapshot)
-    if (!parsed) {
-      return
-    }
-    api.updateScene({
-      elements: parsed.elements,
-      ...(parsed.files ? { files: parsed.files } : {}),
-    })
-    lastPersistedRef.current = snapshot
-  }, [snapshot])
+    applySnapshot(api, snapshot)
+  }, [applySnapshot, snapshot])
 
   useEffect(() => {
     return () => {
@@ -199,6 +275,8 @@ export const ExcalidrawCanvasEditor = forwardRef<
         onPointerDown={onEditingStart}
         excalidrawAPI={(api) => {
           apiRef.current = api
+          // API 就绪时补同步，避免协作者更新在挂载前被跳过
+          applySnapshot(api, snapshotRef.current)
         }}
         UIOptions={{
           canvasActions: {

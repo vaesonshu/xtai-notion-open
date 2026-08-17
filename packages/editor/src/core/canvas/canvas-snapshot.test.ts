@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   createCanvasBlockId,
+  hasCanvasContent,
   parseCanvasSnapshot,
   stringifyCanvasSnapshot,
   type CanvasSnapshot,
@@ -42,5 +43,26 @@ describe("canvas-snapshot", () => {
     expect(createCanvasBlockId()).toMatch(
       /^([0-9a-f-]{36}|canvas-\d+-[a-z0-9]+)$/
     )
+  })
+
+  it("detects non-empty canvas content", () => {
+    const empty = stringifyCanvasSnapshot({ elements: [] })
+    expect(hasCanvasContent(empty)).toBe(false)
+
+    const deletedOnly = stringifyCanvasSnapshot({
+      elements: [{ id: "a", isDeleted: true } as CanvasSnapshot["elements"][0]],
+    })
+    expect(hasCanvasContent(deletedOnly)).toBe(false)
+
+    const withShape = stringifyCanvasSnapshot({
+      elements: [
+        {
+          id: "rect-1",
+          type: "rectangle",
+          isDeleted: false,
+        } as CanvasSnapshot["elements"][0],
+      ],
+    })
+    expect(hasCanvasContent(withShape)).toBe(true)
   })
 })

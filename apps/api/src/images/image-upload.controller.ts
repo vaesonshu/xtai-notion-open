@@ -2,13 +2,17 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Inject,
   Param,
   Post,
+  Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common"
+import type { Response } from "express"
 import { FileInterceptor } from "@nestjs/platform-express"
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
@@ -47,5 +51,22 @@ export class ImageUploadController {
     @CurrentUser() user: DevUser
   ): Promise<PresignImageResponse> {
     return this.images.createPresign(documentId, user.id, request)
+  }
+
+  @Get("proxy")
+  async proxyImage(
+    @Param("documentId") documentId: string,
+    @Query("url") url: string | undefined,
+    @CurrentUser() user: DevUser,
+    @Res() response: Response
+  ): Promise<void> {
+    if (!url?.trim()) {
+      throw new BadRequestException("Image url is required")
+    }
+
+    const result = await this.images.proxyImage(documentId, user.id, url)
+    response.setHeader("Content-Type", result.contentType)
+    response.setHeader("Cache-Control", "private, max-age=3600")
+    response.send(result.buffer)
   }
 }

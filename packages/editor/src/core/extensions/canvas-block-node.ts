@@ -2,6 +2,7 @@ import { Node, mergeAttributes } from "@tiptap/core"
 import { createCanvasBlockId } from "../canvas/canvas-snapshot"
 
 import type { ImageUploadHandler } from "../image-upload"
+import type { CanvasImageFetchHandler } from "../canvas/canvas-files"
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -15,7 +16,10 @@ declare module "@tiptap/core" {
  * Excalidraw 画板内嵌块：原子块节点，场景快照存在 attrs.snapshot 中，
  * 经 TipTap Collaboration + Yjs 与协作者同步。
  */
-export const CanvasBlockNode = Node.create<{ upload?: ImageUploadHandler }>({
+export const CanvasBlockNode = Node.create<{
+  upload?: ImageUploadHandler
+  fetchImage?: CanvasImageFetchHandler
+}>({
   name: "canvasBlock",
   group: "block",
   atom: true,
@@ -24,6 +28,7 @@ export const CanvasBlockNode = Node.create<{ upload?: ImageUploadHandler }>({
   addOptions() {
     return {
       upload: undefined,
+      fetchImage: undefined,
     }
   },
 
