@@ -89,6 +89,7 @@ export function EditorProvider({
         editor,
         collaborationStatus: null,
         collaborators: [],
+        collaborationUser: null,
       }}
     >
       {children}

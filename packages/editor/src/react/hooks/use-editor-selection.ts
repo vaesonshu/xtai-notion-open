@@ -8,9 +8,11 @@ export function useEditorSelection(): number {
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
-    const handleSelectionUpdate = () => setVersion(current => current + 1)
+    const handleSelectionUpdate = () => setVersion((current) => current + 1)
     editor.on("selectionUpdate", handleSelectionUpdate)
-    return () => { editor.off("selectionUpdate", handleSelectionUpdate) }
+    return () => {
+      editor.off("selectionUpdate", handleSelectionUpdate)
+    }
   }, [editor])
 
   return version

@@ -3,18 +3,11 @@ import type { NextConfig } from "next"
 const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@workspace/ui", "@workspace/editor", "@workspace/icons"],
-  serverExternalPackages: [
-    "tldraw",
-    "@tldraw/editor",
-    "@tldraw/store",
-    "@tldraw/tlschema",
-    "@tldraw/utils",
-    "@tldraw/state",
-    "@tldraw/state-react",
-    "@tldraw/validate",
-    "@tldraw/driver",
-    "@tldraw/assets",
+  transpilePackages: [
+    "@workspace/ui",
+    "@workspace/editor",
+    "@workspace/icons",
+    "@excalidraw/excalidraw",
   ],
   env: {
     NEXT_PUBLIC_API_URL: apiUrl,

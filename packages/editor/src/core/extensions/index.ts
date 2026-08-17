@@ -83,7 +83,9 @@ export function createEditorExtensions(
     (options.imageUploadNode ?? ImageUploadNode).configure({
       upload: options.imageUpload,
     }),
-    options.canvasBlockNode ?? CanvasBlockNode,
+    (options.canvasBlockNode ?? CanvasBlockNode).configure({
+      upload: options.imageUpload,
+    }),
     MentionNode,
     // 表格：官方 Table/Row/Header/Cell 四件套，StarterKit 不含表格需显式注册。
     Table.configure({ resizable: true }),

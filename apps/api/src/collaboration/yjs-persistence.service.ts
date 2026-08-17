@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from "@nestjs/common"
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common"
 import * as Y from "yjs"
 import { YjsPersistenceRepository } from "./yjs-persistence.repository"
 
@@ -19,9 +19,12 @@ const DEFAULT_COMPACT_UPDATE_COUNT_THRESHOLD = 50
 
 @Injectable()
 export class YjsPersistenceService {
+  private readonly logger = new Logger(YjsPersistenceService.name)
   private readonly flushDelayMs: number
   private readonly compactUpdateCountThreshold: number
   private readonly buffers = new Map<string, DocumentBuffer>()
+  // 同一文档的 flush 串行化，避免并发事务在 pg_advisory_xact_lock 上等待超时
+  private readonly flushChains = new Map<string, Promise<void>>()
 
   constructor(
     @Inject(YjsPersistenceRepository)
@@ -61,6 +64,22 @@ export class YjsPersistenceService {
   }
 
   async flushDocument(documentId: string): Promise<void> {
+    const previous = this.flushChains.get(documentId) ?? Promise.resolve()
+    const current = previous
+      .catch(() => undefined)
+      .then(() => this.flushDocumentOnce(documentId))
+    this.flushChains.set(documentId, current)
+
+    try {
+      await current
+    } finally {
+      if (this.flushChains.get(documentId) === current) {
+        this.flushChains.delete(documentId)
+      }
+    }
+  }
+
+  private async flushDocumentOnce(documentId: string): Promise<void> {
     const buffer = this.buffers.get(documentId)
     if (!buffer || buffer.updates.length === 0) {
       this.clearTimer(buffer)
@@ -72,7 +91,15 @@ export class YjsPersistenceService {
     const updates = buffer.updates.splice(0, buffer.updates.length)
     this.buffers.delete(documentId)
 
-    await this.repository.insertUpdates(documentId, updates)
+    try {
+      await this.repository.insertUpdates(documentId, updates)
+    } catch (error) {
+      // 写入失败时把 updates 合并回缓冲区，避免协作内容丢失
+      const failedBuffer = this.getOrCreateBuffer(documentId)
+      failedBuffer.updates.unshift(...updates)
+      this.scheduleFlush(documentId, failedBuffer)
+      throw error
+    }
 
     const snapshot = await this.repository.getLatestSnapshot(documentId)
     const afterSequence = snapshot?.sequence ?? 0
@@ -118,7 +145,12 @@ export class YjsPersistenceService {
   private scheduleFlush(documentId: string, buffer: DocumentBuffer): void {
     this.clearTimer(buffer)
     buffer.timer = setTimeout(() => {
-      void this.flushDocument(documentId)
+      void this.flushDocument(documentId).catch((error: unknown) => {
+        this.logger.error(
+          `Failed to flush Yjs updates for document ${documentId}`,
+          error instanceof Error ? error.stack : String(error)
+        )
+      })
     }, this.flushDelayMs)
     if (typeof buffer.timer === "object" && "unref" in buffer.timer) {
       buffer.timer.unref()

@@ -1,6 +1,3 @@
-/* 全局引入 tldraw 样式：避免在 client 组件里 import CSS 触发 serverExternalPackages 警告 */
-@import "tldraw/tldraw.css";
-
 .ProseMirror {
   min-height: 20rem;
   outline: none;
@@ -477,7 +474,7 @@
   cursor: zoom-in;
 }
 
-/* tldraw 画板内嵌块：固定高度容器供 Tldraw 填充 */
+/* Excalidraw 画板内嵌块：固定高度容器供画板填充 */
 .editor-canvas-block {
   margin: 1.5rem 0;
   border: 1px solid #e8e6e1;
@@ -495,6 +492,59 @@
   padding: 0.35rem 0.5rem 0.35rem 0.75rem;
 }
 
+.editor-canvas-block__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.125rem;
+}
+
+/* 全屏覆盖层：保持同一 Excalidraw 实例，避免切换时丢失编辑状态 */
+.editor-canvas-block--fullscreen {
+  background: #fcfcfa;
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  margin: 0;
+  position: fixed;
+  z-index: 50;
+}
+
+.editor-canvas-block--fullscreen .editor-canvas-block__viewport {
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-canvas-block--fullscreen .editor-canvas-block__surface {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.editor-canvas-block__viewport {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.editor-canvas-block__lock-banner {
+  background: #fff8e6;
+  border-bottom: 1px solid #f0e4c4;
+  color: #8a6a1f;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.editor-canvas-block__placeholder {
+  align-items: center;
+  color: #78746c;
+  display: flex;
+  font-size: 0.875rem;
+  height: 28rem;
+  justify-content: center;
+}
+
 .editor-canvas-block__title {
   color: #78746c;
   font-size: 0.75rem;
@@ -505,6 +555,10 @@
   height: 28rem;
   position: relative;
   width: 100%;
+}
+
+.editor-canvas-block__surface--excalidraw .excalidraw {
+  height: 100%;
 }
 
 .editor-canvas-block__loading {

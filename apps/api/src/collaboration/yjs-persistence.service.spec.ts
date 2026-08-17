@@ -46,9 +46,7 @@ describe("YjsPersistenceService", () => {
         snapshot,
         sequence: 3,
       }),
-      listUpdatesAfter: vi.fn().mockResolvedValue([
-        { update, sequence: 4 },
-      ]),
+      listUpdatesAfter: vi.fn().mockResolvedValue([{ update, sequence: 4 }]),
     })
     const service = new YjsPersistenceService(repo)
 
@@ -149,6 +147,74 @@ describe("YjsPersistenceService", () => {
     expect(sequenceArg).toBe(4)
     expect(snapshotArg).toBeInstanceOf(Uint8Array)
     expect(deleteUpdatesUpTo).toHaveBeenCalledWith("doc-1", 4)
+  })
+
+  it("serializes concurrent flushDocument calls for the same document", async () => {
+    let releaseFirst: (() => void) | undefined
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve
+    })
+    let activeFlushes = 0
+    let maxConcurrentFlushes = 0
+
+    const insertUpdates = vi.fn().mockImplementation(async () => {
+      activeFlushes += 1
+      maxConcurrentFlushes = Math.max(maxConcurrentFlushes, activeFlushes)
+      await firstGate
+      activeFlushes -= 1
+      return { lastSequence: 1 }
+    })
+    const repo = createRepo({
+      insertUpdates,
+      countUpdatesAfterSequence: vi.fn().mockResolvedValue(1),
+      getMaxSequence: vi.fn().mockResolvedValue(1),
+    })
+    const service = new YjsPersistenceService(repo, {
+      flushDelayMs: 10_000,
+      compactUpdateCountThreshold: 100,
+    })
+
+    service.enqueueUpdate("doc-1", encodeTextUpdate("a"))
+    void service.flushDocument("doc-1")
+
+    await vi.waitFor(() => {
+      expect(insertUpdates).toHaveBeenCalledTimes(1)
+    })
+    expect(maxConcurrentFlushes).toBe(1)
+
+    service.enqueueUpdate("doc-1", encodeTextUpdate("b"))
+    void service.flushDocument("doc-1")
+
+    releaseFirst?.()
+    await vi.waitFor(() => {
+      expect(insertUpdates).toHaveBeenCalledTimes(2)
+    })
+    expect(maxConcurrentFlushes).toBe(1)
+  })
+
+  it("restores buffered updates when insertUpdates fails", async () => {
+    const insertUpdates = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("db down"))
+      .mockResolvedValue({ lastSequence: 1 })
+    const repo = createRepo({
+      insertUpdates,
+      countUpdatesAfterSequence: vi.fn().mockResolvedValue(1),
+      getMaxSequence: vi.fn().mockResolvedValue(1),
+    })
+    const service = new YjsPersistenceService(repo, {
+      flushDelayMs: 10_000,
+      compactUpdateCountThreshold: 100,
+    })
+    const update = encodeTextUpdate("retry")
+
+    service.enqueueUpdate("doc-1", update)
+    await expect(service.flushDocument("doc-1")).rejects.toThrow("db down")
+
+    await service.flushDocument("doc-1")
+
+    expect(insertUpdates).toHaveBeenCalledTimes(2)
+    expect(insertUpdates.mock.calls[1]?.[1]).toEqual([update])
   })
 
   it("flushDocument triggers compact when update count reaches threshold", async () => {

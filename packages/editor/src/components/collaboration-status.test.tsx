@@ -11,6 +11,7 @@ function renderStatus(status: Status) {
         editor: null,
         collaborationStatus: status,
         collaborators: [],
+        collaborationUser: null,
       }}
     >
       <CollaborationStatus />

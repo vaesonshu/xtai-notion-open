@@ -88,22 +88,29 @@ export class YjsPersistenceRepository {
       return { lastSequence: max }
     }
 
-    return this.prisma.client.$transaction(async (tx) => {
-      // 对同一文档加事务级 advisory 锁，串行化 sequence 的“读 MAX + 1”与
-      // 插入，避免并发 flush 读到相同起始 sequence 而触发唯一约束冲突。
-      // hashtext 碰撞只会导致不同文档偶发串行化（仅轻微影响性能），不会漏锁。
-      // pg_advisory_xact_lock 返回 void，$queryRaw 无法反序列化；用 $executeRaw 仅执行锁
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${documentId}))`
-      const start = await this.nextSequenceIn(tx, documentId)
-      await tx.yjsUpdate.createMany({
-        data: updates.map((update, index) => ({
-          documentId,
-          sequence: BigInt(start + index),
-          update: Buffer.from(update),
-        })),
-      })
-      return { lastSequence: start + updates.length - 1 }
-    })
+    return this.prisma.client.$transaction(
+      async (tx) => {
+        // 对同一文档加事务级 advisory 锁，串行化 sequence 的“读 MAX + 1”与
+        // 插入，避免并发 flush 读到相同起始 sequence 而触发唯一约束冲突。
+        // hashtext 碰撞只会导致不同文档偶发串行化（仅轻微影响性能），不会漏锁。
+        // pg_advisory_xact_lock 返回 void，$queryRaw 无法反序列化；用 $executeRaw 仅执行锁
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${documentId}))`
+        const start = await this.nextSequenceIn(tx, documentId)
+        await tx.yjsUpdate.createMany({
+          data: updates.map((update, index) => ({
+            documentId,
+            sequence: BigInt(start + index),
+            update: Buffer.from(update),
+          })),
+        })
+        return { lastSequence: start + updates.length - 1 }
+      },
+      {
+        // advisory lock 竞争或 Neon 冷启动时，默认 2s maxWait 容易触发 P2028
+        maxWait: 10_000,
+        timeout: 30_000,
+      }
+    )
   }
 
   async insertSnapshot(
@@ -120,10 +127,7 @@ export class YjsPersistenceRepository {
     })
   }
 
-  async deleteUpdatesUpTo(
-    documentId: string,
-    sequence: number
-  ): Promise<void> {
+  async deleteUpdatesUpTo(documentId: string, sequence: number): Promise<void> {
     await this.prisma.client.yjsUpdate.deleteMany({
       where: { documentId, sequence: { lte: sequence } },
     })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Editor } from "@tiptap/core"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
@@ -62,6 +62,42 @@ function readCollaborators(provider: HocuspocusProvider): CollaborationUser[] {
   return users
 }
 
+function readCanvasEditors(
+  provider: HocuspocusProvider
+): Map<string, CollaborationUser> {
+  const awareness = provider.awareness
+  const editors = new Map<string, CollaborationUser>()
+  if (!awareness) {
+    return editors
+  }
+
+  awareness.getStates().forEach((state, clientId) => {
+    const canvasEditing = state.canvasEditing
+    const user = state.user
+    if (
+      clientId === awareness.clientID ||
+      !canvasEditing ||
+      typeof canvasEditing !== "object" ||
+      typeof canvasEditing.canvasId !== "string" ||
+      !user ||
+      typeof user !== "object" ||
+      typeof user.id !== "string" ||
+      typeof user.name !== "string" ||
+      typeof user.color !== "string"
+    ) {
+      return
+    }
+
+    editors.set(canvasEditing.canvasId, {
+      id: user.id,
+      name: user.name,
+      color: user.color,
+    })
+  })
+
+  return editors
+}
+
 function createSyncedEditor(options: {
   document: Y.Doc
   provider: HocuspocusProvider
@@ -109,6 +145,9 @@ export function CollaborationEditorProvider({
     session.getStatus()
   )
   const [collaborators, setCollaborators] = useState<CollaborationUser[]>([])
+  const [canvasEditors, setCanvasEditors] = useState<
+    Map<string, CollaborationUser>
+  >(new Map())
   const [editor, setEditor] = useState<Editor | null>(null)
   const editorRef = useRef<Editor | null>(null)
   const createOptionsRef = useRef({ editable, initialContent, imageUpload })
@@ -147,6 +186,7 @@ export function CollaborationEditorProvider({
     }
     const syncCollaborators = () => {
       setCollaborators(readCollaborators(provider))
+      setCanvasEditors(readCanvasEditors(provider))
     }
 
     provider.on("synced", syncStatus)
@@ -167,6 +207,21 @@ export function CollaborationEditorProvider({
       provider.off("awarenessChange", syncCollaborators)
     }
   }, [collaboration.user, session])
+
+  const setCanvasEditing = useCallback(
+    (canvasId: string | null) => {
+      session.provider.setAwarenessField(
+        "canvasEditing",
+        canvasId ? { canvasId } : null
+      )
+    },
+    [session]
+  )
+
+  const getCanvasEditor = useCallback(
+    (canvasId: string) => canvasEditors.get(canvasId) ?? null,
+    [canvasEditors]
+  )
 
   useEffect(() => {
     if (!editor) {
@@ -219,6 +274,9 @@ export function CollaborationEditorProvider({
         editor,
         collaborationStatus: status,
         collaborators,
+        collaborationUser: collaboration.user,
+        setCanvasEditing,
+        getCanvasEditor,
       }}
     >
       {children}

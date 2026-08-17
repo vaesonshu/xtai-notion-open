@@ -25,6 +25,6 @@ export type EditorExtensionOptions = {
    * 缺省时使用 core 层的纯 Node 定义（仅 schema/命令，无节点视图渲染）。
    */
   imageUploadNode?: Node
-  /** 可选：挂载 tldraw NodeView 的画板块扩展。 */
+  /** 可选：挂载 Excalidraw NodeView 的画板块扩展。 */
   canvasBlockNode?: Node
 }

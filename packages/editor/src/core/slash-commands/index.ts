@@ -109,7 +109,7 @@ const DEFINITIONS: SlashCommandDefinition[] = [
   command(
     "canvas-block",
     "\u753b\u677f",
-    ["canvas", "canvas-block", "\u753b\u677f", "\u767d\u677f", "tldraw"],
+    ["canvas", "canvas-block", "\u753b\u677f", "\u767d\u677f", "excalidraw"],
     (editor) => editor.chain().focus().insertCanvasBlock().run()
   ),
 ]
