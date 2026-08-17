@@ -7,6 +7,7 @@ import { createEditorExtensions } from "../../core/extensions"
 import { createInitialDocument } from "../../core/document/initial-document"
 import type { EditorDocument } from "../../core/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
+import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 
 export type EditorProviderProps = {
@@ -26,6 +27,7 @@ function createLocalEditor(options: {
     extensions: createEditorExtensions({
       imageUpload: options.imageUpload,
       imageUploadNode: ImageUploadNode,
+      canvasBlockNode: CanvasBlockNode,
     }),
     content: options.initialContent ?? createInitialDocument(),
     editable: options.editable,

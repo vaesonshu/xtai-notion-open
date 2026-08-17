@@ -473,3 +473,42 @@
 .article-reader .ProseMirror img {
   cursor: zoom-in;
 }
+
+/* tldraw 画板内嵌块：固定高度容器供 Tldraw 填充 */
+.editor-canvas-block {
+  margin: 1.5rem 0;
+  border: 1px solid #e8e6e1;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #fcfcfa;
+}
+
+.editor-canvas-block__header {
+  align-items: center;
+  background: #f3f2ef;
+  border-bottom: 1px solid #e8e6e1;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
+}
+
+.editor-canvas-block__title {
+  color: #78746c;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.editor-canvas-block__surface {
+  height: 28rem;
+  position: relative;
+  width: 100%;
+}
+
+.editor-canvas-block__loading {
+  align-items: center;
+  color: #78746c;
+  display: flex;
+  font-size: 0.875rem;
+  height: 28rem;
+  justify-content: center;
+}

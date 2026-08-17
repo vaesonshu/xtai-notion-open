@@ -106,6 +106,12 @@ const DEFINITIONS: SlashCommandDefinition[] = [
         .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
         .run()
   ),
+  command(
+    "canvas-block",
+    "\u753b\u677f",
+    ["canvas", "canvas-block", "\u753b\u677f", "\u767d\u677f", "tldraw"],
+    (editor) => editor.chain().focus().insertCanvasBlock().run()
+  ),
 ]
 
 export const SLASH_COMMANDS: SlashCommand[] = DEFINITIONS.map(

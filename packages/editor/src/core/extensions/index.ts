@@ -14,6 +14,7 @@ import StarterKit from "@tiptap/starter-kit"
 import { mergeAttributes } from "@tiptap/core"
 import type { Extensions } from "@tiptap/core"
 import type { EditorExtensionOptions } from "../types"
+import { CanvasBlockNode } from "./canvas-block-node"
 import { ImageUploadNode } from "./image-upload-node"
 
 export type { EditorExtensionOptions } from "../types"
@@ -82,6 +83,7 @@ export function createEditorExtensions(
     (options.imageUploadNode ?? ImageUploadNode).configure({
       upload: options.imageUpload,
     }),
+    options.canvasBlockNode ?? CanvasBlockNode,
     MentionNode,
     // 表格：官方 Table/Row/Header/Cell 四件套，StarterKit 不含表格需显式注册。
     Table.configure({ resizable: true }),

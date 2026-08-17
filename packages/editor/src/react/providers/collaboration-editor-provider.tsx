@@ -16,6 +16,7 @@ import { createEditorExtensions } from "../../core/extensions"
 import { createStarterDocument } from "../../core/document"
 import type { CollaborationUser, EditorDocument } from "../../core/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
+import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 import { EditorContext } from "../context/editor-context"
 import type { EditorProviderProps } from "./editor-provider"
@@ -77,6 +78,7 @@ function createSyncedEditor(options: {
       user: options.user,
       imageUpload: options.imageUpload,
       imageUploadNode: ImageUploadNode,
+      canvasBlockNode: CanvasBlockNode,
     }),
     editable: options.editable,
     immediatelyRender: false,
