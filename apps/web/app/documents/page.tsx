@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 type DocumentListItem = {
   id: string
@@ -17,7 +18,6 @@ export default function DocumentsIndexPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -54,7 +54,9 @@ export default function DocumentsIndexPage() {
         setLoading(false)
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : "加载文档失败")
+          toast.error(
+            caught instanceof Error ? caught.message : "加载文档失败"
+          )
           setLoading(false)
         }
       }
@@ -70,7 +72,6 @@ export default function DocumentsIndexPage() {
   async function createDocument() {
     if (!user) return
     setLoading(true)
-    setError(null)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
       const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
@@ -87,7 +88,7 @@ export default function DocumentsIndexPage() {
       }
       router.replace(`/documents/${document.id}`)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "新建文档失败")
+      toast.error(caught instanceof Error ? caught.message : "新建文档失败")
       setLoading(false)
     }
   }
@@ -109,7 +110,6 @@ export default function DocumentsIndexPage() {
             这里会打开你最近使用的文档；如果还没有文档，可以先创建一个。
           </p>
         </div>
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button onClick={() => void createDocument()} disabled={!user}>
           新建文档
         </Button>

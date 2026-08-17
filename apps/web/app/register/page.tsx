@@ -1,14 +1,12 @@
 "use client"
 
 import {
-  AlertCircleIcon,
   ArrowLeftIcon,
   LockKeyholeIcon,
   MailIcon,
   UserRoundIcon,
   UserRoundPlusIcon,
 } from "@workspace/icons"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -29,6 +27,7 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
+import { toast } from "sonner"
 
 function getSafeReturnTo(value: string | null) {
   // Keep the eventual post-login destination internal when registration was
@@ -46,16 +45,14 @@ function RegisterForm() {
   const [password, setPassword] = useState("")
   const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const returnTo = getSafeReturnTo(searchParams.get("returnTo"))
   const loginHref = `/login?returnTo=${encodeURIComponent(returnTo)}`
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError(null)
 
     if (password !== passwordConfirmation) {
-      setError("两次输入的密码不一致")
+      toast.error("两次输入的密码不一致")
       return
     }
 
@@ -86,7 +83,7 @@ function RegisterForm() {
       const params = new URLSearchParams({ registered: "1", returnTo })
       router.push(`/login?${params.toString()}`)
     } catch (caught) {
-      setError(
+      toast.error(
         caught instanceof Error ? caught.message : "注册失败，请稍后重试"
       )
     } finally {
@@ -117,13 +114,6 @@ function RegisterForm() {
           <CardContent>
             <form id="register-form" onSubmit={submit}>
               <FieldGroup>
-                {error ? (
-                  <Alert variant="destructive">
-                    <AlertCircleIcon />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                ) : null}
-
                 <Field>
                   <FieldLabel htmlFor="display-name">
                     <UserRoundIcon className="size-4" />
@@ -179,9 +169,7 @@ function RegisterForm() {
                 </Field>
 
                 <Field
-                  data-invalid={Boolean(
-                    error && password !== passwordConfirmation
-                  )}
+                  data-invalid={password !== passwordConfirmation}
                 >
                   <FieldLabel htmlFor="password-confirmation">
                     <LockKeyholeIcon className="size-4" />
@@ -198,9 +186,7 @@ function RegisterForm() {
                       setPasswordConfirmation(event.target.value)
                     }
                     disabled={loading}
-                    aria-invalid={Boolean(
-                      error && password !== passwordConfirmation
-                    )}
+                    aria-invalid={password !== passwordConfirmation}
                     required
                   />
                 </Field>

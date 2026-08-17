@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 type Message = { role: "user" | "assistant"; content: string }
 
@@ -76,7 +77,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
   const [answerStarted, setAnswerStarted] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -86,7 +86,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     else {
       abortRef.current?.abort()
       setMessages([])
-      setError(null)
       setInput("")
     }
   }, [props.open])
@@ -96,7 +95,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
       behavior: "smooth",
       block: "end",
     })
-  }, [messages, streaming, error])
+  }, [messages, streaming])
 
   if (!props.open) return null
 
@@ -106,7 +105,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     const history = messages
     setMessages([...history, { role: "user", content }])
     setInput("")
-    setError(null)
     setStreaming(true)
     setAnswerStarted(false)
     const controller = new AbortController()
@@ -163,8 +161,16 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
         }
       }
     } catch (caught) {
-      if (!controller.signal.aborted)
-        setError(caught instanceof Error ? caught.message : "AI 服务暂不可用")
+      if (!controller.signal.aborted) {
+        const message =
+          caught instanceof Error ? caught.message : "AI 服务暂不可用"
+        toast.error(message, {
+          action: {
+            label: "重试",
+            onClick: () => void send(content),
+          },
+        })
+      }
     } finally {
       setStreaming(false)
       setAnswerStarted(false)
@@ -241,19 +247,6 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               </span>
               正在思考…
             </div>
-          </div>
-        )}
-        {error && (
-          <div role="alert" className="text-sm text-red-600">
-            {error}{" "}
-            <Button
-              variant="link"
-              onClick={() =>
-                void send(messages[messages.length - 1]?.content ?? "")
-              }
-            >
-              重试
-            </Button>
           </div>
         )}
         <div ref={messagesEndRef} aria-hidden="true" />

@@ -1,12 +1,10 @@
 "use client"
 
 import {
-  AlertCircleIcon,
   ArrowLeftIcon,
   LockKeyholeIcon,
   MailIcon,
 } from "@workspace/icons"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -22,7 +20,8 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import { useAuth } from "../../components/auth-provider"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 function getSafeReturnTo(value: string | null) {
   // Authentication redirects stay inside this application even if the query
@@ -39,15 +38,19 @@ function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const returnTo = getSafeReturnTo(searchParams.get("returnTo"))
   const registerHref = `/register?returnTo=${encodeURIComponent(returnTo)}`
   const registered = searchParams.get("registered") === "1"
 
+  useEffect(() => {
+    if (registered) {
+      toast.success("账号创建成功，请使用新账号登录。")
+    }
+  }, [registered])
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
-    setError(null)
 
     try {
       // Use the same-origin auth proxy so the login response and `/auth/me`
@@ -71,7 +74,7 @@ function LoginForm() {
       await refreshAuth()
       router.push(returnTo)
     } catch (caught) {
-      setError(
+      toast.error(
         caught instanceof Error ? caught.message : "登录失败，请稍后重试"
       )
     } finally {
@@ -102,21 +105,6 @@ function LoginForm() {
           <CardContent>
             <form id="login-form" onSubmit={submit}>
               <FieldGroup>
-                {registered ? (
-                  <Alert>
-                    <AlertDescription>
-                      账号创建成功，请使用新账号登录。
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-
-                {error ? (
-                  <Alert variant="destructive">
-                    <AlertCircleIcon />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                ) : null}
-
                 <Field>
                   <FieldLabel htmlFor="email">
                     <MailIcon className="size-4" />

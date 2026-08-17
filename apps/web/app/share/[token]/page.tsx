@@ -1,11 +1,10 @@
 "use client"
 
-import { AlertCircleIcon } from "@workspace/icons"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { useAuth } from "../../../components/auth-provider"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 function getToken(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -59,7 +58,10 @@ export default function ShareAcceptancePage() {
         if (!cancelled) router.replace(`/documents/${body.documentId}`)
       } catch (caught) {
         if (cancelled) return
-        setError(caught instanceof Error ? caught.message : "无法接受分享链接")
+        const message =
+          caught instanceof Error ? caught.message : "无法接受分享链接"
+        toast.error(message)
+        setError(message)
       }
     }
 
@@ -72,10 +74,7 @@ export default function ShareAcceptancePage() {
   if (error) {
     return (
       <main className="flex min-h-svh items-center justify-center px-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircleIcon />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <p className="max-w-md text-center text-sm text-destructive">{error}</p>
       </main>
     )
   }

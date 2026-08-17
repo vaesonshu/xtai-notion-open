@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { toast } from "sonner"
 import RegisterPage from "./page"
 
 const push = vi.fn()
@@ -53,7 +54,7 @@ describe("RegisterPage", () => {
     )
   })
 
-  it("shows a local error when password confirmation does not match", async () => {
+  it("shows a toast when password confirmation does not match", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch")
     render(<RegisterPage />)
 
@@ -71,7 +72,7 @@ describe("RegisterPage", () => {
     })
     fireEvent.click(screen.getByRole("button", { name: "创建账号" }))
 
-    expect(await screen.findByText("两次输入的密码不一致")).toBeVisible()
+    expect(toast.error).toHaveBeenCalledWith("两次输入的密码不一致")
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

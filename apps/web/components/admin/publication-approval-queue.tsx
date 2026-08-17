@@ -10,6 +10,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Textarea } from "@workspace/ui/components/textarea"
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { useAuthOptional } from "../auth-provider"
 
 type PendingPublication = {
@@ -24,7 +25,6 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
   const [items, setItems] = useState<PendingPublication[]>([])
   const [target, setTarget] = useState<PendingPublication | null>(null)
   const [reason, setReason] = useState("")
-  const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -47,7 +47,9 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
       })
       .catch((nextError: unknown) => {
         if (!cancelled) {
-          setError(nextError instanceof Error ? nextError.message : "加载失败")
+          toast.error(
+            nextError instanceof Error ? nextError.message : "加载失败"
+          )
         }
       })
     return () => {
@@ -58,11 +60,10 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
   async function decide(id: string, decision: "approve" | "reject") {
     if (!apiUrl || !userId) return
     if (decision === "reject" && !reason.trim()) {
-      setError("请填写拒绝原因")
+      toast.error("请填写拒绝原因")
       return
     }
     setBusyId(id)
-    setError(null)
     try {
       const response = await fetch(
         `${apiUrl.replace(/\/$/, "")}/admin/publications/${id}/${decision}`,
@@ -84,8 +85,9 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
       setItems((current) => current.filter((item) => item.id !== id))
       setTarget(null)
       setReason("")
+      toast.success(decision === "approve" ? "已通过发布" : "已拒绝发布")
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "审批失败")
+      toast.error(nextError instanceof Error ? nextError.message : "审批失败")
     } finally {
       setBusyId(null)
     }
@@ -99,11 +101,6 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
         <h2 className="text-sm font-semibold text-[#29463a]">待审批</h2>
         <span className="text-xs text-[#74857c]">{items.length} 篇</span>
       </div>
-      {error ? (
-        <p role="alert" className="mb-3 text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
       {!items.length ? (
         <p className="py-4 text-center text-xs text-[#74857c]">
           暂无待审批文章

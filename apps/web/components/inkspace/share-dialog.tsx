@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
@@ -26,14 +27,10 @@ export function ShareDialog({
 }: ShareDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   async function createLink() {
     setLoading(true)
-    setError(null)
-    setCopied(false)
     try {
       const response = await fetch(
         `/api/documents/${encodeURIComponent(documentId)}/share-link`,
@@ -49,7 +46,9 @@ export function ShareDialog({
       // Keep the generated URL same-origin so cookies and login handoff work.
       setShareUrl(`${window.location.origin}/share/${body.token}`)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "无法生成分享链接")
+      toast.error(
+        cause instanceof Error ? cause.message : "无法生成分享链接"
+      )
     } finally {
       setLoading(false)
     }
@@ -58,7 +57,7 @@ export function ShareDialog({
   async function copyLink() {
     if (!shareUrl) return
     await navigator.clipboard.writeText(shareUrl)
-    setCopied(true)
+    toast.success("已复制分享链接")
   }
 
   return (
@@ -82,12 +81,11 @@ export function ShareDialog({
           </DialogDescription>
         </DialogHeader>
         {loading && <p role="status">正在生成分享链接…</p>}
-        {error && <p role="alert">{error}</p>}
         {shareUrl && (
           <div className="flex gap-2">
             <Input aria-label="分享链接" readOnly value={shareUrl} />
             <Button type="button" onClick={() => void copyLink()}>
-              {copied ? "已复制" : "复制"}
+              复制
             </Button>
           </div>
         )}

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import { useState } from "react"
+import { toast } from "sonner"
 
 function getInitials(name: string) {
   const trimmed = name.trim()
@@ -29,7 +30,6 @@ function getInitials(name: string) {
 export function AuthMenu() {
   const auth = useAuthOptional()
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // If the provider is missing in a narrow test harness, fall back to the
   // logged-out state instead of crashing the whole toolbar tree.
@@ -39,7 +39,6 @@ export function AuthMenu() {
 
   async function logout() {
     setBusy(true)
-    setError(null)
     try {
       // Logout must clear the cookie on the same origin that created it.
       const res = await fetch("/auth/logout", {
@@ -52,7 +51,7 @@ export function AuthMenu() {
       // router and isolated test harnesses that render this component.
       window.location.assign("/login")
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      toast.error(err instanceof Error ? err.message : String(err))
     } finally {
       setBusy(false)
     }
@@ -76,8 +75,7 @@ export function AuthMenu() {
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <DropdownMenu>
+    <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button
@@ -106,8 +104,6 @@ export function AuthMenu() {
             <span>{busy ? "注销中..." : "注销"}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
+    </DropdownMenu>
   )
 }
