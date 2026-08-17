@@ -9,7 +9,6 @@ import {
   type Editor,
   type TLStoreSnapshot,
 } from "tldraw"
-import "tldraw/tldraw.css"
 import {
   parseTldrawDocumentSnapshot,
   stringifyTldrawDocumentSnapshot,

@@ -1,3 +1,6 @@
+/* 全局引入 tldraw 样式：避免在 client 组件里 import CSS 触发 serverExternalPackages 警告 */
+@import "tldraw/tldraw.css";
+
 .ProseMirror {
   min-height: 20rem;
   outline: none;
