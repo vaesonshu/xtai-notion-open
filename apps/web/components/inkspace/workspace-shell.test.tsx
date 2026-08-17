@@ -1,7 +1,12 @@
 import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { getDocumentIdAfterDeletion, WorkspaceShell } from "./workspace-shell"
+import { toast } from "sonner"
+import {
+  getDocumentIdAfterDeletion,
+  resetDocumentsCacheForTests,
+  WorkspaceShell,
+} from "./workspace-shell"
 
 const { push, replace } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -28,6 +33,7 @@ const props = {
 afterEach(() => {
   vi.clearAllMocks()
   vi.unstubAllGlobals()
+  resetDocumentsCacheForTests()
 })
 
 describe("WorkspaceShell", () => {
@@ -113,6 +119,23 @@ describe("WorkspaceShell", () => {
     })
   })
 
+  it("reuses the cached document list when the shell remounts", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: "first", title: "First", role: "owner" }],
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { unmount } = render(<WorkspaceShell {...props} />)
+    await waitFor(() => expect(screen.getByText("First")).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledOnce()
+
+    unmount()
+    render(<WorkspaceShell {...props} documentId="another-document" />)
+    await waitFor(() => expect(screen.getByText("First")).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
   it("shows a clear error when document creation fails", async () => {
     vi.stubGlobal(
       "fetch",
@@ -121,9 +144,11 @@ describe("WorkspaceShell", () => {
     render(<WorkspaceShell {...props} />)
     fireEvent.click(screen.getByRole("button", { name: /新建文档/ }))
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "无法连接到文档服务"
-    )
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining("无法连接到文档服务")
+      )
+    })
     expect(screen.getByRole("button", { name: /新建文档/ })).toBeEnabled()
     expect(push).not.toHaveBeenCalled()
   })

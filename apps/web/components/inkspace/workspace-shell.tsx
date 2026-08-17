@@ -1,7 +1,8 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import {
   DocumentWorkspace,
   type DocumentWorkspaceProps,
@@ -64,6 +65,19 @@ function getCreationError(error: unknown): string {
   return error instanceof Error ? error.message : "新建文档失败。"
 }
 
+type DocumentsCache = {
+  userId: string
+  items: SidebarDocument[]
+}
+
+// 跨文档切换时复用同一份列表，避免壳层偶发重挂载导致侧边栏闪动。
+let documentsCache: DocumentsCache | null = null
+
+/** 测试用：重置文档列表缓存。 */
+export function resetDocumentsCacheForTests() {
+  documentsCache = null
+}
+
 export function WorkspaceShell({
   documentId,
   openFirstDocument = false,
@@ -73,61 +87,93 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const router = useRouter()
   const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-  const [documents, setDocuments] = useState<SidebarDocument[]>([])
+  const [documents, setDocuments] = useState<SidebarDocument[]>(() =>
+    documentsCache?.userId === user.id ? documentsCache.items : []
+  )
+  const syncDocuments = useCallback(
+    (updater: (current: SidebarDocument[]) => SidebarDocument[]) => {
+      setDocuments((current) => {
+        const next = updater(current)
+        documentsCache = { userId: user.id, items: next }
+        return next
+      })
+    },
+    [user.id]
+  )
   const personalDocuments = documents.filter((item) => item.role === "owner")
   const collaborativeDocuments = documents.filter(
     (item) => item.role !== "owner"
   )
   async function renameDocument(id: string, title: string) {
-    const response = await fetch(
-      `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
-      {
-        method: "PATCH",
-        // Include credentials so session cookie is sent in production.
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          "x-dev-user-id": user.id,
-        },
-        body: JSON.stringify({ title }),
-      }
-    )
-    if (!response.ok) throw new Error("重命名失败")
-    const updated = (await response.json()) as { id: string; title: string }
-    setDocuments((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, title: updated.title } : item
+    try {
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
+        {
+          method: "PATCH",
+          // Include credentials so session cookie is sent in production.
+          credentials: "include",
+          headers: {
+            "content-type": "application/json",
+            "x-dev-user-id": user.id,
+          },
+          body: JSON.stringify({ title }),
+        }
       )
-    )
+      if (!response.ok) throw new Error("重命名失败")
+      const updated = (await response.json()) as { id: string; title: string }
+      syncDocuments((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, title: updated.title } : item
+        )
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "重命名失败")
+    }
   }
   async function deleteDocument(id: string) {
-    const response = await fetch(
-      `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
-      {
-        method: "DELETE",
-        credentials: "include",
-        headers: { "x-dev-user-id": user.id },
+    try {
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "x-dev-user-id": user.id },
+        }
+      )
+      if (!response.ok) throw new Error("删除失败")
+      syncDocuments((current) => current.filter((item) => item.id !== id))
+      if (id === documentId) {
+        const nextDocumentId = getDocumentIdAfterDeletion(personalDocuments, id)
+        router.push(nextDocumentId ? `/documents/${nextDocumentId}` : "/")
       }
-    )
-    if (!response.ok) throw new Error("删除失败")
-    setDocuments((current) => current.filter((item) => item.id !== id))
-    if (id === documentId) {
-      const nextDocumentId = getDocumentIdAfterDeletion(personalDocuments, id)
-      router.push(nextDocumentId ? `/documents/${nextDocumentId}` : "/")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "删除失败")
     }
   }
   useEffect(() => {
     if (!apiUrl) return
+    if (documentsCache?.userId === user.id) {
+      setDocuments(documentsCache.items)
+      return
+    }
+
+    let cancelled = false
     void fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
       credentials: "include",
       headers: { "x-dev-user-id": user.id },
     })
       .then((response) => (response.ok ? response.json() : []))
-      .then((items: Array<Partial<SidebarDocument> & DocumentListItem>) =>
-        setDocuments(normalizeDocumentHierarchy(items))
-      )
+      .then((items: Array<Partial<SidebarDocument> & DocumentListItem>) => {
+        if (cancelled) return
+        const normalized = normalizeDocumentHierarchy(items)
+        documentsCache = { userId: user.id, items: normalized }
+        setDocuments(normalized)
+      })
       .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
   }, [apiUrl, user.id])
 
   useEffect(() => {
@@ -139,7 +185,6 @@ export function WorkspaceShell({
 
   async function createDocument() {
     setCreating(true)
-    setCreateError(null)
     try {
       const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
         method: "POST",
@@ -153,7 +198,7 @@ export function WorkspaceShell({
       if (!document.id) {
         throw new Error("新建文档响应无效")
       }
-      setDocuments((current) => [
+      syncDocuments((current) => [
         ...current.filter((item) => item.id !== document.id),
         {
           id: document.id,
@@ -165,23 +210,30 @@ export function WorkspaceShell({
       ])
       router.push(`/documents/${document.id}`)
     } catch (error) {
-      setCreateError(getCreationError(error))
+      toast.error(getCreationError(error))
     } finally {
       setCreating(false)
     }
   }
 
   async function createChildDocument(parentId: string) {
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "x-dev-user-id": user.id, "content-type": "application/json" },
-      body: JSON.stringify({ parentId }),
-    })
-    if (!response.ok) throw new Error("创建子文档失败")
-    const document = (await response.json()) as SidebarDocument
-    setDocuments((current) => [...current, document])
-    router.push(`/documents/${document.id}`)
+    try {
+      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "x-dev-user-id": user.id,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ parentId }),
+      })
+      if (!response.ok) throw new Error("创建子文档失败")
+      const document = (await response.json()) as SidebarDocument
+      syncDocuments((current) => [...current, document])
+      router.push(`/documents/${document.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建子文档失败")
+    }
   }
 
   return (
@@ -193,10 +245,10 @@ export function WorkspaceShell({
         onSelectDocument={(id) => router.push(`/documents/${id}`)}
         onCreateDocument={createDocument}
         creatingDocument={creating}
-        createError={createError}
         onRenameDocument={renameDocument}
         onDeleteDocument={deleteDocument}
         onCreateChildDocument={(id) => void createChildDocument(id)}
+        onOpenSquare={() => router.push("/square")}
       />
       <main className="flex min-w-0 flex-1 flex-col bg-[#FCFCFA] !text-[#242321]">
         <DocumentWorkspace

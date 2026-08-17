@@ -10,6 +10,7 @@ import {
   LibraryIcon,
   PlusIcon,
   SearchIcon,
+  SquarePenIcon,
   StarIcon,
 } from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
@@ -79,7 +80,6 @@ function getDocumentDepth(
 export function WorkspaceSidebar({
   onCreateDocument,
   creatingDocument = false,
-  createError,
   documents = [],
   collaborativeDocuments = [],
   selectedDocumentId,
@@ -87,17 +87,18 @@ export function WorkspaceSidebar({
   onRenameDocument,
   onDeleteDocument,
   onCreateChildDocument,
+  onOpenSquare,
 }: {
   onCreateDocument?: () => void
   onCreateChildDocument?: (id: string) => void
   creatingDocument?: boolean
-  createError?: string | null
   documents?: SidebarDocument[]
   collaborativeDocuments?: SidebarDocument[]
   selectedDocumentId?: string
   onSelectDocument?: (id: string) => void
   onRenameDocument?: (id: string, title: string) => Promise<void>
   onDeleteDocument?: (id: string) => Promise<void>
+  onOpenSquare?: () => void
 }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const select = (key: string, action?: () => void) => {
@@ -154,12 +155,15 @@ export function WorkspaceSidebar({
             icon={LibraryIcon}
             label="新建知识库"
           />
+          <SideAction
+            itemKey="square"
+            selectedKey={selectedKey}
+            onSelect={select}
+            icon={SquarePenIcon}
+            label="写作广场"
+            onClick={onOpenSquare}
+          />
         </div>
-        {createError && (
-          <p className="px-2 text-xs text-destructive" role="alert">
-            {createError}
-          </p>
-        )}
         <SideAction
           itemKey="favorites"
           selectedKey={selectedKey}

@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { flattenDocuments, WorkspaceSidebar } from "./sidebar"
 
 describe("WorkspaceSidebar selection states", () => {
@@ -74,6 +74,15 @@ describe("WorkspaceSidebar selection states", () => {
         .closest("button")
         ?.querySelector('span[aria-hidden="true"]')
     ).toBeInTheDocument()
+  })
+
+  it("navigates to the writing square when the entry is clicked", () => {
+    const onOpenSquare = vi.fn()
+    render(<WorkspaceSidebar onOpenSquare={onOpenSquare} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "写作广场" }))
+
+    expect(onOpenSquare).toHaveBeenCalledOnce()
   })
 
   it("starts without a highlighted shortcut and selects one on click", () => {

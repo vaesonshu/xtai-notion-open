@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest"
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import DocumentPage from "./page"
+import DocumentWorkspaceLayout from "./layout"
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ documentId: "route-document" }),
@@ -23,9 +23,9 @@ vi.mock("../../../components/inkspace/workspace-shell", () => ({
   ),
 }))
 
-describe("DocumentPage", () => {
+describe("DocumentWorkspaceLayout", () => {
   it("renders the workspace for the document identified by the route parameter", () => {
-    render(<DocumentPage />)
+    render(<DocumentWorkspaceLayout />)
 
     expect(screen.getByTestId("workspace-document")).toHaveAttribute(
       "data-workspace-document-id",
