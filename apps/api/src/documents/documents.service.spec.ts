@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
+import * as editorCore from "@workspace/editor/core"
 import type { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
 import type { UserRepository } from "../auth/user.repository"
@@ -292,5 +293,61 @@ describe("DocumentsService", () => {
     await expect(
       service.rejectPublication("doc-1", "admin-1", "  ")
     ).rejects.toBeInstanceOf(ConflictException)
+  })
+
+  it("returns published article detail with content for the public square", async () => {
+    const yDoc = { destroy: vi.fn() }
+    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue({
+      type: "doc",
+      content: [],
+    })
+    vi.spyOn(editorCore, "documentToPlainText").mockReturnValue("hello")
+    const repo = createRepo({
+      findPublishedById: vi.fn().mockResolvedValue({
+        row: {
+          id: "doc-1",
+          workspace_id: "ws-1",
+          title: "Published guide",
+          publication_status: "published",
+          published_at: new Date("2026-08-14T08:00:00.000Z"),
+          created_at: new Date("2026-01-01"),
+          updated_at: new Date("2026-08-14"),
+        },
+        authorName: "Ada",
+        authorColor: "#24866B",
+        workspaceName: "个人空间",
+      }),
+    })
+    const persistence = {
+      loadDocument: vi.fn().mockResolvedValue(yDoc),
+    }
+    const service = new DocumentsService(
+      repo,
+      undefined,
+      persistence as never
+    )
+
+    await expect(service.getPublishedArticle("doc-1")).resolves.toMatchObject({
+      id: "doc-1",
+      title: "Published guide",
+      author: "Ada",
+      authorColor: "#24866B",
+      category: "个人空间",
+      content: { type: "doc" },
+    })
+    expect(persistence.loadDocument).toHaveBeenCalledWith("doc-1")
+  })
+
+  it("rejects unpublished article detail requests with 404", async () => {
+    const repo = createRepo({
+      findPublishedById: vi.fn().mockResolvedValue(null),
+    })
+    const service = new DocumentsService(repo, undefined, {
+      loadDocument: vi.fn(),
+    } as never)
+
+    await expect(service.getPublishedArticle("missing")).rejects.toBeInstanceOf(
+      NotFoundException
+    )
   })
 })

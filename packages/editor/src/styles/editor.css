@@ -456,3 +456,16 @@
   user-select: none;
   white-space: nowrap;
 }
+
+/* 写作广场阅读页：去掉编辑器默认留白，正文与标题区保持适度间距 */
+.article-reader .ProseMirror {
+  min-height: 0;
+  padding: 0.375rem 0 0;
+}
+
+.article-reader .ProseMirror > :first-child,
+.article-reader .ProseMirror h1:first-child,
+.article-reader .ProseMirror h2:first-child,
+.article-reader .ProseMirror h3:first-child {
+  margin-top: 0;
+}

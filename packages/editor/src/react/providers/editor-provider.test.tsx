@@ -210,6 +210,20 @@ describe("EditorProvider", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ type: "doc" }))
   })
 
+  it("keeps the editor available across StrictMode effect remounts", async () => {
+    render(
+      <StrictMode>
+        <EditorProvider>
+          <EditorName />
+        </EditorProvider>
+      </StrictMode>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("editable")).toBeInTheDocument()
+    })
+  })
+
   it("throws when collaboration hooks are used outside collaboration provider", () => {
     expect(() => render(<CollaborationStatusLabel />)).toThrow(
       /useCollaborationStatus must be used inside .*CollaborationEditorProvider/,

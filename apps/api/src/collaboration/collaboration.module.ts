@@ -4,14 +4,11 @@ import { AuthModule } from "../auth/auth.module"
 import { CollaborationAuthService } from "./collaboration-auth.service"
 import { CollaborationService } from "./collaboration.service"
 import { HocuspocusFactory } from "./hocuspocus.factory"
-import { YjsPersistenceRepository } from "./yjs-persistence.repository"
-import { YjsPersistenceService } from "./yjs-persistence.service"
+import { YjsPersistenceModule } from "./yjs-persistence.module"
 
 @Module({
-  imports: [DocumentsModule, AuthModule],
+  imports: [DocumentsModule, AuthModule, YjsPersistenceModule],
   providers: [
-    YjsPersistenceRepository,
-    YjsPersistenceService,
     CollaborationAuthService,
     HocuspocusFactory,
     CollaborationService,
@@ -19,7 +16,7 @@ import { YjsPersistenceService } from "./yjs-persistence.service"
   exports: [
     CollaborationService,
     CollaborationAuthService,
-    YjsPersistenceService,
+    YjsPersistenceModule,
   ],
 })
 export class CollaborationModule {}

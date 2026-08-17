@@ -79,6 +79,7 @@ function createSyncedEditor(options: {
       imageUploadNode: ImageUploadNode,
     }),
     editable: options.editable,
+    immediatelyRender: false,
   })
 
   if (wasEmpty) {

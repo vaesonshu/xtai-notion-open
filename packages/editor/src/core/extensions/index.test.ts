@@ -79,6 +79,27 @@ describe("editor core", () => {
     expect(starterKit?.options.undoRedo).toEqual({})
   })
 
+  it("binds a Y.Doc without a provider for read-only collaboration export", () => {
+    const document = new Y.Doc()
+    const extensions = createEditorExtensions({ document })
+    const collaboration = extensions.find(
+      (extension) => extension.name === "collaboration"
+    )
+    const collaborationCaret = extensions.find(
+      (extension) => extension.name === "collaborationCaret"
+    )
+    const starterKit = extensions.find(
+      (extension) => extension.name === "starterKit"
+    )
+
+    expect(collaboration).toBeDefined()
+    expect(collaboration?.options.document).toBe(document)
+    expect(collaborationCaret).toBeUndefined()
+    expect(starterKit?.options.undoRedo).toBe(false)
+
+    document.destroy()
+  })
+
   it("passes the collaboration document and provider to collaboration extensions", () => {
     const document = new Y.Doc()
     const provider = {} as HocuspocusProvider

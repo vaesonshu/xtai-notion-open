@@ -10,13 +10,17 @@ describe("PublishedArticleList", () => {
           {
             id: "doc-1",
             title: "Published guide",
+            author: "Ada",
             publishedAt: "2026-08-14T08:00:00.000Z",
+            category: "个人空间",
           },
         ]}
       />
     )
 
-    expect(screen.getByText("Published guide")).toBeInTheDocument()
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/square/doc-1")
+    expect(screen.getByText("Ada")).toBeInTheDocument()
+    expect(screen.getByText("个人空间")).toBeInTheDocument()
   })
 
   it("shows a clear empty state when no published articles exist", () => {

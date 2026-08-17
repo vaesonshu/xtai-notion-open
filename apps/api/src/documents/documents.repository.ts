@@ -6,6 +6,7 @@ import type {
   DocumentRole,
   DocumentRow,
   PublicationStatus,
+  PublishedArticleSource,
 } from "./document-types"
 import { isDocumentRole } from "./document-types"
 
@@ -170,11 +171,39 @@ export class DocumentsRepository {
     return documents.map((document) => this.toDocumentRow(document))
   }
 
-  async listPublishedArticles(): Promise<DocumentRow[]> {
+  async listPublishedArticles(): Promise<PublishedArticleSource[]> {
     const documents = await this.prisma.client.document.findMany({
       where: { publicationStatus: "published" },
       orderBy: { publishedAt: "desc" },
+      include: {
+        owner: { select: { displayName: true, color: true } },
+        workspace: { select: { name: true } },
+      },
     })
-    return documents.map((document) => this.toDocumentRow(document))
+    return documents.map((document) => ({
+      row: this.toDocumentRow(document),
+      authorName: document.owner?.displayName ?? null,
+      authorColor: document.owner?.color ?? null,
+      workspaceName: document.workspace.name,
+    }))
+  }
+
+  async findPublishedById(
+    documentId: string
+  ): Promise<PublishedArticleSource | null> {
+    const document = await this.prisma.client.document.findFirst({
+      where: { id: documentId, publicationStatus: "published" },
+      include: {
+        owner: { select: { displayName: true, color: true } },
+        workspace: { select: { name: true } },
+      },
+    })
+    if (!document) return null
+    return {
+      row: this.toDocumentRow(document),
+      authorName: document.owner?.displayName ?? null,
+      authorColor: document.owner?.color ?? null,
+      workspaceName: document.workspace.name,
+    }
   }
 }

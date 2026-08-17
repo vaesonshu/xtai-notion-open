@@ -52,6 +52,19 @@ export interface PublishedArticle {
   id: string
   title: string
   author: string | null
+  authorColor: string | null
   publishedAt: Date
   excerpt: string
+  category: string
+}
+
+export interface PublishedArticleDetail extends PublishedArticle {
+  content: Record<string, unknown>
+}
+
+export interface PublishedArticleSource {
+  row: DocumentRow
+  authorName: string | null
+  authorColor: string | null
+  workspaceName: string
 }

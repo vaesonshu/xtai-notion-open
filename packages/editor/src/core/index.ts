@@ -35,6 +35,7 @@ export {
   uploadImage,
   validateImageFile,
 } from "./image-upload"
+export { documentFromYjs, documentToPlainText } from "./yjs-document"
 export type {
   ImageMimeType,
   ImageUploadConfig,

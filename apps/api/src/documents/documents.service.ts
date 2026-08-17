@@ -6,12 +6,15 @@ import {
   NotFoundException,
   Optional,
 } from "@nestjs/common"
+import { documentFromYjs, documentToPlainText } from "@workspace/editor/core"
 import { UserRepository } from "../auth/user.repository"
+import { YjsPersistenceService } from "../collaboration/yjs-persistence.service"
 import type {
   DocumentMetadata,
   DocumentRole,
   DocumentRow,
   PublishedArticle,
+  PublishedArticleDetail,
 } from "./document-types"
 import { DocumentsRepository } from "./documents.repository"
 
@@ -22,7 +25,10 @@ export class DocumentsService {
     private readonly documents: DocumentsRepository,
     @Optional()
     @Inject(UserRepository)
-    private readonly users?: UserRepository
+    private readonly users?: UserRepository,
+    @Optional()
+    @Inject(YjsPersistenceService)
+    private readonly yjsPersistence?: YjsPersistenceService
   ) {}
 
   getMemberRole(
@@ -155,21 +161,53 @@ export class DocumentsService {
   }
 
   async listPublishedArticles(): Promise<PublishedArticle[]> {
-    const rows = await this.documents.listPublishedArticles()
+    const articles = await this.documents.listPublishedArticles()
     // Never return internal approval metadata from the public square endpoint.
-    return rows.flatMap((row) =>
-      row.published_at
+    return articles.flatMap((article) =>
+      article.row.published_at
         ? [
             {
-              id: row.id,
-              title: row.title,
-              author: null,
-              publishedAt: row.published_at,
+              id: article.row.id,
+              title: article.row.title,
+              author: article.authorName,
+              authorColor: article.authorColor,
+              publishedAt: article.row.published_at,
               excerpt: "",
+              category: article.workspaceName,
             },
           ]
         : []
     )
+  }
+
+  async getPublishedArticle(
+    documentId: string
+  ): Promise<PublishedArticleDetail> {
+    const article = await this.documents.findPublishedById(documentId)
+    if (!article?.row.published_at) {
+      throw new NotFoundException("Published article not found")
+    }
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+
+    const yDoc = await this.yjsPersistence.loadDocument(documentId)
+    try {
+      const content = documentFromYjs(yDoc)
+      const excerpt = documentToPlainText(content).slice(0, 200)
+      return {
+        id: article.row.id,
+        title: article.row.title,
+        author: article.authorName,
+        authorColor: article.authorColor,
+        publishedAt: article.row.published_at,
+        excerpt,
+        category: article.workspaceName,
+        content,
+      }
+    } finally {
+      yDoc.destroy()
+    }
   }
 
   private async assertAdmin(userId: string): Promise<void> {

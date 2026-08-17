@@ -55,14 +55,16 @@ export const MentionNode = Mention.extend({
 export function createEditorExtensions(
   options: EditorExtensionOptions = {}
 ): Extensions {
-  const isCollaborative = Boolean(
+  // 绑定 Y.Doc 时禁用本地撤销栈；完整协作会话才挂载光标扩展。
+  const bindsCollaborationDocument = Boolean(options.document)
+  const isCollaborativeSession = Boolean(
     options.document && options.provider && options.user
   )
   const extensions: Extensions = [
     StarterKit.configure({
       dropcursor: false,
       link: { openOnClick: false, autolink: true },
-      undoRedo: isCollaborative ? false : {},
+      undoRedo: bindsCollaborationDocument ? false : {},
     }),
     Dropcursor.configure({
       color: "#24866B",
@@ -88,17 +90,21 @@ export function createEditorExtensions(
     TableCell,
   ]
 
-  if (isCollaborative) {
+  if (bindsCollaborationDocument && options.document) {
     extensions.push(
       Collaboration.configure({
         document: options.document,
-        provider: options.provider,
-      }),
-      CollaborationCaret.configure({
-        provider: options.provider,
-        user: options.user,
+        ...(options.provider ? { provider: options.provider } : {}),
       })
     )
+    if (isCollaborativeSession && options.provider && options.user) {
+      extensions.push(
+        CollaborationCaret.configure({
+          provider: options.provider,
+          user: options.user,
+        })
+      )
+    }
   }
 
   return extensions

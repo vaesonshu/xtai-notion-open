@@ -13,7 +13,7 @@ import {
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
-import type { DocumentMetadata, PublishedArticle } from "./document-types"
+import type { DocumentMetadata, PublishedArticle, PublishedArticleDetail } from "./document-types"
 import { DocumentsService } from "./documents.service"
 import { ShareLinkService } from "./share-link.service"
 
@@ -130,6 +130,13 @@ export class PublicSquareController {
   @Get("articles")
   listArticles(): Promise<PublishedArticle[]> {
     return this.documents.listPublishedArticles()
+  }
+
+  @Get("articles/:documentId")
+  getArticle(
+    @Param("documentId") documentId: string
+  ): Promise<PublishedArticleDetail> {
+    return this.documents.getPublishedArticle(documentId)
   }
 }
 
