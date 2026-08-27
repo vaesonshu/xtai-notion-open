@@ -1,4 +1,4 @@
-import type { ImageUploadHandler, ImageUploadResult } from "@workspace/editor"
+import type { ImageUploadHandler, ImageUploadResult } from "@xtai-notion/editor-core"
 
 export type CreateDocumentImageUploaderOptions = {
   apiUrl: string

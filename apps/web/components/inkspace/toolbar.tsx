@@ -1,10 +1,10 @@
 "use client"
 
-import type { CollaborationStatus } from "@workspace/editor/collaboration"
+import type { CollaborationStatus } from "@xtai-notion/editor-react/collaboration"
 import {
   useCollaborationStatus,
   useCollaborators,
-} from "@workspace/editor/react"
+} from "@xtai-notion/editor-react"
 import {
   ChevronDownIcon,
   CloudCheckIcon,

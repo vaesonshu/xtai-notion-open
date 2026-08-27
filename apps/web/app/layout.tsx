@@ -1,5 +1,5 @@
 import "@workspace/ui/globals.css"
-import "@workspace/editor/styles.css"
+import "@xtai-notion/editor-shadcn/style.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import { Toaster } from "@workspace/ui/components/sonner"

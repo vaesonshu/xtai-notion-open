@@ -9,9 +9,9 @@ import {
   toggleInlineMark,
   type EditorDocument,
   type InlineMark,
-} from "@workspace/editor"
-import { EditorContent, EditorProvider, useEditorInstance } from "@workspace/editor/react"
-import "@workspace/editor/styles.css"
+} from "@xtai-notion/editor-core"
+import { EditorContent, EditorProvider, useEditorInstance } from "@xtai-notion/editor-react"
+import "@xtai-notion/editor-shadcn/style.css"
 import {
   BoldIcon,
   CodeIcon,
@@ -69,11 +69,39 @@ function PlaygroundToolbar() {
           <CodeIcon />
           代码
         </Button>
-        <Button type="button" size="sm" variant="outline" aria-label="撤销" onClick={() => editor.chain().focus().undo().run()}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label="撤销"
+          onClick={() => {
+            ;(
+              editor.chain().focus() as unknown as {
+                undo: () => { run: () => boolean }
+              }
+            )
+              .undo()
+              .run()
+          }}
+        >
           <UndoIcon />
           撤销
         </Button>
-        <Button type="button" size="sm" variant="outline" aria-label="重做" onClick={() => editor.chain().focus().redo().run()}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label="重做"
+          onClick={() => {
+            ;(
+              editor.chain().focus() as unknown as {
+                redo: () => { run: () => boolean }
+              }
+            )
+              .redo()
+              .run()
+          }}
+        >
           <RedoIcon />
           重做
         </Button>

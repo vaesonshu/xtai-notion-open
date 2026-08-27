@@ -1,7 +1,7 @@
 "use client"
 
-import type { EditorDocument } from "@workspace/editor"
-import { DocumentEditor } from "@workspace/editor/components"
+import type { EditorDocument } from "@xtai-notion/editor-core"
+import { DocumentEditor } from "@xtai-notion/editor-shadcn"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
 import { XIcon } from "@workspace/icons"

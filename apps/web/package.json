@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
-    "@workspace/editor": "workspace:*",
+    "@xtai-notion/editor-core": "workspace:*",
+    "@xtai-notion/editor-react": "workspace:*",
+    "@xtai-notion/editor-shadcn": "workspace:*",
     "@workspace/icons": "workspace:*",
     "@workspace/ui": "workspace:*",
     "@xyflow/react": "^12.11.3",

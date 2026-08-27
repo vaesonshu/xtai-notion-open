@@ -1,10 +1,11 @@
 "use client"
 
-import type { CollaborationUser } from "@workspace/editor"
-import { useEditorText } from "@workspace/editor/react"
-import type { CreateProvider } from "@workspace/editor/collaboration"
-import { DocumentEditor } from "@workspace/editor/components"
-import type { MentionProvider, MentionNavigate } from "@workspace/editor"
+import type { CollaborationUser } from "@xtai-notion/editor-core"
+import { useEditorText } from "@xtai-notion/editor-react"
+import type { CreateProvider } from "@xtai-notion/editor-react/collaboration"
+import { DocumentEditor } from "@xtai-notion/editor-shadcn"
+import type { MentionProvider } from "@xtai-notion/editor-core"
+import type { MentionNavigate } from "@xtai-notion/editor-react"
 import {
   Alert,
   AlertDescription,
@@ -29,7 +30,7 @@ export type DocumentWorkspaceProps = {
   createProvider?: CreateProvider
   title?: string
   parentTitle?: string
-  /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
+  /** ??????????????????????????? */
   mentionNavigate?: MentionNavigate
 }
 
@@ -52,7 +53,7 @@ function isDocumentRole(value: unknown): value is DocumentRole {
 
 function getLoadErrorMessage(error: unknown): string {
   if (error instanceof TypeError && error.message === "Failed to fetch") {
-    return "无法连接到文档服务，请确认 API 已启动。"
+    return "????????????? API ????"
   }
   return error instanceof Error ? error.message : "Failed to load document"
 }
@@ -85,8 +86,8 @@ async function fetchDocumentRole(
 type MentionableDocument = { id: string; title: string }
 
 /**
- * 拉取用户可见的全部文档，供 @ 提及使用。结果在组件生命周期内缓存，
- * 避免每次键入都重新请求；提及菜单在本地按查询过滤。
+ * ????????????? @ ??????????????????
+ * ?????????????????????????
  */
 function useMentionProvider(
   apiUrl: string,
@@ -108,7 +109,7 @@ function useMentionProvider(
         setDocuments(
           items
             .filter((item) => item.id !== excludeDocumentId)
-            .map((item) => ({ id: item.id, title: item.title || "未命名文档" }))
+            .map((item) => ({ id: item.id, title: item.title || "?????" }))
         )
       })
       .catch(() => undefined)
@@ -118,7 +119,7 @@ function useMentionProvider(
   }, [apiUrl, userId, excludeDocumentId])
 
   return useCallback(
-    // query 参数由 editor 端在本地过滤，这里始终返回全量候选文档。
+    // query ??? editor ????????????????????
     () =>
       documents.map((document) => ({
         id: document.id,
@@ -169,21 +170,21 @@ export function DocumentWorkspace({
         const body = (await response.json().catch(() => null)) as {
           message?: string
         } | null
-        throw new Error(body?.message || `发布失败 (${response.status})`)
+        throw new Error(body?.message || `???? (${response.status})`)
       }
       // The post response is authoritative, avoiding a local-only pending state.
       const body = (await response.json()) as DocumentMetadataResponse
       const nextStatus = body.publicationStatus ?? "pending"
       setPublicationStatus(nextStatus)
       if (nextStatus === "published") {
-        toast.success("发布成功，文章已上线")
+        toast.success("??????????")
       } else if (nextStatus === "pending") {
-        toast.success("已提交发布申请，等待审批")
+        toast.success("????????????")
       } else {
-        toast.success("发布成功")
+        toast.success("????")
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "发布失败，请稍后重试")
+      toast.error(error instanceof Error ? error.message : "??????????")
     }
   }, [apiUrl, documentId, user.id])
 
@@ -218,10 +219,10 @@ export function DocumentWorkspace({
     return (
       <div className="flex flex-1 items-center justify-center p-8">
         <Alert variant="destructive" className="max-w-lg" role="alert">
-          <AlertTitle>配置错误</AlertTitle>
+          <AlertTitle>????</AlertTitle>
           <AlertDescription>
-            缺少客户端端点。请设置 `NEXT_PUBLIC_API_URL` 与
-            `NEXT_PUBLIC_COLLABORATION_URL` 后重新启动应用。
+            ??????????? `NEXT_PUBLIC_API_URL` ?
+            `NEXT_PUBLIC_COLLABORATION_URL` ????????
           </AlertDescription>
         </Alert>
       </div>
@@ -233,7 +234,7 @@ export function DocumentWorkspace({
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex flex-1 items-center justify-center p-8">
           <Alert variant="destructive" className="max-w-lg" role="alert">
-            <AlertTitle>无法加载文档</AlertTitle>
+            <AlertTitle>??????</AlertTitle>
             <AlertDescription>{loadError}</AlertDescription>
           </Alert>
         </div>
@@ -247,7 +248,7 @@ export function DocumentWorkspace({
         className="flex min-h-0 flex-1 flex-col"
         aria-busy="true"
         role="status"
-        aria-label="正在加载文档"
+        aria-label="??????"
       >
         <div className="flex h-[68px] shrink-0 items-center border-b border-[#E8E6E1] px-6">
           <span className="h-4 w-56 animate-pulse rounded bg-[#E2DED5]" />
@@ -265,7 +266,7 @@ export function DocumentWorkspace({
             </div>
           </article>
         </section>
-        <span className="sr-only">正在加载文档内容</span>
+        <span className="sr-only">????????</span>
       </div>
     )
   }

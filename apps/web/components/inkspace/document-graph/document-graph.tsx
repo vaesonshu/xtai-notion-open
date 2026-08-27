@@ -12,6 +12,7 @@ import {
   type Node,
   type NodeChange,
   type NodeMouseHandler,
+  type OnNodeDrag,
   ReactFlow,
 } from "@xyflow/react"
 import * as d3 from "d3-force"
@@ -153,7 +154,7 @@ export function DocumentGraph({
     }
   }, [apiUrl, userId])
 
-  const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
+  const selectNode = useCallback((node: Node) => {
     setNodes((current) =>
       current.map((item) => ({ ...item, selected: item.id === node.id }))
     )
@@ -164,6 +165,20 @@ export function DocumentGraph({
       }))
     )
   }, [])
+
+  const handleNodeClick: NodeMouseHandler = useCallback(
+    (_, node) => {
+      selectNode(node)
+    },
+    [selectNode]
+  )
+
+  const handleNodeDragStart: OnNodeDrag = useCallback(
+    (_, node) => {
+      selectNode(node)
+    },
+    [selectNode]
+  )
 
   const handleNodeDoubleClick: NodeMouseHandler = useCallback(
     (_, node) => {
@@ -212,7 +227,7 @@ export function DocumentGraph({
           proOptions={{ hideAttribution: true }}
           onNodeClick={handleNodeClick}
           onNodeDoubleClick={handleNodeDoubleClick}
-          onNodeDragStart={handleNodeClick}
+          onNodeDragStart={handleNodeDragStart}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
         >

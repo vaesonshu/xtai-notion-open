@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
-import type { EditorDocument } from "@workspace/editor"
+import type { EditorDocument } from "@xtai-notion/editor-core"
 import { ArticleReader } from "./article-reader"
 
 vi.mock("../auth-provider", () => ({
@@ -36,7 +36,7 @@ const contentWithImage: EditorDocument = {
   content: [
     {
       type: "image",
-      attrs: { src: "https://example.com/photo.jpg", alt: "示例图" },
+      attrs: { src: "https://example.com/photo.jpg", alt: "示例�? },
     },
   ],
 }
@@ -62,7 +62,7 @@ describe("ArticleReader", () => {
     expect(screen.getByText("A")).toBeInTheDocument()
     expect(screen.getByText("个人空间")).toBeInTheDocument()
     expect(screen.getByText("公开阅读正文")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "← 返回写作广场" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "�?返回写作广场" })).toHaveAttribute(
       "href",
       "/square"
     )

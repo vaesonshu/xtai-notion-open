@@ -5,6 +5,9 @@ const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
 const nextConfig: NextConfig = {
   transpilePackages: [
     "@workspace/ui",
+    "@xtai-notion/editor-core",
+    "@xtai-notion/editor-react",
+    "@xtai-notion/editor-shadcn",
     "@workspace/editor",
     "@workspace/icons",
     "@excalidraw/excalidraw",

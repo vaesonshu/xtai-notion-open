@@ -2,7 +2,7 @@ import { fireEvent, render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { EditorToolbar } from "./toolbar"
 
-vi.mock("@workspace/editor/react", () => ({
+vi.mock("@xtai-notion/editor-react", () => ({
   // Keep collaboration deterministic while exercising the real toolbar DOM.
   useCollaborationStatus: () => "synced",
   useCollaborators: () => [{ id: "user-2", name: "Lin", color: "#24866B" }],
