@@ -10,7 +10,7 @@ import {
   documentFromYjs,
   documentToPlainText,
   collectMentionIds,
-} from "@xtai-notion/editor-core"
+} from "@xtai-notion/editor-core/server"
 import { UserRepository } from "../auth/user.repository"
 import { YjsPersistenceService } from "../collaboration/yjs-persistence.service"
 import type {

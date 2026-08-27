@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import * as Y from "yjs"
-import * as editorCore from "@xtai-notion/editor-core"
+import * as editorCore from "@xtai-notion/editor-core/server"
 import type { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
 import type { UserRepository } from "../auth/user.repository"

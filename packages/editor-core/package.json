@@ -46,6 +46,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js",
+      "require": "./dist/server.cjs",
+      "types": "./dist/server.d.ts"
     }
   },
   "main": "./dist/index.cjs",
