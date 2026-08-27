@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 import {
   createEmptyDocument,
-  createInitialDocument,
   createStarterDocument,
   isEditorDocument,
-} from "./index"
+} from "./document"
+import { createInitialDocument } from "./document/initial-document"
 
 describe("core document entry point", () => {
   it("exposes the stable document contract", () => {

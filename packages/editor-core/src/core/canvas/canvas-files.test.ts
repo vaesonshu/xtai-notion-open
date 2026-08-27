@@ -17,7 +17,7 @@ describe("externalizeCanvasFiles", () => {
         dataURL:
           "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
       },
-    } as BinaryFiles
+    } as unknown as BinaryFiles
 
     const result = await externalizeCanvasFiles(files, upload)
 
@@ -36,7 +36,7 @@ describe("externalizeCanvasFiles", () => {
         created: 1,
         dataURL: "https://cdn.example.com/existing.png",
       },
-    } as BinaryFiles
+    } as unknown as BinaryFiles
 
     const result = await externalizeCanvasFiles(files, upload)
 
@@ -55,7 +55,7 @@ describe("externalizeCanvasFiles", () => {
         created: 1,
         dataURL: "https://cdn.example.com/existing.png",
       },
-    } as BinaryFiles
+    } as unknown as BinaryFiles
 
     const result = await inlineRemoteCanvasFiles(files, fetchRemote)
 
