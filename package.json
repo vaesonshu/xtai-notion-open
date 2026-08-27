@@ -9,7 +9,8 @@
     "format": "turbo format",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:editor-boundaries": "node scripts/check-editor-boundaries.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
