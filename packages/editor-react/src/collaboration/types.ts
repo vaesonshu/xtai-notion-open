@@ -1,6 +1,6 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type * as Y from "yjs"
-import type { CollaborationUser } from "../core/types"
+import type { CollaborationUser } from "@xtai-notion/editor-core"
 
 export type CollaborationStatus =
   | "connecting"

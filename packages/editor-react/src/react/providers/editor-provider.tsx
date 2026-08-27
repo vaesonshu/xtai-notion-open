@@ -1,15 +1,16 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
+import type { Node } from "@tiptap/core"
 import { Editor } from "@tiptap/core"
+import {
+  createEditorExtensions,
+  createInitialDocument,
+  type CanvasImageFetchHandler,
+  type EditorDocument,
+  type ImageUploadHandler,
+} from "@xtai-notion/editor-core"
 import { EditorContext } from "../context/editor-context"
-import { createEditorExtensions } from "../../core/extensions"
-import { createInitialDocument } from "../../core/document/initial-document"
-import type { EditorDocument } from "../../core/types"
-import type { ImageUploadHandler } from "../../core/image-upload"
-import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
-import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
-import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 
 export type EditorProviderProps = {
   initialContent?: EditorDocument
@@ -17,7 +18,15 @@ export type EditorProviderProps = {
   onChange?: (document: EditorDocument) => void
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
+  /** ?? React NodeView ??????????? core ? Node? */
+  imageUploadNode?: Node
+  /** ?? Excalidraw NodeView ???????? core ? Node? */
+  canvasBlockNode?: Node
   children: ReactNode
+}
+
+type EditorInitOptions = ConstructorParameters<typeof Editor>[0] & {
+  immediatelyRender?: boolean
 }
 
 function createLocalEditor(options: {
@@ -25,19 +34,20 @@ function createLocalEditor(options: {
   editable: boolean
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
+  imageUploadNode?: Node
+  canvasBlockNode?: Node
 }): Editor {
   return new Editor({
     extensions: createEditorExtensions({
       imageUpload: options.imageUpload,
       canvasImageFetch: options.canvasImageFetch,
-      imageUploadNode: ImageUploadNode,
-      canvasBlockNode: CanvasBlockNode,
+      imageUploadNode: options.imageUploadNode,
+      canvasBlockNode: options.canvasBlockNode,
     }),
     content: options.initialContent ?? createInitialDocument(),
     editable: options.editable,
-    // Next.js 需显式关闭首帧渲染，避免 SSR/水合与软导航后正文空白
     immediatelyRender: false,
-  })
+  } as EditorInitOptions)
 }
 
 export function EditorProvider({
@@ -45,11 +55,12 @@ export function EditorProvider({
   editable = true,
   imageUpload,
   canvasImageFetch,
+  imageUploadNode,
+  canvasBlockNode,
   onChange,
   children,
 }: EditorProviderProps) {
   const editorRef = useRef<Editor | null>(null)
-  // 首帧保持 null，与服务端 SSR 一致，避免水合时骨架屏与正文 DOM 不匹配
   const [editor, setEditor] = useState<Editor | null>(null)
 
   useEffect(() => {
@@ -59,6 +70,8 @@ export function EditorProvider({
         editable,
         imageUpload,
         canvasImageFetch,
+        imageUploadNode,
+        canvasBlockNode,
       })
       editorRef.current = instance
       setEditor(instance)
@@ -69,7 +82,7 @@ export function EditorProvider({
       editorRef.current = null
       setEditor(null)
     }
-  }, []) // 内容变更由父级 key 触发重挂载，避免误覆盖本地编辑
+  }, [])
 
   useEffect(() => {
     if (!editor) {

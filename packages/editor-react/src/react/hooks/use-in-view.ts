@@ -7,7 +7,7 @@ type UseInViewOptions = {
   enabled?: boolean
 }
 
-/** 视口懒加载：元素进入视口后再挂载重型子组件。 */
+/** 视口懒加载：元素进入视口后再挂载重型子组件�?*/
 export function useInView<T extends Element>({
   rootMargin = "240px 0px",
   enabled = true,

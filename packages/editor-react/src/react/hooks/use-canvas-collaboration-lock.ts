@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useRef } from "react"
 import { EditorContext } from "../context/editor-context"
-import type { CollaborationUser } from "../../core/types"
+import type { CollaborationUser } from "@xtai-notion/editor-core"
 
 export function useCanvasCollaborationLock(
   canvasId: string | null | undefined

@@ -1,9 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import type { Node } from "@tiptap/core"
 import { Editor } from "@tiptap/core"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
+import {
+  createEditorExtensions,
+  createStarterDocument,
+  type CanvasImageFetchHandler,
+  type CollaborationUser,
+  type EditorDocument,
+  type ImageUploadHandler,
+} from "@xtai-notion/editor-core"
 import {
   createCollaborationSession,
   type CreateProvider,
@@ -12,15 +21,12 @@ import type {
   CollaborationConfig,
   CollaborationStatus,
 } from "../../collaboration/types"
-import { createEditorExtensions } from "../../core/extensions"
-import { createStarterDocument } from "../../core/document"
-import type { CollaborationUser, EditorDocument } from "../../core/types"
-import type { ImageUploadHandler } from "../../core/image-upload"
-import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
-import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
-import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 import { EditorContext } from "../context/editor-context"
 import type { EditorProviderProps } from "./editor-provider"
+
+type EditorInitOptions = ConstructorParameters<typeof Editor>[0] & {
+  immediatelyRender?: boolean
+}
 
 export type CollaborationEditorProviderProps = EditorProviderProps & {
   collaboration: CollaborationConfig
@@ -107,6 +113,8 @@ function createSyncedEditor(options: {
   initialContent?: EditorDocument
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
+  imageUploadNode?: Node
+  canvasBlockNode?: Node
 }): Editor {
   const wasEmpty = isRemoteDocumentEmpty(options.document)
   const editor = new Editor({
@@ -116,12 +124,12 @@ function createSyncedEditor(options: {
       user: options.user,
       imageUpload: options.imageUpload,
       canvasImageFetch: options.canvasImageFetch,
-      imageUploadNode: ImageUploadNode,
-      canvasBlockNode: CanvasBlockNode,
+      imageUploadNode: options.imageUploadNode,
+      canvasBlockNode: options.canvasBlockNode,
     }),
     editable: options.editable,
     immediatelyRender: false,
-  })
+  } as EditorInitOptions)
 
   if (wasEmpty) {
     editor.commands.setContent(
@@ -138,6 +146,8 @@ export function CollaborationEditorProvider({
   initialContent,
   imageUpload,
   canvasImageFetch,
+  imageUploadNode,
+  canvasBlockNode,
   editable = true,
   onChange,
   children,
@@ -159,6 +169,8 @@ export function CollaborationEditorProvider({
     initialContent,
     imageUpload,
     canvasImageFetch,
+    imageUploadNode,
+    canvasBlockNode,
   })
   const mountGenerationRef = useRef(0)
 
@@ -168,8 +180,17 @@ export function CollaborationEditorProvider({
       initialContent,
       imageUpload,
       canvasImageFetch,
+      imageUploadNode,
+      canvasBlockNode,
     }
-  }, [canvasImageFetch, editable, imageUpload, initialContent])
+  }, [
+    canvasBlockNode,
+    canvasImageFetch,
+    editable,
+    imageUpload,
+    imageUploadNode,
+    initialContent,
+  ])
 
   useEffect(() => {
     const provider = session.provider
@@ -187,6 +208,8 @@ export function CollaborationEditorProvider({
         initialContent: createOptionsRef.current.initialContent,
         imageUpload: createOptionsRef.current.imageUpload,
         canvasImageFetch: createOptionsRef.current.canvasImageFetch,
+        imageUploadNode: createOptionsRef.current.imageUploadNode,
+        canvasBlockNode: createOptionsRef.current.canvasBlockNode,
       })
       editorRef.current = nextEditor
       setEditor(nextEditor)

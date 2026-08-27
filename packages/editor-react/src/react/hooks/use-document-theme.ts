@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-/** 跟随 next-themes 的 class 策略，不引入 next-themes 依赖。 */
+/** 跟随 next-themes �?class 策略，不引入 next-themes 依赖�?*/
 export function useDocumentTheme(): "light" | "dark" {
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     typeof document !== "undefined" &&
