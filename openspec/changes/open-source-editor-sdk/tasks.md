@@ -40,9 +40,9 @@
 
 ## 6. 文档与边界校验
 
-- [ ] 6.1 为 `packages/editor-core`、`packages/editor-react`、`packages/editor-shadcn` 各编写 `README.md`：安装、peer 依赖、最小示例、样式引入；react README 须包含 headless + 自定义 `ComponentsProvider` 示例。
-- [ ] 6.2 在根目录 `README.md` 增加「编辑器 SDK 包结构」小节，说明三包职责与开源意图（简短即可）。
-- [ ] 6.3 添加 ESLint 或简单脚本 `scripts/check-editor-boundaries.mjs`（可选），校验 core/react/shadcn 包间禁止反向依赖；在根 `package.json` 增加 `"check:editor-boundaries"` 脚本。
+- [x] 6.1 为 `packages/editor-core`、`packages/editor-react`、`packages/editor-shadcn` 各编写 `README.md`：安装、peer 依赖、最小示例、样式引入；react README 须包含 headless + 自定义 `ComponentsProvider` 示例。
+- [x] 6.2 在根目录 `README.md` 增加「编辑器 SDK 包结构」小节，说明三包职责与开源意图（简短即可）。
+- [x] 6.3 添加 ESLint 或简单脚本 `scripts/check-editor-boundaries.mjs`（可选），校验 core/react/shadcn 包间禁止反向依赖；在根 `package.json` 增加 `"check:editor-boundaries"` 脚本。
 
 ## 7. 全量验收
 
@@ -50,7 +50,7 @@
 - [x] 7.2 运行 `pnpm --filter @xtai-notion/editor-core build && pnpm --filter @xtai-notion/editor-react build && pnpm --filter @xtai-notion/editor-shadcn build` 验收三包构建成功。
 - [x] 7.3 运行 `pnpm lint`、`pnpm typecheck`、`pnpm --filter @xtai-notion/editor-core test`、`pnpm --filter @xtai-notion/editor-react test`、`pnpm --filter @xtai-notion/editor-shadcn test`、`pnpm --filter api test`、`pnpm --filter web test` 验收全部通过。
 - [x] 7.4 运行 `pnpm --filter web build` 验收 Demo 应用构建成功。
-- [ ] 7.5 手动或 Playwright 冒烟：打开文档编辑页，验证斜杠菜单、粗体、协作状态（若环境可用）与迁移前行为一致；将结果记录到本变更目录 `README.md` 验证说明。
+- [x] 7.5 手动或 Playwright 冒烟：打开文档编辑页，验证斜杠菜单、粗体、协作状态（若环境可用）与迁移前行为一致；将结果记录到本变更目录 `README.md` 验证说明。
 
 ## 8. 后续（本变更不实现，仅记录）
 
