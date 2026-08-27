@@ -26,7 +26,7 @@ const content: EditorDocument = {
   content: [
     {
       type: "paragraph",
-      content: [{ type: "text", text: "公开阅读正文" }],
+      content: [{ type: "text", text: "\u516c\u5f00\u9605\u8bfb\u6b63\u6587" }],
     },
   ],
 }
@@ -36,7 +36,10 @@ const contentWithImage: EditorDocument = {
   content: [
     {
       type: "image",
-      attrs: { src: "https://example.com/photo.jpg", alt: "示例�? },
+      attrs: {
+        src: "https://example.com/photo.jpg",
+        alt: "\u793a\u4f8b\u56fe",
+      },
     },
   ],
 }
@@ -51,21 +54,22 @@ describe("ArticleReader", () => {
           author: "Ada",
           authorColor: "#24866B",
           publishedAt: "2026-08-14T08:00:00.000Z",
-          category: "个人空间",
+          category: "\u4e2a\u4eba\u7a7a\u95f4",
           content,
         }}
       />
     )
 
-    expect(screen.getByRole("heading", { name: "Published guide" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Published guide" })
+    ).toBeInTheDocument()
     expect(screen.getByText("Ada")).toBeInTheDocument()
     expect(screen.getByText("A")).toBeInTheDocument()
-    expect(screen.getByText("个人空间")).toBeInTheDocument()
-    expect(screen.getByText("公开阅读正文")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "�?返回写作广场" })).toHaveAttribute(
-      "href",
-      "/square"
-    )
+    expect(screen.getByText("\u4e2a\u4eba\u7a7a\u95f4")).toBeInTheDocument()
+    expect(screen.getByText("\u516c\u5f00\u9605\u8bfb\u6b63\u6587")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: /\u8fd4\u56de\u5199\u4f5c\u5e7f\u573a/ })
+    ).toHaveAttribute("href", "/square")
   })
 
   it("opens a lightbox when an inline image is clicked", () => {
@@ -77,18 +81,19 @@ describe("ArticleReader", () => {
           author: "Ada",
           authorColor: "#24866B",
           publishedAt: "2026-08-14T08:00:00.000Z",
-          category: "个人空间",
+          category: "\u4e2a\u4eba\u7a7a\u95f4",
           content: contentWithImage,
         }}
       />
     )
 
-    fireEvent.click(screen.getByRole("img"))
+    fireEvent.click(screen.getByRole("img", { name: "\u793a\u4f8b\u56fe" }))
 
-    expect(screen.getByRole("dialog", { name: "图片预览" })).toBeInTheDocument()
-    expect(screen.getByRole("img", { name: "放大预览" })).toHaveAttribute(
-      "src",
-      "https://example.com/photo.jpg"
-    )
+    expect(
+      screen.getByRole("dialog", { name: "\u56fe\u7247\u9884\u89c8" })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("img", { name: "\u653e\u5927\u9884\u89c8" })
+    ).toHaveAttribute("src", "https://example.com/photo.jpg")
   })
 })

@@ -10,7 +10,8 @@ import {
   type EditorDocument,
   type InlineMark,
 } from "@xtai-notion/editor-core"
-import { EditorContent, EditorProvider, useEditorInstance } from "@xtai-notion/editor-react"
+import { EditorContent, EditorContext, EditorProvider, useEditorInstance } from "@xtai-notion/editor-react"
+import { use } from "react"
 import "@xtai-notion/editor-shadcn/style.css"
 import {
   BoldIcon,
@@ -171,7 +172,22 @@ function PlaygroundInspector({ document }: { document: EditorDocument }) {
 }
 
 function PlaygroundBody() {
-  const editor = useEditorInstance()
+  const context = use(EditorContext)
+  const editor = context?.editor
+
+  // EditorProvider 首帧可能尚未挂载 Tiptap 实例，等就绪后再渲染依赖 editor 的子树
+  if (!editor) {
+    return null
+  }
+
+  return <PlaygroundBodyReady editor={editor} />
+}
+
+function PlaygroundBodyReady({
+  editor,
+}: {
+  editor: NonNullable<ReturnType<typeof useEditorInstance>>
+}) {
   const [document, setDocument] = useState<EditorDocument>(() => editor.getJSON() as EditorDocument)
 
   useEffect(() => {
