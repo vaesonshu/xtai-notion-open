@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: "@react-src",
+        replacement: path.resolve(rootDir, "src"),
+      },
+      {
         find: /^@xtai-notion\/editor-core\/(.+)$/,
         replacement: path.resolve(rootDir, "../editor-core/src/core/$1"),
       },
@@ -28,5 +32,6 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./test/setup.ts"],
+    include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
   },
 })

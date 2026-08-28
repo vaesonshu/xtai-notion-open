@@ -4,7 +4,10 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   resolve: {
     alias: [
-      // 更具体的子路径 alias 必须排在包根路径之前
+      {
+        find: "@/",
+        replacement: `${path.resolve(__dirname, "./")}/`,
+      },
       {
         find: "@xtai-notion/editor-shadcn/style.css",
         replacement: path.resolve(
@@ -76,5 +79,6 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./test/setup.ts"],
+    include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
   },
 })

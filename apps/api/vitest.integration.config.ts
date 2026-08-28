@@ -13,7 +13,7 @@ export default defineConfig({
   test: {
     environment: "node",
     setupFiles: ["./vitest.integration.setup.ts"],
-    include: ["src/**/*.integration.spec.ts"],
+    include: ["test/**/*.integration.spec.ts"],
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 60_000,

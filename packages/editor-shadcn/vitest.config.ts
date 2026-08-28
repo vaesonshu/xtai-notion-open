@@ -8,6 +8,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: "@shadcn-src",
+        replacement: path.resolve(rootDir, "src"),
+      },
+      {
         find: "@xtai-notion/editor-shadcn/style.css",
         replacement: path.resolve(rootDir, "./src/style.css"),
       },
@@ -47,5 +51,6 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./test/setup.ts"],
+    include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
   },
 })
