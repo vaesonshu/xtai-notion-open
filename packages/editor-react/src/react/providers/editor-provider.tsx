@@ -7,6 +7,7 @@ import {
   createStarterBlocks,
 } from "@xtai-notion/editor-core"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { EditorSchema } from "@xtai-notion/editor-core/schema"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
 import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
 import { EditorContext } from "../context/editor-context"
@@ -20,6 +21,8 @@ export type EditorProviderProps = {
   /** shadcn 等 UI 层注入的 NodeView 扩展；省略时使用 core 默认节点定义。 */
   imageUploadNode?: Node
   canvasBlockNode?: Node
+  /** 带 React NodeView 的自定义 schema（优先于 canvasBlockNode 覆盖） */
+  editorSchema?: EditorSchema
   children: ReactNode
 }
 
@@ -30,10 +33,12 @@ function createLocalBlockEditor(options: {
   canvasImageFetch?: CanvasImageFetchHandler
   imageUploadNode?: Node
   canvasBlockNode?: Node
+  editorSchema?: EditorSchema
 }): BlockEditor {
   return new BlockEditor({
     initialContent: options.initialContent ?? createStarterBlocks(),
     editable: options.editable,
+    editorSchema: options.editorSchema,
     extensions: {
       imageUpload: options.imageUpload,
       canvasImageFetch: options.canvasImageFetch,
@@ -50,6 +55,7 @@ export function EditorProvider({
   canvasImageFetch,
   imageUploadNode,
   canvasBlockNode,
+  editorSchema,
   onChange,
   children,
 }: EditorProviderProps) {
@@ -66,6 +72,7 @@ export function EditorProvider({
         canvasImageFetch,
         imageUploadNode,
         canvasBlockNode,
+        editorSchema,
       })
       blockEditorRef.current = instance
       setBlockEditor(instance)

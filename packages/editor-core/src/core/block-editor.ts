@@ -11,14 +11,20 @@ import {
   BLOCK_SIDE_MENU_PLUGIN_KEY,
   createBlockSideMenuController,
 } from "./block-side-menu"
-import { createBlockSchemaExtensions } from "./extensions"
+import {
+  createBlockSchemaExtensions,
+  createBlockSchemaExtensionsFromRegistry,
+} from "./extensions"
 import { handleBackspace, handleEnter } from "./extensions/block-keymap"
+import type { EditorSchema } from "./schema/create-editor-schema"
 import type { EditorExtensionOptions } from "./types"
 
 type BlockEditorOptions = {
   initialContent?: Block[]
   editable?: boolean
   extensions?: EditorExtensionOptions
+  /** SDK 自定义块 schema；传入时优先于默认 createEditorSchema() */
+  editorSchema?: EditorSchema
   /** 协作模式下远端已有内容时应为 false，避免覆盖 Y.Doc */
   applyInitialContent?: boolean
 }
@@ -295,7 +301,12 @@ export class BlockEditor {
   constructor(options: BlockEditorOptions = {}) {
     const extensionOptions = options.extensions ?? {}
     this.editor = new Editor({
-      extensions: createBlockSchemaExtensions(extensionOptions),
+      extensions: options.editorSchema
+        ? createBlockSchemaExtensionsFromRegistry(
+            extensionOptions,
+            options.editorSchema.registry
+          )
+        : createBlockSchemaExtensions(extensionOptions),
       editable: options.editable ?? true,
       editorProps: {
         handleKeyDown: (view, event) => {

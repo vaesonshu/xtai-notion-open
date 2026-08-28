@@ -16,6 +16,7 @@ import { createStarterBlocks } from "@xtai-notion/editor-core/block-schema/docum
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import type { CollaborationUser } from "@xtai-notion/editor-core"
 import type { Node } from "@tiptap/core"
+import type { EditorSchema } from "@xtai-notion/editor-core/schema"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
 import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
 import { EditorContext } from "../context/editor-context"
@@ -108,6 +109,7 @@ function createSyncedBlockEditor(options: {
   canvasImageFetch?: CanvasImageFetchHandler
   imageUploadNode?: Node
   canvasBlockNode?: Node
+  editorSchema?: EditorSchema
 }): BlockEditor {
   const wasEmpty = isRemoteDocumentEmpty(options.document)
   return new BlockEditor({
@@ -116,6 +118,7 @@ function createSyncedBlockEditor(options: {
       : undefined,
     applyInitialContent: wasEmpty,
     editable: options.editable,
+    editorSchema: options.editorSchema,
     extensions: {
       document: options.document,
       provider: options.provider,
@@ -136,6 +139,7 @@ export function CollaborationEditorProvider({
   canvasImageFetch,
   imageUploadNode,
   canvasBlockNode,
+  editorSchema,
   editable = true,
   onChange,
   children,
@@ -159,6 +163,7 @@ export function CollaborationEditorProvider({
     canvasImageFetch,
     imageUploadNode,
     canvasBlockNode,
+    editorSchema,
   })
   const mountGenerationRef = useRef(0)
 
@@ -170,11 +175,13 @@ export function CollaborationEditorProvider({
       canvasImageFetch,
       imageUploadNode,
       canvasBlockNode,
+      editorSchema,
     }
   }, [
     canvasBlockNode,
     canvasImageFetch,
     editable,
+    editorSchema,
     imageUpload,
     imageUploadNode,
     initialContent,
@@ -198,6 +205,7 @@ export function CollaborationEditorProvider({
         canvasImageFetch: createOptionsRef.current.canvasImageFetch,
         imageUploadNode: createOptionsRef.current.imageUploadNode,
         canvasBlockNode: createOptionsRef.current.canvasBlockNode,
+        editorSchema: createOptionsRef.current.editorSchema,
       })
       blockEditorRef.current = nextEditor
       setBlockEditor(nextEditor)

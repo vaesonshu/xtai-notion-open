@@ -18,10 +18,13 @@ export type {
 } from "./create-editor-schema"
 export {
   createEditorSchema,
-  DEFAULT_BUILTIN_BLOCK_COUNT,
 } from "./create-editor-schema"
 
 export {
   blockSpecFromExtension,
   createDefaultBlockSchemaRegistry,
+  DEFAULT_BUILTIN_BLOCK_COUNT,
+  BUILTIN_BLOCK_SPECS,
 } from "./default-specs"
+export { canvasSpec } from "./default-specs/canvas"
+export { imageSpec } from "./default-specs/image"

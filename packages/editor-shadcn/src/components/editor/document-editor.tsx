@@ -1,6 +1,7 @@
 "use client"
 
-import { use, type ReactNode } from "react"
+import { useMemo, use, type ReactNode } from "react"
+import { createEditorSchema } from "@xtai-notion/editor-core/schema"
 import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "@xtai-notion/editor-react/collaboration/types"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
@@ -11,7 +12,7 @@ import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provi
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { MentionContext } from "@xtai-notion/editor-react/providers/mention-provider"
 import { EditorSurface } from "./editor-surface"
-import { CanvasBlockNode } from "../nodes/canvas-block-node-extension"
+import { createCanvasBlockSpec } from "../nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../nodes/image-upload-node-extension"
 import { ImageUpload } from "../nodes/image-upload"
 import type { MentionProvider } from "@xtai-notion/editor-core/mention"
@@ -56,6 +57,22 @@ function assertExclusiveMode(props: {
   }
 }
 
+/** 画板 NodeView 通过 schema override 注入，替代旧的 canvasBlockNode 替换逻辑 */
+function useDocumentEditorSchema(props: DocumentEditorSharedProps) {
+  return useMemo(
+    () =>
+      createEditorSchema({
+        override: {
+          canvas: createCanvasBlockSpec({
+            upload: props.imageUpload,
+            fetchImage: props.canvasImageFetch,
+          }),
+        },
+      }),
+    [props.canvasImageFetch, props.imageUpload]
+  )
+}
+
 export function DocumentEditor(props: DocumentEditorProps) {
   assertExclusiveMode(props)
 
@@ -69,6 +86,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
     mentionProvider,
     mentionNavigate,
   } = props
+  const editorSchema = useDocumentEditorSchema(props)
   const surface = <EditorSurface />
   const framedSurface = renderSurface ? renderSurface(surface) : surface
   const framedContent = (
@@ -96,7 +114,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
         imageUpload={props.imageUpload}
         canvasImageFetch={props.canvasImageFetch}
         imageUploadNode={ImageUploadNode}
-        canvasBlockNode={CanvasBlockNode}
+        editorSchema={editorSchema}
         onChange={onChange}
         createProvider={props.createProvider}
       >
@@ -112,7 +130,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
       imageUpload={props.imageUpload}
       canvasImageFetch={props.canvasImageFetch}
       imageUploadNode={ImageUploadNode}
-      canvasBlockNode={CanvasBlockNode}
+      editorSchema={editorSchema}
       onChange={onChange}
     >
       {framedContent}

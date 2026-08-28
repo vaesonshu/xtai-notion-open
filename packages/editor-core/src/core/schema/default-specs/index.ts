@@ -1,120 +1,49 @@
-import type { Node } from "@tiptap/core"
-import {
-  CodeBlockContent,
-  ImageBlock,
-  BlockTable,
-  CanvasBlock,
-} from "../../block-schema/legacy-complex-blocks"
-import type { BlockType } from "../../block-schema/types"
-import type { BlockConfig, BlockSpec } from "../block-spec"
+import type { BlockSpec } from "../block-spec"
 import { BlockSchemaRegistry } from "../registry"
 import { bulletListItemSpec } from "./bullet-list-item"
+import { canvasSpec } from "./canvas"
 import { checkListItemSpec } from "./check-list-item"
+import { codeBlockSpec } from "./code-block"
 import { dividerSpec } from "./divider"
 import { headingSpec } from "./heading"
+import { imageSpec } from "./image"
 import { numberedListItemSpec } from "./numbered-list-item"
 import { paragraphSpec } from "./paragraph"
 import { quoteSpec } from "./quote"
+import { tableSpec } from "./table"
 
-/** P1 已迁移的简单块 spec */
-export const SIMPLE_BLOCK_SPECS: BlockSpec[] = [
+/** 全部 11 种内置块 spec */
+export const BUILTIN_BLOCK_SPECS: BlockSpec[] = [
   paragraphSpec,
   headingSpec,
   bulletListItemSpec,
   numberedListItemSpec,
   checkListItemSpec,
   quoteSpec,
+  codeBlockSpec,
   dividerSpec,
+  imageSpec,
+  tableSpec,
+  canvasSpec,
 ]
 
-/** P2 前复杂块仍从 legacy-complex-blocks 包装（待迁移） */
-const LEGACY_COMPLEX_CONFIGS: Record<
-  Extract<BlockType, "codeBlock" | "image" | "table" | "canvas">,
-  BlockConfig
-> = {
-  codeBlock: {
-    type: "codeBlock",
-    propSchema: { language: { default: "" } },
-    content: "text",
-    code: true,
-  },
-  image: {
-    type: "image",
-    propSchema: {
-      src: { default: "" },
-      uploadStatus: { default: "idle" },
-    },
-    content: "none",
-    isAtom: true,
-  },
-  table: {
-    type: "table",
-    propSchema: {},
-    content: "table",
-  },
-  canvas: {
-    type: "canvas",
-    propSchema: {
-      canvasId: { default: "" },
-      snapshot: { default: "" },
-    },
-    content: "none",
-    isAtom: true,
-  },
-}
-
-const LEGACY_COMPLEX_NODES: Record<
-  keyof typeof LEGACY_COMPLEX_CONFIGS,
-  Node
-> = {
-  codeBlock: CodeBlockContent,
-  image: ImageBlock,
-  table: BlockTable,
-  canvas: CanvasBlock,
-}
-
-/** 将 Tiptap 扩展包装为 BlockSpec（复杂块过渡层） */
+/** 将 Tiptap 扩展包装为 BlockSpec（SDK 自定义块时使用） */
 export function blockSpecFromExtension(
-  extension: Node,
-  config: BlockConfig
+  extension: BlockSpec["node"],
+  config: BlockSpec["config"]
 ): BlockSpec {
   return { config, node: extension }
 }
 
 /** 内置块 type 顺序，供 block-content 与测试使用 */
-export const DEFAULT_BLOCK_TYPES: BlockType[] = [
-  "paragraph",
-  "heading",
-  "bulletListItem",
-  "numberedListItem",
-  "checkListItem",
-  "quote",
-  "codeBlock",
-  "divider",
-  "image",
-  "table",
-  "canvas",
-]
+export const DEFAULT_BLOCK_TYPES = BUILTIN_BLOCK_SPECS.map(
+  (spec) => spec.config.type
+) as import("../../block-schema/types").BlockType[]
 
-/** 从 default-specs + legacy 包装构建默认 registry */
+/** 从 default-specs 构建默认 registry */
 export function createDefaultBlockSchemaRegistry(): BlockSchemaRegistry {
-  const registry = new BlockSchemaRegistry()
-
-  for (const spec of SIMPLE_BLOCK_SPECS) {
-    registry.register(spec)
-  }
-
-  for (const type of ["codeBlock", "image", "table", "canvas"] as const) {
-    registry.register(
-      blockSpecFromExtension(
-        LEGACY_COMPLEX_NODES[type],
-        LEGACY_COMPLEX_CONFIGS[type]
-      )
-    )
-  }
-
-  return registry
+  return new BlockSchemaRegistry(BUILTIN_BLOCK_SPECS)
 }
 
-export const DEFAULT_BUILTIN_BLOCK_COUNT = DEFAULT_BLOCK_TYPES.length
+export const DEFAULT_BUILTIN_BLOCK_COUNT = BUILTIN_BLOCK_SPECS.length
 

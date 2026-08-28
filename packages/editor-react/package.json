@@ -48,6 +48,7 @@
       "types": "./dist/collaboration/index.d.ts"
     },
     "./collaboration/*": "./src/collaboration/*",
+    "./schema/*": "./src/schema/*",
     "./*": "./src/react/*"
   },
   "main": "./dist/index.cjs",

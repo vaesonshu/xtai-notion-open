@@ -22,6 +22,11 @@ export { useCollaborators } from "./hooks/use-collaborators"
 export { useCanvasCollaborationLock } from "./hooks/use-canvas-collaboration-lock"
 export { useDocumentTheme } from "./hooks/use-document-theme"
 export { useInView } from "./hooks/use-in-view"
+export {
+  defineReactBlockSpec,
+  withReactNodeView,
+  type DefineReactBlockSpecOptions,
+} from "../schema/define-react-block-spec"
 export { EditorContext } from "./context/editor-context"
 export {
   ComponentsProvider,
