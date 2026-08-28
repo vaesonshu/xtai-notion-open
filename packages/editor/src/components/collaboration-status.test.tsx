@@ -8,7 +8,7 @@ function renderStatus(status: Status) {
   return render(
     <EditorContext
       value={{
-        editor: null,
+        blockEditor: null,
         collaborationStatus: status,
         collaborators: [],
         collaborationUser: null,

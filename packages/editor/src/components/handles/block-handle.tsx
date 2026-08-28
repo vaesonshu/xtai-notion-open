@@ -2,16 +2,14 @@
 
 import DragHandle from "@tiptap/extension-drag-handle-react"
 import { GripVerticalIcon } from "@workspace/icons"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import { useBlockEditor } from "../../react/hooks/use-block-editor"
 
-/**
- * Disable nested targeting so drag only moves compatible top-level blocks
- * and does not break nested list structure (design.md).
- */
-export const BLOCK_HANDLE_NESTED = false as const
+/** 启用嵌套块拖拽，与块树模型一致。 */
+export const BLOCK_HANDLE_NESTED = true as const
 
 export function BlockHandle() {
-  const editor = useEditorInstance()
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
 
   return (
     <DragHandle

@@ -1,4 +1,16 @@
 export type {
+  Block,
+  BlockType,
+  InlineContent,
+  PartialBlock,
+  TableContent,
+} from "./core/block-schema/types"
+export {
+  createEmptyBlocks,
+  createStarterBlocks,
+} from "./core/block-schema/documents"
+export { BlockEditor } from "./core/block-editor"
+export type {
   CollaborationUser,
   EditorDocument,
   EditorExtensionOptions,

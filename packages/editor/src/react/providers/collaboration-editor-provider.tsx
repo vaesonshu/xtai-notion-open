@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Editor } from "@tiptap/core"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
 import {
@@ -12,9 +11,10 @@ import type {
   CollaborationConfig,
   CollaborationStatus,
 } from "../../collaboration/types"
-import { createEditorExtensions } from "../../core/extensions"
-import { createStarterDocument } from "../../core/document"
-import type { CollaborationUser, EditorDocument } from "../../core/types"
+import { BlockEditor } from "../../core/block-editor"
+import { createStarterBlocks } from "../../core/block-schema/documents"
+import type { Block } from "../../core/block-schema/types"
+import type { CollaborationUser } from "../../core/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
 import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
 import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
@@ -99,18 +99,23 @@ function readCanvasEditors(
   return editors
 }
 
-function createSyncedEditor(options: {
+function createSyncedBlockEditor(options: {
   document: Y.Doc
   provider: HocuspocusProvider
   user: CollaborationUser
   editable: boolean
-  initialContent?: EditorDocument
+  initialContent?: Block[]
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
-}): Editor {
+}): BlockEditor {
   const wasEmpty = isRemoteDocumentEmpty(options.document)
-  const editor = new Editor({
-    extensions: createEditorExtensions({
+  return new BlockEditor({
+    initialContent: wasEmpty
+      ? (options.initialContent ?? createStarterBlocks())
+      : undefined,
+    applyInitialContent: wasEmpty,
+    editable: options.editable,
+    extensions: {
       document: options.document,
       provider: options.provider,
       user: options.user,
@@ -118,18 +123,8 @@ function createSyncedEditor(options: {
       canvasImageFetch: options.canvasImageFetch,
       imageUploadNode: ImageUploadNode,
       canvasBlockNode: CanvasBlockNode,
-    }),
-    editable: options.editable,
-    immediatelyRender: false,
+    },
   })
-
-  if (wasEmpty) {
-    editor.commands.setContent(
-      options.initialContent ?? createStarterDocument()
-    )
-  }
-
-  return editor
 }
 
 export function CollaborationEditorProvider({
@@ -152,8 +147,8 @@ export function CollaborationEditorProvider({
   const [canvasEditors, setCanvasEditors] = useState<
     Map<string, CollaborationUser>
   >(new Map())
-  const [editor, setEditor] = useState<Editor | null>(null)
-  const editorRef = useRef<Editor | null>(null)
+  const [blockEditor, setBlockEditor] = useState<BlockEditor | null>(null)
+  const blockEditorRef = useRef<BlockEditor | null>(null)
   const createOptionsRef = useRef({
     editable,
     initialContent,
@@ -176,10 +171,10 @@ export function CollaborationEditorProvider({
     provider.setAwarenessField("user", collaboration.user)
 
     const ensureEditor = () => {
-      if (editorRef.current || session.getStatus() !== "synced") {
+      if (blockEditorRef.current || session.getStatus() !== "synced") {
         return
       }
-      const nextEditor = createSyncedEditor({
+      const nextEditor = createSyncedBlockEditor({
         document: session.document,
         provider: session.provider,
         user: collaboration.user,
@@ -188,8 +183,8 @@ export function CollaborationEditorProvider({
         imageUpload: createOptionsRef.current.imageUpload,
         canvasImageFetch: createOptionsRef.current.canvasImageFetch,
       })
-      editorRef.current = nextEditor
-      setEditor(nextEditor)
+      blockEditorRef.current = nextEditor
+      setBlockEditor(nextEditor)
     }
 
     const syncStatus = () => {
@@ -239,24 +234,15 @@ export function CollaborationEditorProvider({
   )
 
   useEffect(() => {
-    if (!editor) {
-      return
-    }
-    editor.setEditable(editable)
-  }, [editable, editor])
+    blockEditor?.setEditable(editable)
+  }, [editable, blockEditor])
 
   useEffect(() => {
-    if (!editor || !onChange) {
+    if (!blockEditor || !onChange) {
       return
     }
-    const handleUpdate = () => {
-      onChange(editor.getJSON() as EditorDocument)
-    }
-    editor.on("update", handleUpdate)
-    return () => {
-      editor.off("update", handleUpdate)
-    }
-  }, [editor, onChange])
+    return blockEditor.onChange(onChange)
+  }, [blockEditor, onChange])
 
   useEffect(() => {
     const mountGeneration = mountGenerationRef.current + 1
@@ -272,21 +258,21 @@ export function CollaborationEditorProvider({
   }, [session])
 
   useEffect(() => {
-    if (!editor) {
+    if (!blockEditor) {
       return
     }
     return () => {
-      editor.destroy()
-      if (editorRef.current === editor) {
-        editorRef.current = null
+      blockEditor.destroy()
+      if (blockEditorRef.current === blockEditor) {
+        blockEditorRef.current = null
       }
     }
-  }, [editor])
+  }, [blockEditor])
 
   return (
     <EditorContext
       value={{
-        editor,
+        blockEditor,
         collaborationStatus: status,
         collaborators,
         collaborationUser: collaboration.user,

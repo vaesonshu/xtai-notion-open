@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
-import type { EditorDocument } from "@workspace/editor"
+import type { Block } from "@workspace/editor"
 import { ArticleReader } from "./article-reader"
 
 vi.mock("../auth-provider", () => ({
@@ -21,25 +21,24 @@ beforeEach(() => {
   )
 })
 
-const content: EditorDocument = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [{ type: "text", text: "公开阅读正文" }],
-    },
-  ],
-}
+const content: Block[] = [
+  {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    type: "paragraph",
+    props: {},
+    content: [{ type: "text", text: "公开阅读正文", styles: {} }],
+    children: [],
+  },
+]
 
-const contentWithImage: EditorDocument = {
-  type: "doc",
-  content: [
-    {
-      type: "image",
-      attrs: { src: "https://example.com/photo.jpg", alt: "示例图" },
-    },
-  ],
-}
+const contentWithImage: Block[] = [
+  {
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    type: "image",
+    props: { src: "https://example.com/photo.jpg" },
+    children: [],
+  },
+]
 
 describe("ArticleReader", () => {
   it("renders article metadata and read-only body", () => {

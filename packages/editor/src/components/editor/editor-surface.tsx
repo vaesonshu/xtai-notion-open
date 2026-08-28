@@ -18,7 +18,7 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
   const context = use(EditorContext)
   const navigate = useMentionNavigate()
 
-  if (!context?.editor) {
+  if (!context?.blockEditor) {
     return (
       <div
         className="flex min-h-[28rem] w-full flex-col gap-5 px-10 py-8"
@@ -57,7 +57,7 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
   return (
     <div onClick={handleClick}>
       <EditorContent className={className} />
-      {context.editor.isEditable ? (
+      {context.blockEditor.tiptap.isEditable ? (
         <>
           <SlashMenu />
           <MentionMenu />

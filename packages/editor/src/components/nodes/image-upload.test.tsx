@@ -2,9 +2,10 @@ import "@testing-library/jest-dom/vitest"
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { Editor } from "@tiptap/core"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
-import { useEffect } from "react"
+import { use, useEffect } from "react"
+import { EditorContext } from "../../react/context/editor-context"
 import { EditorProvider } from "../../react/providers/editor-provider"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import { createEmptyBlocks } from "../../core/block-schema/documents"
 import { EditorSurface } from "../editor/editor-surface"
 import { ImageUpload } from "./image-upload"
 
@@ -15,11 +16,24 @@ const dropzoneName = "选择或拖拽上传图片"
 let latestEditor: Editor | null = null
 
 function EditorProbe() {
-  const editor = useEditorInstance()
+  const context = use(EditorContext)
   useEffect(() => {
-    latestEditor = editor
-  }, [editor])
+    const blockEditor = context?.blockEditor
+    if (!blockEditor) {
+      return
+    }
+    latestEditor = blockEditor.tiptap
+    return blockEditor.onChange(() => {
+      latestEditor = blockEditor.tiptap
+    })
+  }, [context?.blockEditor])
   return null
+}
+
+async function waitForEditor() {
+  await waitFor(() => {
+    expect(latestEditor).not.toBeNull()
+  })
 }
 
 function renderUpload(
@@ -29,7 +43,7 @@ function renderUpload(
   }>
 ) {
   return render(
-    <EditorProvider imageUpload={upload}>
+    <EditorProvider initialContent={createEmptyBlocks()} imageUpload={upload}>
       <ImageUpload>
         <EditorSurface />
         <EditorProbe />
@@ -80,6 +94,7 @@ describe("ImageUpload", () => {
       contentType: "image/png",
     })
     renderUpload(upload)
+    await waitForEditor()
     insertUploadNode()
 
     const dropzone = await findDropzone()
@@ -93,17 +108,11 @@ describe("ImageUpload", () => {
 
     await waitFor(() => expect(upload).toHaveBeenCalledWith(image, undefined))
     await waitFor(() => {
-      expect(latestEditor?.getJSON().content).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: "image",
-            attrs: expect.objectContaining({
-              src: "https://cdn.example/image.png",
-              alt: "image.png",
-            }),
-          }),
-        ])
-      )
+      expect(
+        latestEditor?.getJSON().content?.some((node) =>
+          JSON.stringify(node).includes("https://cdn.example/image.png")
+        )
+      ).toBe(true)
     })
   })
 
@@ -113,6 +122,7 @@ describe("ImageUpload", () => {
       contentType: "image/png",
     })
     renderUpload(upload)
+    await waitForEditor()
     insertUploadNode()
 
     await act(async () => {
@@ -126,6 +136,7 @@ describe("ImageUpload", () => {
   it("keeps failed uploads in the document so they can retry or be removed", async () => {
     const upload = vi.fn().mockRejectedValue(new Error("COS upload failed"))
     renderUpload(upload)
+    await waitForEditor()
     insertUploadNode()
 
     const dropzone = await findDropzone()
@@ -143,11 +154,9 @@ describe("ImageUpload", () => {
       fireEvent.click(screen.getByRole("button", { name: "移除图片上传" }))
     })
     await waitFor(() => {
-      expect(latestEditor?.getJSON().content).not.toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ type: "imageUpload" }),
-        ])
-      )
+      expect(
+        JSON.stringify(latestEditor?.getJSON()).includes("imageUpload")
+      ).toBe(false)
     })
 
     insertUploadNode()

@@ -153,17 +153,24 @@ export function DocumentGraph({
     }
   }, [apiUrl, userId])
 
-  const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
+  const selectNode = useCallback((nodeId: string) => {
     setNodes((current) =>
-      current.map((item) => ({ ...item, selected: item.id === node.id }))
+      current.map((item) => ({ ...item, selected: item.id === nodeId }))
     )
     setEdges((current) =>
       current.map((edge) => ({
         ...edge,
-        selected: edge.source === node.id || edge.target === node.id,
+        selected: edge.source === nodeId || edge.target === nodeId,
       }))
     )
   }, [])
+
+  const handleNodeClick: NodeMouseHandler = useCallback(
+    (_, node) => {
+      selectNode(node.id)
+    },
+    [selectNode]
+  )
 
   const handleNodeDoubleClick: NodeMouseHandler = useCallback(
     (_, node) => {
@@ -212,7 +219,7 @@ export function DocumentGraph({
           proOptions={{ hideAttribution: true }}
           onNodeClick={handleNodeClick}
           onNodeDoubleClick={handleNodeDoubleClick}
-          onNodeDragStart={handleNodeClick}
+          onNodeDragStart={(_, node) => selectNode(node.id)}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
         >

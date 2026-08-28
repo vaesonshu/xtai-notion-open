@@ -1,12 +1,12 @@
 "use client"
 
 import { createContext } from "react"
-import type { Editor } from "@tiptap/core"
+import type { BlockEditor } from "../../core/block-editor"
 import type { CollaborationStatus } from "../../collaboration/types"
 import type { CollaborationUser } from "../../core/types"
 
 export type EditorContextValue = {
-  editor: Editor | null
+  blockEditor: BlockEditor | null
   collaborationStatus: CollaborationStatus | null
   collaborators: CollaborationUser[]
   /** 当前协作用户；非协作模式为 null。 */

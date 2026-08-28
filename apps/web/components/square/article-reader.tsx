@@ -1,6 +1,6 @@
 "use client"
 
-import type { EditorDocument } from "@workspace/editor"
+import type { Block } from "@workspace/editor"
 import { DocumentEditor } from "@workspace/editor/components"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
@@ -18,7 +18,7 @@ export type ArticleReaderArticle = {
   publishedAt: string
   category: string
   excerpt?: string
-  content: EditorDocument
+  content: Block[]
 }
 
 const DEFAULT_AUTHOR_COLOR = "#242321"

@@ -12,6 +12,23 @@ import type {
 
 const BLOCK_CONTENT_TYPES = new Set<string>(BLOCK_CONTENT_NODE_NAMES)
 
+/** schema 节点缺失时尽早抛错，便于调试块转换链路 */
+function requireNodeType(schema: Schema, name: string) {
+  const nodeType = schema.nodes[name]
+  if (!nodeType) {
+    throw new Error(`Missing block schema node: ${name}`)
+  }
+  return nodeType
+}
+
+function requireMarkType(schema: Schema, name: string) {
+  const markType = schema.marks[name]
+  if (!markType) {
+    throw new Error(`Missing block schema mark: ${name}`)
+  }
+  return markType
+}
+
 /** PM marks → Block 行内 styles（不含 link） */
 function marksToStyles(marks: readonly Mark[]): InlineStyles {
   const styles: InlineStyles = {}
@@ -189,7 +206,7 @@ function contentNodeToBlock(
     case "numberedListItem":
     case "quote":
       return {
-        type: nodeType,
+        type: nodeType as BlockType,
         props: {},
         content: inlinePmToBlock(node.content),
       }
@@ -291,7 +308,9 @@ function inlineBlockToPm(inline: InlineContent[], schema: Schema): PMNode[] {
     }
 
     if (item.type === "link") {
-      const linkMark = schema.marks.link.create({ href: item.href })
+      const linkMark = requireMarkType(schema, "link").create({
+        href: item.href,
+      })
       for (const child of item.content) {
         if (child.type === "text" && child.text) {
           nodes.push(
@@ -307,7 +326,7 @@ function inlineBlockToPm(inline: InlineContent[], schema: Schema): PMNode[] {
 
     if (item.type === "mention") {
       nodes.push(
-        schema.nodes.mention.create({
+        requireNodeType(schema, "mention").create({
           id: item.id,
           label: item.label,
           href: item.href,
@@ -323,19 +342,20 @@ function tableBlockToPm(content: TableContent, schema: Schema): PMNode {
   const rowNodes = content.rows.map((row, rowIndex) => {
     const isHeaderRow = rowIndex < content.headerRows
     const cellNodes = row.cells.map((cell) => {
-      const cellType = isHeaderRow
-        ? schema.nodes.tableHeader
-        : schema.nodes.tableCell
-      const paragraph = schema.nodes.paragraph.create(
+      const cellType = requireNodeType(
+        schema,
+        isHeaderRow ? "tableHeader" : "tableCell"
+      )
+      const paragraph = requireNodeType(schema, "paragraph").create(
         null,
         inlineBlockToPm(cell.content, schema)
       )
       return cellType.create(null, paragraph)
     })
-    return schema.nodes.tableRow.create(null, cellNodes)
+    return requireNodeType(schema, "tableRow").create(null, cellNodes)
   })
 
-  return schema.nodes.table.create(null, rowNodes)
+  return requireNodeType(schema, "table").create(null, rowNodes)
 }
 
 function blockToContentNode(block: Block, schema: Schema): PMNode {
@@ -344,7 +364,7 @@ function blockToContentNode(block: Block, schema: Schema): PMNode {
     case "bulletListItem":
     case "numberedListItem":
     case "quote":
-      return schema.nodes[block.type].create(
+      return requireNodeType(schema, block.type).create(
         null,
         inlineBlockToPm(
           Array.isArray(block.content) ? block.content : [],
@@ -352,7 +372,7 @@ function blockToContentNode(block: Block, schema: Schema): PMNode {
         )
       )
     case "heading":
-      return schema.nodes.heading.create(
+      return requireNodeType(schema, "heading").create(
         { level: (block.props.level as number) ?? 1 },
         inlineBlockToPm(
           Array.isArray(block.content) ? block.content : [],
@@ -360,7 +380,7 @@ function blockToContentNode(block: Block, schema: Schema): PMNode {
         )
       )
     case "checkListItem":
-      return schema.nodes.checkListItem.create(
+      return requireNodeType(schema, "checkListItem").create(
         { checked: Boolean(block.props.checked) },
         inlineBlockToPm(
           Array.isArray(block.content) ? block.content : [],
@@ -374,27 +394,27 @@ function blockToContentNode(block: Block, schema: Schema): PMNode {
             item.type === "text"
         )
         .map((item) => schema.text(item.text))
-      return schema.nodes.codeBlock.create(
+      return requireNodeType(schema, "codeBlock").create(
         { language: (block.props.language as string | null) ?? null },
         textNodes
       )
     }
     case "divider":
-      return schema.nodes.divider.create()
+      return requireNodeType(schema, "divider").create()
     case "image":
-      return schema.nodes.image.create({
+      return requireNodeType(schema, "image").create({
         src: (block.props.src as string | null) ?? null,
         uploadStatus: (block.props.uploadStatus as string) ?? "idle",
       })
     case "table":
       return tableBlockToPm(block.content as TableContent, schema)
     case "canvas":
-      return schema.nodes.canvas.create({
+      return requireNodeType(schema, "canvas").create({
         canvasId: (block.props.canvasId as string | null) ?? null,
         snapshot: (block.props.snapshot as string) ?? "",
       })
     default:
-      return schema.nodes.paragraph.create(
+      return requireNodeType(schema, "paragraph").create(
         null,
         inlineBlockToPm(
           Array.isArray(block.content) ? block.content : [],
@@ -412,16 +432,19 @@ function blockToContainer(block: Block, schema: Schema): PMNode {
     const nested = block.children.map((child) =>
       blockToContainer(child, schema)
     )
-    children.push(schema.nodes.blockGroup.create(null, nested))
+    children.push(requireNodeType(schema, "blockGroup").create(null, nested))
   }
 
-  return schema.nodes.blockContainer.create({ id: block.id }, children)
+  return requireNodeType(schema, "blockContainer").create(
+    { id: block.id },
+    children
+  )
 }
 
 /** Block[] → ProseMirror 文档；空数组时插入 createEmptyBlocks() */
 export function blocksToPmDoc(blocks: Block[], schema: Schema): PMNode {
   const normalized = blocks.length > 0 ? blocks : createEmptyBlocks()
   const containers = normalized.map((block) => blockToContainer(block, schema))
-  const group = schema.nodes.blockGroup.create(null, containers)
-  return schema.nodes.doc.create(null, group)
+  const group = requireNodeType(schema, "blockGroup").create(null, containers)
+  return requireNodeType(schema, "doc").create(null, group)
 }

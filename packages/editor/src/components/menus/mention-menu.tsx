@@ -23,7 +23,7 @@ import {
   useFloating,
   type VirtualElement,
 } from "@floating-ui/react"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import { useBlockEditor } from "../../react/hooks/use-block-editor"
 import {
   filterMentionItems,
   insertMention,
@@ -41,7 +41,7 @@ type MentionSuggestionState = {
 }
 
 export function MentionMenu() {
-  const editor = useEditorInstance()
+  const editor = useBlockEditor().tiptap
   const mentionProvider = useMentionProvider()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<MentionableItem[]>([])

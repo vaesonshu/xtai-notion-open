@@ -1,16 +1,21 @@
 "use client"
 
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useState, use, type FormEvent } from "react"
 import {
-  createStarterDocument,
+  createStarterBlocks,
   executeSlashCommand,
   filterSlashCommands,
   setEditorLink,
   toggleInlineMark,
-  type EditorDocument,
+  type Block,
   type InlineMark,
 } from "@workspace/editor"
-import { EditorContent, EditorProvider, useEditorInstance } from "@workspace/editor/react"
+import {
+  EditorContent,
+  EditorContext,
+  EditorProvider,
+  useBlockEditor,
+} from "@workspace/editor/react"
 import "@workspace/editor/styles.css"
 import {
   BoldIcon,
@@ -27,7 +32,8 @@ import { Button } from "@workspace/ui/components/button"
 import { formatEditorSnapshot } from "./playground-utils"
 
 function PlaygroundToolbar() {
-  const editor = useEditorInstance()
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
   const [linkHref, setLinkHref] = useState("https://example.com")
   const [slashQuery, setSlashQuery] = useState("")
 
@@ -117,7 +123,7 @@ function PlaygroundToolbar() {
               type="button"
               size="sm"
               variant="secondary"
-              onClick={() => executeSlashCommand(editor, command.id)}
+              onClick={() => executeSlashCommand(blockEditor, command.id)}
             >
               {command.label}
             </Button>
@@ -128,7 +134,7 @@ function PlaygroundToolbar() {
   )
 }
 
-function PlaygroundInspector({ document }: { document: EditorDocument }) {
+function PlaygroundInspector({ blocks }: { blocks: Block[] }) {
   return (
     <section className="border-t border-[#E7E4DC] bg-[#F8F8F6] p-4">
       <h2 className="mb-2 text-sm font-medium text-[#5C574E]">编辑器 JSON 快照</h2>
@@ -136,26 +142,31 @@ function PlaygroundInspector({ document }: { document: EditorDocument }) {
         aria-label="编辑器 JSON 快照"
         className="max-h-80 overflow-auto rounded-lg border border-[#E7E4DC] bg-white p-3 text-xs leading-5 text-[#242321]"
       >
-        {formatEditorSnapshot(document)}
+        {formatEditorSnapshot(blocks)}
       </pre>
     </section>
   )
 }
 
 function PlaygroundBody() {
-  const editor = useEditorInstance()
-  const [document, setDocument] = useState<EditorDocument>(() => editor.getJSON() as EditorDocument)
+  const context = use(EditorContext)
+  if (!context?.blockEditor) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-[#5C574E]">
+        正在加载编辑器…
+      </div>
+    )
+  }
+  return <PlaygroundBodyReady />
+}
+
+function PlaygroundBodyReady() {
+  const blockEditor = useBlockEditor()
+  const [blocks, setBlocks] = useState<Block[]>(() => blockEditor.document)
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setDocument(editor.getJSON() as EditorDocument)
-    }
-
-    editor.on("update", handleUpdate)
-    return () => {
-      editor.off("update", handleUpdate)
-    }
-  }, [editor])
+    return blockEditor.onChange(setBlocks)
+  }, [blockEditor])
 
   return (
     <>
@@ -163,7 +174,7 @@ function PlaygroundBody() {
       <div className="min-h-0 flex-1 overflow-auto px-6 py-8">
         <EditorContent className="prose prose-neutral max-w-3xl focus:outline-none [&_.ProseMirror]:min-h-80 [&_.ProseMirror]:outline-none" />
       </div>
-      <PlaygroundInspector document={document} />
+      <PlaygroundInspector blocks={blocks} />
     </>
   )
 }
@@ -175,7 +186,7 @@ export function EditorPlayground() {
         <h1 className="text-xl font-semibold tracking-tight">编辑器测试台</h1>
         <p className="mt-1 text-sm text-[#5C574E]">本地非协作模式，用于验证当前编辑器核心命令与格式化能力。</p>
       </header>
-      <EditorProvider initialContent={createStarterDocument()}>
+      <EditorProvider initialContent={createStarterBlocks()}>
         <div className="flex min-h-0 flex-1 flex-col">
           <PlaygroundBody />
         </div>

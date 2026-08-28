@@ -20,9 +20,13 @@ import {
   UnderlineIcon,
   UndoIcon,
 } from "@workspace/icons"
-import { EditorContext, type Editor } from "@workspace/editor/react"
+import type { Block, TableContent } from "@workspace/editor"
+import {
+  EditorContext,
+  useBlockEditor,
+} from "@workspace/editor/react"
 import { TableGridPicker, useImageUpload } from "@workspace/editor/components"
-import { insertTable } from "@workspace/editor/core"
+import type { BlockEditor } from "@workspace/editor"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
@@ -45,8 +49,21 @@ const marks = [
   ["Inline code", CodeIcon, "code"],
 ] as const
 
-export function insertEmoji(editor: Editor, emoji: string): boolean {
+export function insertEmoji(
+  editor: BlockEditor["tiptap"],
+  emoji: string
+): boolean {
   return editor.chain().focus().insertContent(emoji).run()
+}
+
+function blockHasVisibleContent(block: Block | undefined): boolean {
+  if (!block?.content) return false
+  if (Array.isArray(block.content)) {
+    return block.content.some((item) =>
+      item.type === "text" ? item.text.length > 0 : true
+    )
+  }
+  return true
 }
 
 function ToolbarTooltip({
@@ -68,7 +85,7 @@ function EmojiPicker({
   editor,
   onSelect,
 }: {
-  editor: Editor
+  editor: BlockEditor["tiptap"]
   onSelect: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -116,21 +133,20 @@ function EmojiPicker({
   )
 }
 
-export function FixedEditorToolbar() {
-  const context = use(EditorContext)
+function FixedEditorToolbarReady() {
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
   const { canUpload, openFilePicker } = useImageUpload()
-  const editor = context?.editor
   const readState = () => ({
-    active: editor ? marks.map(([, , mark]) => editor.isActive(mark)) : [],
-    canUndo: editor?.can().undo() ?? false,
-    canRedo: editor?.can().redo() ?? false,
+    active: marks.map(([, , mark]) => editor.isActive(mark)),
+    canUndo: editor.can().undo(),
+    canRedo: editor.can().redo(),
   })
   const [state, setState] = useState(readState)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [tablePickerOpen, setTablePickerOpen] = useState(false)
 
   useEffect(() => {
-    if (!editor) return
     const update = () => setState(readState())
     editor.on("transaction", update)
     editor.on("selectionUpdate", update)
@@ -140,7 +156,32 @@ export function FixedEditorToolbar() {
     }
   }, [editor])
 
-  if (!editor?.isEditable) return null
+  function insertTable(rows: number, cols: number) {
+    const tableBlock: Block = {
+      id: crypto.randomUUID(),
+      type: "table",
+      props: {},
+      content: {
+        headerRows: 1,
+        rows: Array.from({ length: rows }, () => ({
+          cells: Array.from({ length: cols }, () => ({ content: [] })),
+        })),
+      } satisfies TableContent,
+      children: [],
+    }
+    const selected = blockEditor.getSelectedBlocks()[0]
+    if (selected && !blockHasVisibleContent(selected)) {
+      blockEditor.updateBlock(selected.id, tableBlock)
+    } else {
+      blockEditor.insertBlocks(
+        [tableBlock],
+        selected?.id ?? blockEditor.document[0]!.id,
+        "after"
+      )
+    }
+  }
+
+  if (!editor.isEditable) return null
 
   return (
     <div
@@ -296,7 +337,7 @@ export function FixedEditorToolbar() {
         <PopoverContent align="start" className="w-auto p-0">
           <TableGridPicker
             onSelect={(rows, cols) => {
-              insertTable(editor, rows, cols)
+              insertTable(rows, cols)
               setTablePickerOpen(false)
             }}
           />
@@ -355,4 +396,12 @@ export function FixedEditorToolbar() {
       </ToolbarTooltip>
     </div>
   )
+}
+
+export function FixedEditorToolbar() {
+  const context = use(EditorContext)
+  if (!context?.blockEditor) {
+    return null
+  }
+  return <FixedEditorToolbarReady />
 }

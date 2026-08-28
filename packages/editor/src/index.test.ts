@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { CollaborationUser, EditorExtensionOptions } from "./index"
-import {
-  createEmptyDocument,
-  createStarterDocument,
-  isEditorDocument,
-} from "./index"
+import { createEmptyDocument, createStarterDocument } from "./index"
+import { isBlockArray } from "./core/block-schema/documents"
 
 describe("editor package public types", () => {
   it("exposes collaboration types from the package root", () => {
@@ -20,11 +17,11 @@ describe("editor package public types", () => {
 })
 
 describe("editor package document API", () => {
-  it("exposes the stable document contract from the package root", () => {
+  it("exposes the stable block document contract from the package root", () => {
     const emptyDocument = createEmptyDocument()
     const starterDocument = createStarterDocument()
 
-    expect(isEditorDocument(emptyDocument)).toBe(true)
-    expect(isEditorDocument(starterDocument)).toBe(true)
+    expect(isBlockArray(emptyDocument)).toBe(true)
+    expect(isBlockArray(starterDocument)).toBe(true)
   })
 })

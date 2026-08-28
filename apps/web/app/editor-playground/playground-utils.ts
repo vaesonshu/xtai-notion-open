@@ -1,5 +1,5 @@
-import type { EditorDocument } from "@workspace/editor"
+import type { Block } from "@workspace/editor"
 
-export function formatEditorSnapshot(document: EditorDocument): string {
-  return JSON.stringify(document, null, 2)
+export function formatEditorSnapshot(blocks: Block[]): string {
+  return JSON.stringify(blocks, null, 2)
 }

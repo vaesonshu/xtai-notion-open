@@ -98,6 +98,23 @@ export function createBlockSchemaExtensions(
     MentionNode,
   ]
 
+  if (options.imageUploadNode) {
+    extensions.push(
+      options.imageUploadNode.configure({
+        upload: options.imageUpload,
+      })
+    )
+  }
+
+  if (options.canvasBlockNode) {
+    extensions.push(
+      options.canvasBlockNode.configure({
+        upload: options.imageUpload,
+        fetchImage: options.canvasImageFetch,
+      })
+    )
+  }
+
   if (bindsCollaborationDocument && options.document) {
     extensions.push(
       Collaboration.configure({

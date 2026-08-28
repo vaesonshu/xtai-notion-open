@@ -2,7 +2,8 @@ import { act, render, screen, waitFor } from "@testing-library/react"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import { describe, expect, it, vi } from "vitest"
 import type { CollaborationConfig } from "../../collaboration/types"
-import type { CollaborationUser, EditorDocument } from "../../core/types"
+import type { Block } from "../../core/block-schema/types"
+import type { CollaborationUser } from "../../core/types"
 import { DocumentEditor, type DocumentEditorProps } from "./document-editor"
 
 type ProviderListener = (...args: unknown[]) => void
@@ -109,15 +110,15 @@ const baseConfig: CollaborationConfig = {
   user: baseUser,
 }
 
-const sampleContent: EditorDocument = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [{ type: "text", text: "本地正文内容" }],
-    },
-  ],
-}
+const sampleContent: Block[] = [
+  {
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    type: "paragraph",
+    props: {},
+    content: [{ type: "text", text: "本地正文内容", styles: {} }],
+    children: [],
+  },
+]
 
 describe("DocumentEditor", () => {
   it("renders local content mode", () => {

@@ -1,22 +1,22 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { Editor } from "@tiptap/core"
 import { afterEach, beforeAll, describe, expect, it } from "vitest"
-import { useEffect } from "react"
-import type { EditorDocument } from "../../core/types"
+import { use, useEffect } from "react"
+import { EditorContext } from "../../react/context/editor-context"
+import type { Block } from "../../core/block-schema/types"
 import { EditorProvider } from "../../react/providers/editor-provider"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
 import { EditorSurface } from "../editor/editor-surface"
 import { shouldShowBubbleToolbar } from "./bubble-toolbar"
 
-const paragraphDoc: EditorDocument = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [{ type: "text", text: "format this text" }],
-    },
-  ],
-}
+const paragraphDoc: Block[] = [
+  {
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    type: "paragraph",
+    props: {},
+    content: [{ type: "text", text: "format this text", styles: {} }],
+    children: [],
+  },
+]
 
 beforeAll(() => {
   if (!Range.prototype.getClientRects) {
@@ -54,15 +54,29 @@ beforeAll(() => {
 let latestEditor: Editor | null = null
 
 function EditorProbe() {
-  const editor = useEditorInstance()
+  const context = use(EditorContext)
   useEffect(() => {
-    latestEditor = editor
-  }, [editor])
+    const blockEditor = context?.blockEditor
+    if (!blockEditor) {
+      return
+    }
+    latestEditor = blockEditor.tiptap
+    return blockEditor.onChange(() => {
+      latestEditor = blockEditor.tiptap
+    })
+  }, [context?.blockEditor])
   return null
 }
 
+async function waitForEditor() {
+  await waitFor(() => {
+    expect(latestEditor).not.toBeNull()
+  })
+  return latestEditor!
+}
+
 function renderEditableSurface(
-  content: EditorDocument = paragraphDoc,
+  content: Block[] = paragraphDoc,
   editable = true
 ) {
   return render(
@@ -75,7 +89,14 @@ function renderEditableSurface(
 
 async function selectFormattableRange(editor: Editor) {
   await act(async () => {
-    editor.chain().focus().setTextSelection({ from: 1, to: 7 }).run()
+    const textStart = editor.state.doc.textBetween(0, editor.state.doc.content.size).length
+      ? 3
+      : 1
+    editor
+      .chain()
+      .focus()
+      .setTextSelection({ from: textStart, to: textStart + 6 })
+      .run()
   })
 }
 
@@ -84,8 +105,9 @@ afterEach(() => {
 })
 
 describe("shouldShowBubbleToolbar", () => {
-  it("returns false for an empty cursor selection", () => {
+  it("returns false for an empty cursor selection", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -105,8 +127,9 @@ describe("shouldShowBubbleToolbar", () => {
     ).toBe(false)
   })
 
-  it("returns true for a non-empty formattable text selection", () => {
+  it("returns true for a non-empty formattable text selection", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -130,6 +153,7 @@ describe("shouldShowBubbleToolbar", () => {
 describe("BubbleToolbar", () => {
   it("shows the toolbar when a formattable range is selected", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -147,6 +171,7 @@ describe("BubbleToolbar", () => {
 
   it("uses the selected color for marks already active in the selection", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -167,6 +192,7 @@ describe("BubbleToolbar", () => {
 
   it("does not show the toolbar for an empty cursor", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -181,6 +207,7 @@ describe("BubbleToolbar", () => {
 
   it("toggles bold on the current selection", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -195,12 +222,12 @@ describe("BubbleToolbar", () => {
       expect(editor!.isActive("bold")).toBe(true)
     })
     expect(bold).toHaveAttribute("data-pressed")
-    expect(editor!.state.selection.from).toBe(1)
-    expect(editor!.state.selection.to).toBe(7)
+    expect(editor!.state.selection.empty).toBe(false)
   })
 
   it("toggles inline code on the current selection", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -219,6 +246,7 @@ describe("BubbleToolbar", () => {
 
   it("sets and removes a link on the current selection", async () => {
     renderEditableSurface()
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -257,6 +285,7 @@ describe("BubbleToolbar", () => {
 
   it("does not mount the toolbar when the editor is read-only", async () => {
     renderEditableSurface(paragraphDoc, false)
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 

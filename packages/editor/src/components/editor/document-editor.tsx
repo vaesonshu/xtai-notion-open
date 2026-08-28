@@ -3,7 +3,7 @@
 import { use, type ReactNode } from "react"
 import type { CreateProvider } from "../../collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "../../collaboration/types"
-import type { EditorDocument } from "../../core/types"
+import type { Block } from "../../core/block-schema/types"
 import type { ImageUploadHandler } from "../../core/image-upload"
 import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
 import { CollaborationEditorProvider } from "../../react/providers/collaboration-editor-provider"
@@ -17,7 +17,7 @@ import type { MentionNavigate } from "../../react/providers/mention-provider"
 
 type DocumentEditorSharedProps = {
   editable?: boolean
-  onChange?: (document: EditorDocument) => void
+  onChange?: (blocks: Block[]) => void
   className?: string
   children?: ReactNode
   renderToolbar?: () => ReactNode
@@ -32,7 +32,7 @@ type DocumentEditorSharedProps = {
 
 export type DocumentEditorProps =
   | (DocumentEditorSharedProps & {
-      content?: EditorDocument
+      content?: Block[]
       collaboration?: never
       createProvider?: never
     })
@@ -44,7 +44,7 @@ export type DocumentEditorProps =
     })
 
 function assertExclusiveMode(props: {
-  content?: EditorDocument
+  content?: Block[]
   collaboration?: CollaborationConfig
 }) {
   if (props.content !== undefined && props.collaboration !== undefined) {
@@ -120,5 +120,5 @@ function EditorReadyToolbar({
   renderToolbar?: () => ReactNode
 }) {
   const context = use(EditorContext)
-  return context?.editor ? renderToolbar?.() : null
+  return context?.blockEditor ? renderToolbar?.() : null
 }

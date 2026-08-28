@@ -23,8 +23,10 @@ import {
   getSlashCommands,
   type SlashCommand,
 } from "../../core/slash-commands"
-import { insertTable } from "../../core/table"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import type { Block, TableContent } from "../../core/block-schema/types"
+import { generateBlockId } from "../../core/block-schema/ids"
+import type { BlockEditor } from "../../core/block-editor"
+import { useBlockEditor } from "../../react/hooks/use-block-editor"
 import { useImageUpload } from "../nodes/image-upload"
 import { TableGridPicker } from "./table-grid-picker"
 
@@ -37,22 +39,64 @@ type SlashSuggestionState = {
   command: (item: SlashCommand) => void
 }
 
+function blockHasVisibleContent(block: Block | undefined): boolean {
+  if (!block?.content) return false
+  if (Array.isArray(block.content)) {
+    return block.content.some((item) =>
+      item.type === "text" ? item.text.length > 0 : true
+    )
+  }
+  return true
+}
+
+function createTableBlock(rows: number, cols: number): Block {
+  const cell = (): { content: [] } => ({ content: [] })
+  const row = () => ({
+    cells: Array.from({ length: cols }, cell),
+  })
+  return {
+    id: generateBlockId(),
+    type: "table",
+    props: {},
+    content: {
+      headerRows: 1,
+      rows: Array.from({ length: rows }, row),
+    } satisfies TableContent,
+    children: [],
+  }
+}
+
+function insertTableBlock(blockEditor: BlockEditor, rows: number, cols: number) {
+  const tableBlock = createTableBlock(rows, cols)
+  const selected = blockEditor.getSelectedBlocks()[0]
+  if (selected && !blockHasVisibleContent(selected)) {
+    blockEditor.updateBlock(selected.id, tableBlock)
+  } else {
+    blockEditor.insertBlocks(
+      [tableBlock],
+      selected?.id ?? blockEditor.document[0]!.id,
+      "after"
+    )
+  }
+}
+
 function applySlashCommand(
-  editor: Editor,
+  blockEditor: BlockEditor,
   range: Range,
   item: SlashCommand,
   insertImageUpload: () => void
 ) {
-  editor.chain().focus().deleteRange(range).run()
+  blockEditor.tiptap.chain().focus().deleteRange(range).run()
   if (item.id === "upload-image") {
     insertImageUpload()
     return
   }
-  executeSlashCommand(editor, item.id)
+  executeSlashCommand(blockEditor, item.id)
 }
 
 export function SlashMenu() {
-  const editor = useEditorInstance()
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
   const { canUpload, openFilePicker: insertImageUpload } = useImageUpload()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -95,7 +139,7 @@ export function SlashMenu() {
       },
       command: ({ editor: activeEditor, range, props }) => {
         applySlashCommand(
-          activeEditor,
+          blockEditor,
           range,
           props,
           insertImageUploadRef.current
@@ -223,8 +267,8 @@ export function SlashMenu() {
   function applyTable(rows: number, cols: number) {
     const range = suggestionRef.current?.range
     if (!range) return
-    editor.chain().focus().deleteRange(range).run()
-    insertTable(editor, rows, cols)
+    blockEditor.tiptap.chain().focus().deleteRange(range).run()
+    insertTableBlock(blockEditor, rows, cols)
     exitSuggestion(editor.view, slashMenuPluginKey)
   }
 

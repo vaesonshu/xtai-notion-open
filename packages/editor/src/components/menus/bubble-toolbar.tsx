@@ -28,7 +28,7 @@ import {
   toggleInlineMark,
   type InlineMark,
 } from "../../core/commands"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import { useBlockEditor } from "../../react/hooks/use-block-editor"
 
 export type ShouldShowBubbleToolbarProps = {
   editor: Editor
@@ -190,7 +190,7 @@ function BubbleToolbarControls({ editor }: { editor: Editor }) {
 }
 
 export function BubbleToolbar() {
-  const editor = useEditorInstance()
+  const editor = useBlockEditor().tiptap
 
   if (!editor.isEditable) {
     return null

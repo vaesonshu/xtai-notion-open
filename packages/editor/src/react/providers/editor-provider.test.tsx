@@ -4,8 +4,9 @@ import { Editor } from "@tiptap/core"
 import { describe, expect, it, vi } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
-import { createEditorExtensions } from "../../core/extensions"
-import { createStarterDocument } from "../../core/document"
+import { BlockEditor } from "../../core/block-editor"
+import { blocksToPmDoc } from "../../core/block-schema/convert"
+import { createStarterBlocks } from "../../core/block-schema/documents"
 import type { CollaborationConfig } from "../../collaboration/types"
 import type { CollaborationUser } from "../../core/types"
 import { CollaborationEditorProvider } from "./collaboration-editor-provider"
@@ -18,20 +19,22 @@ import { useEditorInstance } from "../hooks/use-editor-instance"
 
 function EditorName() {
   const context = use(EditorContext)
-  if (!context?.editor) {
+  if (!context?.blockEditor) {
     return <span>loading</span>
   }
   return (
-    <span>{context.editor.options.editable ? "editable" : "readonly"}</span>
+    <span>
+      {context.blockEditor.tiptap.options.editable ? "editable" : "readonly"}
+    </span>
   )
 }
 
 function InsertContentButton() {
   const context = use(EditorContext)
-  if (!context?.editor) {
+  if (!context?.blockEditor) {
     return null
   }
-  const editor = context.editor
+  const editor = context.blockEditor.tiptap
   return (
     <button onClick={() => editor.commands.insertContent("新内容")}>
       insert
@@ -194,22 +197,27 @@ function seedRemoteDocument(
   provider: HocuspocusProvider,
   text: string
 ) {
-  const seed = new Editor({
-    extensions: createEditorExtensions({
+  const seed = new BlockEditor({
+    applyInitialContent: false,
+    extensions: {
       document,
       provider,
       user: baseUser,
-    }),
+    },
   })
-  seed.commands.setContent({
-    type: "doc",
-    content: [
+  const pmDoc = blocksToPmDoc(
+    [
       {
+        id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
         type: "paragraph",
-        content: [{ type: "text", text }],
+        props: {},
+        content: [{ type: "text", text, styles: {} }],
+        children: [],
       },
     ],
-  })
+    seed.tiptap.schema
+  )
+  seed.tiptap.commands.setContent(pmDoc.toJSON())
   seed.destroy()
 }
 
@@ -226,7 +234,7 @@ describe("EditorProvider", () => {
     })
   })
 
-  it("emits the latest JSON document after an edit", async () => {
+  it("emits the latest block document after an edit", async () => {
     const onChange = vi.fn()
     render(
       <EditorProvider onChange={onChange}>
@@ -240,7 +248,9 @@ describe("EditorProvider", () => {
     screen.getByRole("button", { name: "insert" }).click()
 
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "doc" })
+      expect.arrayContaining([
+        expect.objectContaining({ type: expect.any(String), id: expect.any(String) }),
+      ])
     )
   })
 
@@ -311,16 +321,15 @@ describe("CollaborationEditorProvider", () => {
 
   it("creates an editor after sync and writes starter content when remote is empty", async () => {
     const provider = createMockProvider()
-    const starter = createStarterDocument()
-    const starterText = starter.content
-      .map((node) => {
-        if (!node.content) {
-          return ""
-        }
-        return node.content
-          .map((child) => ("text" in child ? child.text : ""))
-          .join("")
-      })
+    const starter = createStarterBlocks()
+    const starterText = starter
+      .flatMap((block) =>
+        Array.isArray(block.content)
+          ? block.content.map((item) =>
+              item.type === "text" ? item.text : ""
+            )
+          : []
+      )
       .join("")
 
     render(
@@ -359,7 +368,7 @@ describe("CollaborationEditorProvider", () => {
     render(
       <CollaborationEditorProvider
         collaboration={baseConfig}
-        initialContent={createStarterDocument()}
+        initialContent={createStarterBlocks()}
         createProvider={(options) => {
           captured.document = options.document
           return provider as unknown as HocuspocusProvider

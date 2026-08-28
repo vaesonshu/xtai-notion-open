@@ -12,6 +12,8 @@ type BlockEditorOptions = {
   initialContent?: Block[]
   editable?: boolean
   extensions?: EditorExtensionOptions
+  /** 协作模式下远端已有内容时应为 false，避免覆盖 Y.Doc */
+  applyInitialContent?: boolean
 }
 
 type ContainerRef = {
@@ -285,11 +287,29 @@ export class BlockEditor {
     this.editor = new Editor({
       extensions: createBlockSchemaExtensions(extensionOptions),
       editable: options.editable ?? true,
-    })
+      editorProps: {
+        handleKeyDown: (_view, event) => {
+          if (event.key === "Tab" && !event.altKey && !event.metaKey && !event.ctrlKey) {
+            event.preventDefault()
+            if (event.shiftKey) {
+              this.unnestBlock()
+            } else {
+              this.nestBlock()
+            }
+            return true
+          }
+          return false
+        },
+      },
+      // Next.js 需显式关闭首帧渲染，避免 SSR/水合与软导航后正文空白
+      immediatelyRender: false,
+    } as ConstructorParameters<typeof Editor>[0])
 
-    const initialBlocks = options.initialContent ?? createEmptyBlocks()
-    const doc = blocksToPmDoc(initialBlocks, this.editor.schema)
-    this.editor.commands.setContent(doc.toJSON())
+    if (options.applyInitialContent !== false) {
+      const initialBlocks = options.initialContent ?? createEmptyBlocks()
+      const doc = blocksToPmDoc(initialBlocks, this.editor.schema)
+      this.editor.commands.setContent(doc.toJSON())
+    }
   }
 
   get document(): Block[] {

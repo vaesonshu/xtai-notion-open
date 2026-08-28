@@ -3,6 +3,7 @@ export { EditorProvider } from "./providers/editor-provider"
 export type { CollaborationEditorProviderProps } from "./providers/collaboration-editor-provider"
 export { CollaborationEditorProvider } from "./providers/collaboration-editor-provider"
 export { EditorContent } from "./editor-content"
+export { useBlockEditor } from "./hooks/use-block-editor"
 export { useEditorInstance } from "./hooks/use-editor-instance"
 export { useEditorChange } from "./hooks/use-editor-change"
 export { useEditorSelection } from "./hooks/use-editor-selection"
@@ -20,4 +21,3 @@ export type {
   MentionContextValue,
   MentionNavigate,
 } from "./providers/mention-provider"
-export type { Editor } from "@tiptap/core"

@@ -27,7 +27,8 @@ export function useImageUpload(): ImageUploadControls {
 }
 
 export function ImageUpload({ children }: { children?: ReactNode }) {
-  const editor = use(EditorContext)?.editor
+  const blockEditor = use(EditorContext)?.blockEditor
+  const editor = blockEditor?.tiptap
   const uploadExtension = editor?.extensionManager?.extensions?.find(
     (extension) => extension.name === "imageUpload"
   )

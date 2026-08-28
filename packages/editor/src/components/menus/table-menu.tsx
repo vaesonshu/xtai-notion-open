@@ -10,7 +10,7 @@ import {
   XIcon,
 } from "@workspace/icons"
 import { Button } from "@workspace/ui/components/button"
-import { useEditorInstance } from "../../react/hooks/use-editor-instance"
+import { useBlockEditor } from "../../react/hooks/use-block-editor"
 
 type TableAction = {
   label: string
@@ -49,7 +49,8 @@ function ActionIcon({ label }: { label: string }) {
 
 /** 表格选中时的浮动工具栏，提供行/列增删与删除表格操作。 */
 export function TableMenu() {
-  const editor = useEditorInstance()
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
 
   const isInTable = useEditorState({
     editor,

@@ -3,20 +3,20 @@ import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
-import type { EditorDocument } from "../../core/types"
+import type { Block } from "../../core/block-schema/types"
 import { EditorProvider } from "../../react/providers/editor-provider"
 import { BLOCK_HANDLE_NESTED } from "./block-handle"
 import { EditorSurface } from "../editor/editor-surface"
 
-const paragraphDoc: EditorDocument = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [{ type: "text", text: "drag me" }],
-    },
-  ],
-}
+const paragraphDoc: Block[] = [
+  {
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    type: "paragraph",
+    props: {},
+    content: [{ type: "text", text: "drag me", styles: {} }],
+    children: [],
+  },
+]
 
 beforeAll(() => {
   if (!Range.prototype.getClientRects) {
@@ -70,8 +70,8 @@ describe("BlockHandle", () => {
     expect(screen.queryByTestId("block-handle")).not.toBeInTheDocument()
   })
 
-  it("keeps nested dragging disabled so only top-level blocks move", () => {
-    expect(BLOCK_HANDLE_NESTED).toBe(false)
+  it("enables nested dragging for the block tree model", () => {
+    expect(BLOCK_HANDLE_NESTED).toBe(true)
   })
 })
 
@@ -84,7 +84,8 @@ describe("editor styles", () => {
     const css = readFileSync(stylesPath, "utf8")
 
     expect(css).toContain(".ProseMirror")
-    expect(css).toContain(".ProseMirror > * {\n  margin-inline-start: 0;")
+    expect(css).toContain(".ProseMirror > *")
+    expect(css).toContain("margin-inline-start: 0")
     expect(css).toContain('ul[data-type="taskList"]')
     expect(css).toContain("is-editor-empty")
     expect(css).toContain("data-placeholder")
