@@ -13,6 +13,8 @@ import TaskList from "@tiptap/extension-task-list"
 import StarterKit from "@tiptap/starter-kit"
 import { mergeAttributes } from "@tiptap/core"
 import type { Extensions } from "@tiptap/core"
+import { blockContentExtensions } from "../block-schema/block-content"
+import { BlockContainer, BlockDoc, BlockGroup } from "../block-schema/pm-nodes"
 import type { EditorExtensionOptions } from "../types"
 import { CanvasBlockNode } from "./canvas-block-node"
 import { ImageUploadNode } from "./image-upload-node"
@@ -93,6 +95,70 @@ export function createEditorExtensions(
     TableRow,
     TableHeader,
     TableCell,
+  ]
+
+  if (bindsCollaborationDocument && options.document) {
+    extensions.push(
+      Collaboration.configure({
+        document: options.document,
+        ...(options.provider ? { provider: options.provider } : {}),
+      })
+    )
+    if (isCollaborativeSession && options.provider && options.user) {
+      extensions.push(
+        CollaborationCaret.configure({
+          provider: options.provider,
+          user: options.user,
+        })
+      )
+    }
+  }
+
+  return extensions
+}
+
+/** 块文档 schema：Doc/blockGroup/blockContainer + 全部 blockContent 节点 */
+export function createBlockSchemaExtensions(
+  options: EditorExtensionOptions = {}
+): Extensions {
+  const bindsCollaborationDocument = Boolean(options.document)
+  const isCollaborativeSession = Boolean(
+    options.document && options.provider && options.user
+  )
+
+  const extensions: Extensions = [
+    StarterKit.configure({
+      doc: false,
+      paragraph: false,
+      heading: false,
+      bulletList: false,
+      orderedList: false,
+      listItem: false,
+      taskList: false,
+      taskItem: false,
+      blockquote: false,
+      codeBlock: false,
+      horizontalRule: false,
+      dropcursor: false,
+      link: { openOnClick: false, autolink: true },
+      undoRedo: bindsCollaborationDocument ? false : {},
+    }),
+    BlockDoc,
+    BlockGroup,
+    BlockContainer,
+    ...blockContentExtensions,
+    TableRow,
+    TableHeader,
+    TableCell,
+    Dropcursor.configure({
+      color: "#24866B",
+      width: 2,
+      class: "ProseMirror-dropcursor",
+    }),
+    Placeholder.configure({
+      placeholder: options.placeholder ?? "输入 / 查看块类型",
+    }),
+    MentionNode,
   ]
 
   if (bindsCollaborationDocument && options.document) {
