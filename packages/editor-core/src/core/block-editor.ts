@@ -6,6 +6,10 @@ import { createEmptyBlocks } from "./block-schema/documents"
 import { generateBlockId, MAX_NEST_DEPTH } from "./block-schema/ids"
 import { handleTableBlockPaste } from "./block-schema/table-paste"
 import type { Block, PartialBlock } from "./block-schema/types"
+import {
+  BLOCK_SIDE_MENU_PLUGIN_KEY,
+  createBlockSideMenuController,
+} from "./block-side-menu"
 import { createBlockSchemaExtensions } from "./extensions"
 import type { EditorExtensionOptions } from "./types"
 
@@ -282,6 +286,9 @@ function unnestContainer(
  */
 export class BlockEditor {
   private readonly editor: Editor
+  private readonly sideMenuController: ReturnType<
+    typeof createBlockSideMenuController
+  >
 
   constructor(options: BlockEditorOptions = {}) {
     const extensionOptions = options.extensions ?? {}
@@ -313,6 +320,9 @@ export class BlockEditor {
       immediatelyRender: false,
     } as ConstructorParameters<typeof Editor>[0])
 
+    this.sideMenuController = createBlockSideMenuController(this.editor)
+    this.editor.registerPlugin(this.sideMenuController.plugin)
+
     if (options.applyInitialContent !== false) {
       const initialBlocks = options.initialContent ?? createEmptyBlocks()
       const doc = blocksToPmDoc(initialBlocks, this.editor.schema)
@@ -327,6 +337,17 @@ export class BlockEditor {
   /** @internal React NodeView / 协作绑定使用，不从包根导出 */
   get tiptap(): Editor {
     return this.editor
+  }
+
+  /** 块侧栏菜单：悬停定位与拖拽冻结控制 */
+  readonly sideMenu = {
+    subscribe: (
+      listener: Parameters<
+        ReturnType<typeof createBlockSideMenuController>["subscribe"]
+      >[0]
+    ) => this.sideMenuController.subscribe(listener),
+    freezeMenu: () => this.sideMenuController.freezeMenu(),
+    unfreezeMenu: () => this.sideMenuController.unfreezeMenu(),
   }
 
   insertBlocks(
@@ -529,6 +550,9 @@ export class BlockEditor {
   }
 
   destroy(): void {
+    if (!this.editor.isDestroyed) {
+      this.editor.unregisterPlugin(BLOCK_SIDE_MENU_PLUGIN_KEY)
+    }
     this.editor.destroy()
   }
 }

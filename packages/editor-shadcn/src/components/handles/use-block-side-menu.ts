@@ -1,13 +1,9 @@
 "use client"
 
 import { useFloating } from "@floating-ui/react"
-import type { Editor } from "@tiptap/core"
-import { useEffect, useMemo, useRef, useState } from "react"
-import {
-  BLOCK_SIDE_MENU_PLUGIN_KEY,
-  type BlockSideMenuState,
-  createBlockSideMenuController,
-} from "./block-side-menu-plugin"
+import type { BlockEditor } from "@xtai-notion/editor-core"
+import type { BlockSideMenuState } from "@xtai-notion/editor-core"
+import { useEffect, useMemo, useState } from "react"
 
 const INITIAL_STATE: BlockSideMenuState = {
   show: false,
@@ -15,36 +11,18 @@ const INITIAL_STATE: BlockSideMenuState = {
   blockId: null,
   blockPos: -1,
   blockNode: null,
+  blockType: null,
+  headingLevel: null,
+  hasFileUrl: null,
 }
 
-/** 订阅侧栏插件状态，并用 Floating UI 定位拖拽把手 */
-export function useBlockSideMenu(editor: Editor) {
-  const controllerRef = useRef(
-    null as ReturnType<typeof createBlockSideMenuController> | null
-  )
+/** 订阅 BlockEditor 侧栏状态，并用 Floating UI 定位侧栏控件 */
+export function useBlockSideMenu(blockEditor: BlockEditor) {
   const [state, setState] = useState<BlockSideMenuState>(INITIAL_STATE)
 
   useEffect(() => {
-    if (editor.isDestroyed) {
-      return
-    }
-
-    const controller = createBlockSideMenuController(editor)
-    controllerRef.current = controller
-    editor.registerPlugin(controller.plugin)
-
-    const unsubscribe = controller.subscribe(setState)
-
-    return () => {
-      unsubscribe()
-
-      if (!editor.isDestroyed) {
-        editor.unregisterPlugin(BLOCK_SIDE_MENU_PLUGIN_KEY)
-      }
-
-      controllerRef.current = null
-    }
-  }, [editor])
+    return blockEditor.sideMenu.subscribe(setState)
+  }, [blockEditor])
 
   const { refs, update, floatingStyles } = useFloating({
     open: state.show,
@@ -68,10 +46,11 @@ export function useBlockSideMenu(editor: Editor) {
   return useMemo(
     () => ({
       state,
-      controllerRef,
       setFloating: refs.setFloating,
       floatingStyles,
+      freezeMenu: () => blockEditor.sideMenu.freezeMenu(),
+      unfreezeMenu: () => blockEditor.sideMenu.unfreezeMenu(),
     }),
-    [floatingStyles, refs.setFloating, state]
+    [blockEditor, floatingStyles, refs.setFloating, state]
   )
 }

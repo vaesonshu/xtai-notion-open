@@ -12,6 +12,7 @@ export {
   Maximize2 as Maximize2Icon,
   Minimize2 as Minimize2Icon,
   Pencil as PencilIcon,
+  Plus as PlusIcon,
   RotateCcw as RotateCcwIcon,
   Rows2 as Rows2Icon,
   Strikethrough as StrikethroughIcon,

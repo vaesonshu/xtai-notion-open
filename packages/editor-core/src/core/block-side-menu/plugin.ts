@@ -11,6 +11,9 @@ export type BlockSideMenuState = {
   blockId: string | null
   blockPos: number
   blockNode: Node | null
+  blockType: string | null
+  headingLevel: number | null
+  hasFileUrl: boolean | null
 }
 
 export const BLOCK_SIDE_MENU_PLUGIN_KEY = new PluginKey("blockSideMenu")
@@ -21,9 +24,41 @@ const HIDDEN_STATE: BlockSideMenuState = {
   blockId: null,
   blockPos: -1,
   blockNode: null,
+  blockType: null,
+  headingLevel: null,
+  hasFileUrl: null,
 }
 
 type BlockSideMenuListener = (state: BlockSideMenuState) => void
+
+type SyntheticDragEvent = Event & {
+  clientX: number
+  clientY: number
+  dataTransfer: DataTransfer | null
+  preventDefault: () => void
+  synthetic?: boolean
+}
+
+/** 从 blockContainer 的首个 blockContent 节点提取侧栏展示元数据 */
+function getBlockMetaFromContainer(blockNode: Node): {
+  blockType: string
+  headingLevel: number | null
+  hasFileUrl: boolean | null
+} {
+  const content = blockNode.firstChild
+
+  if (!content) {
+    return { blockType: "paragraph", headingLevel: null, hasFileUrl: null }
+  }
+
+  const blockType = content.type.name
+  const headingLevel =
+    blockType === "heading" ? (content.attrs.level as number) : null
+  const hasFileUrl =
+    blockType === "image" ? Boolean(content.attrs.src) : null
+
+  return { blockType, headingLevel, hasFileUrl }
+}
 
 /** 从 DOM 节点向上查找所属的 blockContainer */
 export function getDraggableBlockFromElement(
@@ -110,6 +145,10 @@ function resolveBlockContainerAtElement(
   return undefined
 }
 
+function isSideMenuElement(target: EventTarget | null) {
+  return target instanceof Element && target.closest(".editor-block-side-menu")
+}
+
 class BlockSideMenuView {
   private state: BlockSideMenuState = HIDDEN_STATE
   private mousePos: { x: number; y: number } | undefined
@@ -121,6 +160,11 @@ class BlockSideMenuView {
     private readonly pmView: EditorView,
     private readonly notify: BlockSideMenuListener
   ) {
+    this.pmView.root.addEventListener("drop", this.onDrop as EventListener, true)
+    this.pmView.root.addEventListener(
+      "dragover",
+      this.onDragOver as EventListener
+    )
     this.pmView.root.addEventListener(
       "mousemove",
       this.onMouseMove as EventListener,
@@ -198,6 +242,7 @@ class BlockSideMenuView {
 
     const editorBoundingBox = blockGroup.getBoundingClientRect()
     const blockContentBoundingBox = blockContent.getBoundingClientRect()
+    const meta = getBlockMetaFromContainer(context.node)
 
     this.publish({
       show: true,
@@ -210,7 +255,77 @@ class BlockSideMenuView {
       blockId: block.id,
       blockPos: context.pos,
       blockNode: context.node,
+      blockType: meta.blockType,
+      headingLevel: meta.headingLevel,
+      hasFileUrl: meta.hasFileUrl,
     })
+  }
+
+  /** 编辑器边缘投放时，将坐标钳制到内容区再合成 drop 事件 */
+  onDrop = (event: DragEvent) => {
+    this.editor.commands.blur()
+
+    if ((event as SyntheticDragEvent).synthetic || !this.pmView.dragging) {
+      return
+    }
+
+    const pos = this.pmView.posAtCoords({
+      left: event.clientX,
+      top: event.clientY,
+    })
+
+    if (!pos || pos.inside === -1) {
+      const blockGroup = this.pmView.dom.firstChild
+
+      if (!(blockGroup instanceof HTMLElement)) {
+        return
+      }
+
+      const editorBoundingBox = blockGroup.getBoundingClientRect()
+      const evt = new Event("drop", event) as SyntheticDragEvent
+      evt.clientX =
+        event.clientX < editorBoundingBox.left ||
+        event.clientX > editorBoundingBox.left + editorBoundingBox.width
+          ? editorBoundingBox.left + editorBoundingBox.width / 2
+          : event.clientX
+      evt.clientY = Math.min(
+        Math.max(event.clientY, editorBoundingBox.top),
+        editorBoundingBox.top + editorBoundingBox.height
+      )
+      evt.dataTransfer = event.dataTransfer
+      evt.preventDefault = () => event.preventDefault()
+      evt.synthetic = true
+      this.pmView.dom.dispatchEvent(evt)
+    }
+  }
+
+  /** 拖拽经过编辑器边缘时，合成 dragover 以维持投放指示 */
+  onDragOver = (event: DragEvent) => {
+    if ((event as SyntheticDragEvent).synthetic || !this.pmView.dragging) {
+      return
+    }
+
+    const pos = this.pmView.posAtCoords({
+      left: event.clientX,
+      top: event.clientY,
+    })
+
+    const blockGroup = this.pmView.dom.firstChild
+
+    if (!pos || (pos.inside === -1 && blockGroup instanceof HTMLElement)) {
+      if (!(blockGroup instanceof HTMLElement)) {
+        return
+      }
+
+      const editorBoundingBox = blockGroup.getBoundingClientRect()
+      const evt = new Event("dragover", event) as SyntheticDragEvent
+      evt.clientX = editorBoundingBox.left + editorBoundingBox.width / 2
+      evt.clientY = event.clientY
+      evt.dataTransfer = event.dataTransfer
+      evt.preventDefault = () => event.preventDefault()
+      evt.synthetic = true
+      this.pmView.dom.dispatchEvent(evt)
+    }
   }
 
   onKeyDown = () => {
@@ -238,6 +353,20 @@ class BlockSideMenuView {
       return
     }
 
+    const editorWrapper = this.pmView.dom.parentElement
+
+    // 光标在编辑器区域内，但悬停在编辑器外的浮层（非侧栏）上时隐藏
+    if (
+      cursorWithinEditor &&
+      event.target instanceof Element &&
+      editorWrapper &&
+      !(editorWrapper === event.target || editorWrapper.contains(event.target)) &&
+      !isSideMenuElement(event.target)
+    ) {
+      this.hide()
+      return
+    }
+
     this.updateStateFromMousePos()
   }
 
@@ -251,6 +380,11 @@ class BlockSideMenuView {
 
   destroy() {
     this.hide()
+    this.pmView.root.removeEventListener("drop", this.onDrop as EventListener, true)
+    this.pmView.root.removeEventListener(
+      "dragover",
+      this.onDragOver as EventListener
+    )
     this.pmView.root.removeEventListener(
       "mousemove",
       this.onMouseMove as EventListener,

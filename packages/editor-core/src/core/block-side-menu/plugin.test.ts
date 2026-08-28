@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { getDraggableBlockFromElement } from "./block-side-menu-plugin"
+import { getDraggableBlockFromElement } from "./plugin"
 
 describe("getDraggableBlockFromElement", () => {
   it("walks up to the nearest blockContainer with data-id", () => {

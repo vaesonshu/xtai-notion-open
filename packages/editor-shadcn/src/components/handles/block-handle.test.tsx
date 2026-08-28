@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
-import { BLOCK_DRAG_NESTED_OPTIONS } from "./block-handle"
 import { EditorSurface } from "../editor/editor-surface"
 
 const paragraphDoc: Block[] = [
@@ -60,20 +59,16 @@ function renderSurface(editable = true) {
 }
 
 describe("BlockHandle", () => {
-  it("does not render the drag handle until a block is hovered", () => {
+  it("does not render the side menu until a block is hovered", () => {
     renderSurface(true)
     expect(screen.queryByTestId("block-handle")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("block-add")).not.toBeInTheDocument()
   })
 
-  it("does not render the drag handle when the editor is read-only", () => {
+  it("does not render the side menu when the editor is read-only", () => {
     renderSurface(false)
     expect(screen.queryByTestId("block-handle")).not.toBeInTheDocument()
-  })
-
-  it("targets blockContainer nodes for nested dragging", () => {
-    expect(BLOCK_DRAG_NESTED_OPTIONS.rules?.[0]?.id).toBe(
-      "preferBlockContainer"
-    )
+    expect(screen.queryByTestId("block-add")).not.toBeInTheDocument()
   })
 })
 
@@ -92,8 +87,10 @@ describe("editor styles", () => {
     expect(css).toContain("data-placeholder")
     expect(css).toContain(".ProseMirror-selectednode")
     expect(css).toContain("--editor-block-gutter")
+    expect(css).toContain(".editor-block-side-menu")
+    expect(css).toContain(".editor-block-side-menu__grip")
+    expect(css).toContain(".editor-block-side-menu__add")
     expect(css).toContain(".editor-block-handle")
-    expect(css).toContain(".editor-block-handle__grip")
     expect(css).toContain(".ProseMirror-dropcursor")
     expect(css).toContain(".ProseMirror code")
     expect(css).toContain(".ProseMirror h1")

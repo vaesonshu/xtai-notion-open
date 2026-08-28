@@ -12,6 +12,11 @@ export type {
   TableContent,
 } from "./block-schema/types"
 export { BlockEditor } from "./block-editor"
+export type { BlockSideMenuState } from "./block-side-menu"
+export {
+  getDraggableBlockFromElement,
+  startBlockContainerDrag,
+} from "./block-side-menu"
 export { MAX_NEST_DEPTH, generateBlockId } from "./block-schema/ids"
 export {
   createEmptyBlocks,

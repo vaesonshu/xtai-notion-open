@@ -1,57 +1,63 @@
 "use client"
 
-import type { NestedOptions } from "@tiptap/extension-drag-handle"
-import { GripVerticalIcon } from "../../icons"
+import { GripVerticalIcon, PlusIcon } from "../../icons"
+import { startBlockContainerDrag } from "@xtai-notion/editor-core"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
-import { startBlockContainerDrag } from "./block-drag-start"
+import { insertBlockAndOpenSlashMenu } from "./block-side-menu-actions"
 import { useBlockSideMenu } from "./use-block-side-menu"
-
-/** 拖拽规则：优先选中 blockContainer，避免误拖 paragraph 等 blockContent。 */
-export const BLOCK_DRAG_NESTED_OPTIONS: NestedOptions = {
-  rules: [
-    {
-      id: "preferBlockContainer",
-      evaluate: ({ node }) => {
-        if (node.type.name === "blockContainer") {
-          return 0
-        }
-        if (node.type.name === "blockGroup") {
-          return 800
-        }
-        if (node.type.spec.group?.split(" ").includes("blockContent")) {
-          return 900
-        }
-        return 0
-      },
-    },
-  ],
-}
 
 export function BlockHandle() {
   const blockEditor = useBlockEditor()
   const editor = blockEditor.tiptap
-  const { state, controllerRef, setFloating, floatingStyles } =
-    useBlockSideMenu(editor)
+  const { state, setFloating, floatingStyles, freezeMenu, unfreezeMenu } =
+    useBlockSideMenu(blockEditor)
 
-  if (!state.show || !state.blockNode || state.blockPos < 0) {
+  if (!state.show || !state.blockNode || state.blockPos < 0 || !state.blockId) {
     return null
+  }
+
+  const sideMenuAttributes: Record<string, string> = {}
+
+  if (state.blockType) {
+    sideMenuAttributes["data-block-type"] = state.blockType
+  }
+
+  if (state.blockType === "heading" && state.headingLevel !== null) {
+    sideMenuAttributes["data-level"] = String(state.headingLevel)
+  }
+
+  if (state.hasFileUrl !== null) {
+    sideMenuAttributes["data-url"] = state.hasFileUrl ? "true" : "false"
   }
 
   return (
     <div
       ref={setFloating}
-      className="editor-block-handle"
+      className="editor-block-side-menu"
       style={floatingStyles}
+      {...sideMenuAttributes}
     >
+      <button
+        type="button"
+        data-testid="block-add"
+        aria-label="添加块"
+        className="editor-block-side-menu__add"
+        tabIndex={-1}
+        onClick={() => {
+          insertBlockAndOpenSlashMenu(blockEditor, state.blockId!)
+        }}
+      >
+        <PlusIcon aria-hidden className="size-[1.375rem]" />
+      </button>
       <button
         type="button"
         data-testid="block-handle"
         aria-label="拖拽块"
-        className="editor-block-handle__grip"
+        className="editor-block-side-menu__grip"
         tabIndex={-1}
         draggable
         onDragStart={(event) => {
-          controllerRef.current?.freezeMenu()
+          freezeMenu()
 
           startBlockContainerDrag(
             event.nativeEvent,
@@ -61,7 +67,7 @@ export function BlockHandle() {
           )
         }}
         onDragEnd={() => {
-          controllerRef.current?.unfreezeMenu()
+          unfreezeMenu()
         }}
       >
         <GripVerticalIcon aria-hidden className="size-[1.375rem]" />
