@@ -12,7 +12,7 @@ export type MentionableItem = {
 }
 
 /**
- * 提及候选的来源。宿主应用注入此接口，@workspace/editor 不感知具体数据源。
+ * 提及候选的来源。宿主应用注入此接口，editor-core 不感知具体数据源。
  * 支持同步或异步返回，便于从远端接口拉取文档列表。
  */
 export type MentionProvider = (

@@ -9,14 +9,13 @@ import {
   toggleInlineMark,
   type Block,
   type InlineMark,
-} from "@workspace/editor"
+} from "@xtai-notion/editor-core"
 import {
   EditorContent,
   EditorContext,
   EditorProvider,
   useBlockEditor,
-} from "@workspace/editor/react"
-import "@workspace/editor/styles.css"
+} from "@xtai-notion/editor-react"
 import {
   BoldIcon,
   CodeIcon,

@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
     "@xtai-notion/editor-core",
     "@xtai-notion/editor-react",
     "@xtai-notion/editor-shadcn",
-    "@workspace/editor",
     "@workspace/icons",
     "@excalidraw/excalidraw",
   ],

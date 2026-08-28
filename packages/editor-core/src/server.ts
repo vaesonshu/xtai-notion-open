@@ -6,8 +6,6 @@ export type { Block } from "./core/block-schema/types"
 export { generateBlockId } from "./core/block-schema/ids"
 export {
   CURRENT_SCHEMA_VERSION,
-  encodeLegacyV1FixtureSnapshot,
-  migrateV1YDocToV2,
   readYDocSchemaVersion,
   writeYDocSchemaVersion,
 } from "./core/migrate"

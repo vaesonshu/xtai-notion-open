@@ -6,12 +6,11 @@ import * as Y from "yjs"
 import { blocksToPmDoc } from "../block-schema/convert"
 import { createStarterBlocks } from "../block-schema/documents"
 import { createEditorExtensions } from "./index"
-import { createInitialDocument } from "../document/initial-document"
 import type { CollaborationUser } from "../types"
 
 describe("editor core", () => {
   it("creates a non-empty initial document with representative block types", () => {
-    const document = createInitialDocument()
+    const document = createStarterBlocks()
     const json = JSON.stringify(document)
 
     expect(document.length).toBeGreaterThan(0)

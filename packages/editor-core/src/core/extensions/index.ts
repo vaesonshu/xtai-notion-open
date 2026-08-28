@@ -8,7 +8,7 @@ import TableHeader from "@tiptap/extension-table-header"
 import TableRow from "@tiptap/extension-table-row"
 import StarterKit from "@tiptap/starter-kit"
 import { mergeAttributes } from "@tiptap/core"
-import type { Extensions } from "@tiptap/core"
+import type { Extensions, Node } from "@tiptap/core"
 import { blockContentExtensions } from "../block-schema/block-content"
 import { BlockContainer, BlockDoc, BlockGroup } from "../block-schema/pm-nodes"
 import type { EditorExtensionOptions } from "../types"
@@ -58,6 +58,24 @@ export function createEditorExtensions(
   return createBlockSchemaExtensions(options)
 }
 
+function resolveBlockContentExtensions(
+  options: EditorExtensionOptions
+): Extensions {
+  const configuredCanvas = options.canvasBlockNode
+    ? options.canvasBlockNode.configure({
+        upload: options.imageUpload,
+        fetchImage: options.canvasImageFetch,
+      })
+    : null
+
+  // 带 NodeView 的 canvas 扩展替换默认 CanvasBlock，避免 canvas / canvasBlock 双节点并存
+  return blockContentExtensions.map((extension: Node) =>
+    extension.name === "canvas" && configuredCanvas
+      ? configuredCanvas
+      : extension
+  )
+}
+
 /** 块文档 schema：Doc/blockGroup/blockContainer + 全部 blockContent 节点 */
 export function createBlockSchemaExtensions(
   options: EditorExtensionOptions = {}
@@ -85,7 +103,7 @@ export function createBlockSchemaExtensions(
     BlockDoc,
     BlockGroup,
     BlockContainer,
-    ...blockContentExtensions,
+    ...resolveBlockContentExtensions(options),
     BlockKeymap,
     CheckListItemClick,
     TableRow,
@@ -106,15 +124,6 @@ export function createBlockSchemaExtensions(
     extensions.push(
       options.imageUploadNode.configure({
         upload: options.imageUpload,
-      })
-    )
-  }
-
-  if (options.canvasBlockNode) {
-    extensions.push(
-      options.canvasBlockNode.configure({
-        upload: options.imageUpload,
-        fetchImage: options.canvasImageFetch,
       })
     )
   }

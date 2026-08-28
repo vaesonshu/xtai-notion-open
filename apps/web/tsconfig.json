@@ -4,8 +4,6 @@
     "paths": {
       "@/*": ["./*"],
       "@workspace/ui/*": ["../../packages/ui/src/*"],
-      "@workspace/editor": ["../../packages/editor/src/index.ts"],
-      "@workspace/editor/*": ["../../packages/editor/src/*"],
       "@xtai-notion/editor-core": ["../../packages/editor-core/src/index.ts"],
       "@xtai-notion/editor-core/*": ["../../packages/editor-core/src/core/*"],
       "@xtai-notion/editor-react/collaboration/*": [

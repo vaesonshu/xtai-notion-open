@@ -2,9 +2,11 @@
 
 import type { Node } from "@tiptap/core"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { BlockEditor } from "@xtai-notion/editor-core"
+import {
+  BlockEditor,
+  createStarterBlocks,
+} from "@xtai-notion/editor-core"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
-import { createInitialDocument } from "@xtai-notion/editor-core/document/initial-document"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
 import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
 import { EditorContext } from "../context/editor-context"
@@ -30,7 +32,7 @@ function createLocalBlockEditor(options: {
   canvasBlockNode?: Node
 }): BlockEditor {
   return new BlockEditor({
-    initialContent: options.initialContent ?? createInitialDocument(),
+    initialContent: options.initialContent ?? createStarterBlocks(),
     editable: options.editable,
     extensions: {
       imageUpload: options.imageUpload,

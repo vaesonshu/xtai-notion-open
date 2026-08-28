@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
-import type { Block } from "@workspace/editor"
+import type { Block } from "@xtai-notion/editor-core"
 import { ArticleReader } from "./article-reader"
 
 vi.mock("../auth-provider", () => ({

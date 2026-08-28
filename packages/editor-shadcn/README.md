@@ -33,14 +33,14 @@ Headless 用户（仅用 `@xtai-notion/editor-react`）可跳过此 CSS。
 ```tsx
 "use client"
 
-import { createStarterDocument } from "@xtai-notion/editor-core"
+import { createStarterBlocks } from "@xtai-notion/editor-core"
 import { DocumentEditor } from "@xtai-notion/editor-shadcn"
 import "@xtai-notion/editor-shadcn/style.css"
 
 export function Page() {
   return (
     <DocumentEditor
-      content={createStarterDocument()}
+      content={createStarterBlocks()}
       onChange={(doc) => console.log(doc)}
     />
   )
@@ -49,7 +49,7 @@ export function Page() {
 
 ## 协作模式
 
-`content` 与 `collaboration` **互斥**，与迁移前 `@workspace/editor` 行为一致：
+`content` 与 `collaboration` **互斥**：
 
 ```tsx
 <DocumentEditor

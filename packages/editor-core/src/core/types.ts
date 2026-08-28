@@ -1,13 +1,8 @@
-import type { JSONContent, Node } from "@tiptap/core"
+import type { Node } from "@tiptap/core"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type * as Y from "yjs"
 import type { ImageUploadHandler } from "./image-upload"
 import type { CanvasImageFetchHandler } from "./canvas/canvas-files"
-
-export type EditorDocument = JSONContent & {
-  type: "doc"
-  content: JSONContent[]
-}
 
 export type CollaborationUser = {
   id: string

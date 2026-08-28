@@ -51,16 +51,16 @@ export class DocumentsRepository {
     return document ? this.toDocumentRow(document) : null
   }
 
-  /** 读取 document 表的 schema_version（缺省视为 v1）。 */
+  /** 读取 document 表的 schema_version（缺省视为当前块 schema）。 */
   async getSchemaVersion(documentId: string): Promise<number> {
     const document = await this.prisma.client.document.findUnique({
       where: { id: documentId },
       select: { schemaVersion: true },
     })
-    return document?.schemaVersion ?? 1
+    return document?.schemaVersion ?? 2
   }
 
-  /** 迁移成功后持久化新的协作 schema 版本。 */
+  /** 持久化协作 schema 版本号。 */
   async updateSchemaVersion(
     documentId: string,
     schemaVersion: number

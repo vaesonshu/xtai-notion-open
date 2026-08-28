@@ -129,9 +129,6 @@ importers:
       '@emoji-mart/data':
         specifier: ^1.2.1
         version: 1.2.1
-      '@workspace/editor':
-        specifier: workspace:*
-        version: link:../../packages/editor
       '@workspace/icons':
         specifier: workspace:*
         version: link:../../packages/icons
@@ -220,31 +217,6 @@ importers:
       undici:
         specifier: ^6.0.0
         version: 6.28.0
-
-  packages/editor:
-    dependencies:
-      '@xtai-notion/editor-core':
-        specifier: workspace:*
-        version: link:../editor-core
-      '@xtai-notion/editor-react':
-        specifier: workspace:*
-        version: link:../editor-react
-      '@xtai-notion/editor-shadcn':
-        specifier: workspace:*
-        version: link:../editor-shadcn
-    devDependencies:
-      '@workspace/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint-config
-      '@workspace/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript-config
-      eslint:
-        specifier: ^9.39.4
-        version: 9.39.4(jiti@2.7.0)
-      typescript:
-        specifier: ^5
-        version: 5.9.3
 
   packages/editor-core:
     dependencies:

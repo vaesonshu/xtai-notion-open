@@ -32,12 +32,12 @@ import { createCollaborationSession } from "@xtai-notion/editor-react/collaborat
 ```tsx
 "use client"
 
-import { createStarterDocument } from "@xtai-notion/editor-core"
+import { createStarterBlocks } from "@xtai-notion/editor-core"
 import { EditorContent, EditorProvider } from "@xtai-notion/editor-react"
 
 export function HeadlessEditor() {
   return (
-    <EditorProvider initialContent={createStarterDocument()}>
+    <EditorProvider initialContent={createStarterBlocks()}>
       <EditorContent className="prose min-h-48 outline-none" />
     </EditorProvider>
   )
@@ -53,7 +53,7 @@ export function HeadlessEditor() {
 ```tsx
 "use client"
 
-import { createStarterDocument } from "@xtai-notion/editor-core"
+import { createStarterBlocks } from "@xtai-notion/editor-core"
 import {
   ComponentsProvider,
   EditorContent,
@@ -87,7 +87,7 @@ const components = {
 export function CustomUiEditor() {
   return (
     <ComponentsProvider value={components}>
-      <EditorProvider initialContent={createStarterDocument()}>
+      <EditorProvider initialContent={createStarterBlocks()}>
         <EditorContent />
       </EditorProvider>
     </ComponentsProvider>

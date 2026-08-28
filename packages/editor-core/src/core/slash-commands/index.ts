@@ -1,3 +1,4 @@
+import { createCanvasBlockId } from "../canvas/canvas-snapshot"
 import type { BlockEditor } from "../block-editor"
 import type {
   Block,
@@ -221,7 +222,7 @@ const SLASH_HANDLERS: Record<string, SlashHandler> = {
     }),
   "canvas-block": (editor, refId, empty, inPlace) =>
     applyTypeChange(editor, refId, empty, inPlace, "canvas", {
-      props: { canvasId: null, snapshot: "" },
+      props: { canvasId: createCanvasBlockId(), snapshot: "" },
     }),
   "upload-image": (editor, refId, empty, inPlace) =>
     applyTypeChange(editor, refId, empty, inPlace, "image", {

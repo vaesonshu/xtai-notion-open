@@ -7,7 +7,6 @@ import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
 import { createStarterBlocks } from "./block-schema/documents"
 import { generateBlockId } from "./block-schema/ids"
 import { createEditorExtensions } from "./extensions"
-import { legacyJsonToBlocks } from "./migrate/legacy-json-to-blocks"
 import {
   CURRENT_SCHEMA_VERSION,
   writeYDocSchemaVersion,
@@ -26,15 +25,15 @@ export function documentFromYjs(yDoc: Y.Doc): Block[] {
     "default"
   ) as { type?: string; content?: { type?: string }[] }
 
-  // 新块 schema：经 PM 再 pmDocToBlocks，保证与编辑器内块树一致
-  if (isBlockSchemaJson(json)) {
-    const schema = getSchema(extensions)
-    const pmDoc = PMNode.fromJSON(schema, json)
-    return pmDocToBlocks(pmDoc)
+  if (!isBlockSchemaJson(json)) {
+    throw new Error(
+      "Unsupported Yjs document shape: expected block schema v2 (doc > blockGroup)"
+    )
   }
 
-  // 旧 doc > paragraph 结构：纯 JSON 迁移兜底
-  return legacyJsonToBlocks(json)
+  const schema = getSchema(extensions)
+  const pmDoc = PMNode.fromJSON(schema, json)
+  return pmDocToBlocks(pmDoc)
 }
 
 /** 递归提取行内纯文本（mention 用 label 表示） */

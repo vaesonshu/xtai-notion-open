@@ -9,7 +9,7 @@ export function useBlockEditor(): BlockEditor {
   const context = use(EditorContext)
   if (!context) {
     throw new Error(
-      "useBlockEditor must be used inside @workspace/editor EditorProvider"
+      "useBlockEditor must be used inside @xtai-notion/editor-react EditorProvider"
     )
   }
   if (!context.blockEditor) {

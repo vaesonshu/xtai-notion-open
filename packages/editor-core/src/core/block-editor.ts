@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core"
 import type { Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState, Transaction } from "@tiptap/pm/state"
+import { NodeSelection, TextSelection } from "@tiptap/pm/state"
 import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
 import { createEmptyBlocks } from "./block-schema/documents"
 import { generateBlockId, MAX_NEST_DEPTH } from "./block-schema/ids"
@@ -474,11 +475,27 @@ export class BlockEditor {
     }
 
     const newContainer = blockToContainerNode(merged, this.editor.schema)
-    const tr = this.editor.state.tr.replaceWith(
+    let tr = this.editor.state.tr.replaceWith(
       ref.pos,
       ref.pos + ref.node.nodeSize,
       newContainer
     )
+
+    // 原子块（画板/分割线/图片）替换后把选区落到合法位置，避免协作层同步越界 cursor
+    const mappedPos = tr.mapping.map(ref.pos)
+    const inserted = tr.doc.nodeAt(mappedPos)
+    const contentNode = inserted?.child(0)
+    if (contentNode) {
+      const atomTypes = new Set(["canvas", "divider", "image"])
+      if (atomTypes.has(contentNode.type.name)) {
+        tr.setSelection(NodeSelection.create(tr.doc, mappedPos + 1))
+      } else if (contentNode.isTextblock) {
+        tr.setSelection(
+          TextSelection.create(tr.doc, mappedPos + 1 + contentNode.nodeSize - 1)
+        )
+      }
+    }
+
     this.editor.view.dispatch(tr)
   }
 

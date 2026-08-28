@@ -9,7 +9,7 @@ export function useEditorInstance(): Editor {
   const context = use(EditorContext)
   if (!context) {
     throw new Error(
-      "useEditorInstance must be used inside @workspace/editor EditorProvider"
+      "useEditorInstance must be used inside @xtai-notion/editor-react EditorProvider"
     )
   }
   if (!context.blockEditor) {

@@ -1,6 +1,5 @@
 export type {
   CollaborationUser,
-  EditorDocument,
   EditorExtensionOptions,
 } from "./types"
 export type {
@@ -27,9 +26,6 @@ export {
 } from "./block-schema/documents"
 export {
   CURRENT_SCHEMA_VERSION,
-  encodeLegacyV1FixtureSnapshot,
-  legacyJsonToBlocks,
-  migrateV1YDocToV2,
   readYDocSchemaVersion,
   writeYDocSchemaVersion,
 } from "./migrate"
@@ -38,14 +34,7 @@ export {
   createEditorExtensions,
   MentionNode,
 } from "./extensions"
-export { CanvasBlockNode } from "./extensions/canvas-block-node"
 export { ImageUploadNode } from "./extensions/image-upload-node"
-export { createInitialDocument } from "./document/initial-document"
-export {
-  createEmptyDocument,
-  createStarterDocument,
-  isEditorDocument,
-} from "./document"
 export type { BlockCommandMode, SlashCommand } from "./slash-commands"
 export {
   SLASH_COMMANDS,

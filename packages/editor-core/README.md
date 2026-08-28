@@ -22,35 +22,29 @@ pnpm add @xtai-notion/editor-core
 
 ```ts
 import {
-  createEditorExtensions,
-  createEmptyDocument,
-  createStarterDocument,
-  documentFromYjs,
-  isEditorDocument,
+  BlockEditor,
+  createStarterBlocks,
+  isBlockArray,
   toggleInlineMark,
 } from "@xtai-notion/editor-core"
-import { Editor } from "@tiptap/core"
 
-const extensions = createEditorExtensions()
-const editor = new Editor({
-  extensions,
-  content: createStarterDocument(),
+const editor = new BlockEditor({
+  initialContent: createStarterBlocks(),
 })
 
-toggleInlineMark(editor, "bold")
-const json = editor.getJSON()
-console.log(isEditorDocument(json)) // true
+toggleInlineMark(editor.tiptap, "bold")
+console.log(isBlockArray(editor.document)) // true
 ```
 
 ## 主要导出
 
 | 类别 | 示例 |
 |------|------|
-| 文档 | `createEmptyDocument`、`createStarterDocument`、`isEditorDocument` |
-| 扩展 | `createEditorExtensions`、`ImageUploadNode`、`CanvasBlockNode`（扩展工厂） |
+| 文档 | `createEmptyBlocks`、`createStarterBlocks`、`isBlockArray` |
+| 扩展 | `createEditorExtensions`、`ImageUploadNode` |
 | 命令 | `toggleInlineMark`、`setEditorLink`、`executeSlashCommand` |
 | 协作 / Yjs | `documentFromYjs`、`externalizeCanvasFiles` |
-| 类型 | `EditorDocument`、`EditorExtensionOptions`、`CollaborationUser` |
+| 类型 | `Block`、`EditorExtensionOptions`、`CollaborationUser` |
 
 完整 API 见 `dist/index.d.ts`（需先 `pnpm build`）。
 

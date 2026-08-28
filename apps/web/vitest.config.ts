@@ -55,48 +55,6 @@ export default defineConfig({
         ),
       },
       {
-        find: "@workspace/editor/styles.css",
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/editor/src/styles/editor.css"
-        ),
-      },
-      {
-        find: "@workspace/editor/react",
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/editor/src/react/index.ts"
-        ),
-      },
-      {
-        find: "@workspace/editor/components",
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/editor/src/components/index.ts"
-        ),
-      },
-      {
-        find: "@workspace/editor/core",
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/editor/src/core/index.ts"
-        ),
-      },
-      {
-        find: "@workspace/editor/collaboration",
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/editor/src/collaboration/index.ts"
-        ),
-      },
-      {
-        find: "@workspace/editor",
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/editor/src/index.ts"
-        ),
-      },
-      {
         find: "@excalidraw/excalidraw/index.css",
         replacement: path.resolve(__dirname, "test/mocks/empty.css"),
       },

@@ -55,5 +55,5 @@
 ## 8. 后续（本变更不实现，仅记录）
 
 - [ ] 8.1 （后续变更）配置 Changesets 或 semantic-release 实现 npm 发布流水线。
-- [ ] 8.2 （后续变更）删除 `@workspace/editor` shim 与 `packages/editor` 目录。
+- [x] 8.2 （后续变更）删除 `@workspace/editor` shim 与 `packages/editor` 目录。
 - [ ] 8.3 （后续变更）建立独立文档站（VitePress / Nextra）与 interactive playground。

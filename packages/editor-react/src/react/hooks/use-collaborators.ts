@@ -8,7 +8,7 @@ export function useCollaborators(): CollaborationUser[] {
   const context = use(EditorContext)
   if (!context || context.collaborationStatus === null) {
     throw new Error(
-      "useCollaborators must be used inside @workspace/editor CollaborationEditorProvider"
+      "useCollaborators must be used inside @xtai-notion/editor-react CollaborationEditorProvider"
     )
   }
   return context.collaborators

@@ -30,7 +30,7 @@ export function createEmptyBlocks(): Block[] {
   ]
 }
 
-/** 种子文档：与 createStarterDocument 相同文案，但用块模型表达 */
+/** 种子文档：演示各常见块类型 */
 export function createStarterBlocks(): Block[] {
   return [
     createBlock("heading", {

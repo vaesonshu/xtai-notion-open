@@ -59,14 +59,14 @@ export function CanvasBlockNode({
 
   const imageUpload = useMemo(() => {
     const extension = editor.extensionManager.extensions.find(
-      (item) => item.name === "canvasBlock"
+      (item) => item.name === "canvas"
     )
     return extension?.options.upload as ImageUploadHandler | undefined
   }, [editor])
 
   const imageFetch = useMemo(() => {
     const extension = editor.extensionManager.extensions.find(
-      (item) => item.name === "canvasBlock"
+      (item) => item.name === "canvas"
     )
     return extension?.options.fetchImage as CanvasImageFetchHandler | undefined
   }, [editor])

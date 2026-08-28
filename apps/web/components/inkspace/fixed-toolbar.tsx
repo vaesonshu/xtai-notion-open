@@ -20,21 +20,20 @@ import {
   UnderlineIcon,
   UndoIcon,
 } from "@workspace/icons"
-import type { Block, TableContent } from "@workspace/editor"
+import type { Block, BlockEditor, TableContent } from "@xtai-notion/editor-core"
 import {
   convertBlockCommand,
   getActiveBlockToolbarCommand,
   toggleInlineMark,
   type BlockToolbarCommand,
   type InlineMark,
-} from "@workspace/editor"
+} from "@xtai-notion/editor-core"
 import {
   EditorContext,
   useBlockEditor,
   useEditorState,
-} from "@workspace/editor/react"
-import { TableGridPicker, useImageUpload } from "@workspace/editor/components"
-import type { BlockEditor } from "@workspace/editor"
+} from "@xtai-notion/editor-react"
+import { TableGridPicker, useImageUpload } from "@xtai-notion/editor-shadcn"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"

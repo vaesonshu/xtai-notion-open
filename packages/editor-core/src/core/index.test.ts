@@ -4,25 +4,18 @@ import {
   createStarterBlocks,
   isBlockArray,
 } from "./block-schema/documents"
-import {
-  createEmptyDocument,
-  createStarterDocument,
-} from "./document"
-import { createInitialDocument } from "./document/initial-document"
 
 describe("core document entry point", () => {
   it("exposes the stable block document contract", () => {
-    expect(isBlockArray(createEmptyDocument())).toBe(true)
-    expect(isBlockArray(createStarterDocument())).toBe(true)
-    expect(createEmptyDocument()[0]?.type).toBe("paragraph")
-    expect(createStarterDocument().map((block) => block.type)).toEqual(
-      createStarterBlocks().map((block) => block.type)
-    )
-  })
-
-  it("keeps the legacy initial document entry point", () => {
-    expect(createInitialDocument().map((block) => block.type)).toEqual(
-      createStarterBlocks().map((block) => block.type)
-    )
+    expect(isBlockArray(createEmptyBlocks())).toBe(true)
+    expect(isBlockArray(createStarterBlocks())).toBe(true)
+    expect(createEmptyBlocks()[0]?.type).toBe("paragraph")
+    expect(createStarterBlocks().map((block) => block.type)).toEqual([
+      "heading",
+      "paragraph",
+      "bulletListItem",
+      "quote",
+      "codeBlock",
+    ])
   })
 })
