@@ -3,6 +3,20 @@ export type {
   EditorDocument,
   EditorExtensionOptions,
 } from "./types"
+export type {
+  Block,
+  BlockType,
+  InlineContent,
+  InlineStyles,
+  PartialBlock,
+  TableContent,
+} from "./block-schema/types"
+export { MAX_NEST_DEPTH, generateBlockId } from "./block-schema/ids"
+export {
+  createEmptyBlocks,
+  createStarterBlocks,
+  isBlockArray,
+} from "./block-schema/documents"
 export { createEditorExtensions } from "./extensions"
 export { createInitialDocument } from "./document/initial-document"
 export {
