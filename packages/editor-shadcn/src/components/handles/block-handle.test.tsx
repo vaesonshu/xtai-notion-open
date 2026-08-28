@@ -60,9 +60,9 @@ function renderSurface(editable = true) {
 }
 
 describe("BlockHandle", () => {
-  it("renders the drag handle when the editor is editable", () => {
+  it("does not render the drag handle until a block is hovered", () => {
     renderSurface(true)
-    expect(screen.getByTestId("block-handle")).toBeInTheDocument()
+    expect(screen.queryByTestId("block-handle")).not.toBeInTheDocument()
   })
 
   it("does not render the drag handle when the editor is read-only", () => {
@@ -71,7 +71,9 @@ describe("BlockHandle", () => {
   })
 
   it("targets blockContainer nodes for nested dragging", () => {
-    expect(BLOCK_DRAG_NESTED_OPTIONS.rules[0]?.id).toBe("preferBlockContainer")
+    expect(BLOCK_DRAG_NESTED_OPTIONS.rules?.[0]?.id).toBe(
+      "preferBlockContainer"
+    )
   })
 })
 
@@ -84,12 +86,14 @@ describe("editor styles", () => {
     const css = readFileSync(stylesPath, "utf8")
 
     expect(css).toContain(".ProseMirror")
-    expect(css).toContain('[data-node-type="blockGroup"]')
+    expect(css).toContain("padding-block: 0.375em")
     expect(css).toContain('[data-node-type="blockContainer"]')
     expect(css).toContain("is-editor-empty")
     expect(css).toContain("data-placeholder")
     expect(css).toContain(".ProseMirror-selectednode")
+    expect(css).toContain("--editor-block-gutter")
     expect(css).toContain(".editor-block-handle")
+    expect(css).toContain(".editor-block-handle__grip")
     expect(css).toContain(".ProseMirror-dropcursor")
     expect(css).toContain(".ProseMirror code")
     expect(css).toContain(".ProseMirror h1")

@@ -1,9 +1,10 @@
 "use client"
 
-import DragHandle from "@tiptap/extension-drag-handle-react"
 import type { NestedOptions } from "@tiptap/extension-drag-handle"
 import { GripVerticalIcon } from "../../icons"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
+import { startBlockContainerDrag } from "./block-drag-start"
+import { useBlockSideMenu } from "./use-block-side-menu"
 
 /** 拖拽规则：优先选中 blockContainer，避免误拖 paragraph 等 blockContent。 */
 export const BLOCK_DRAG_NESTED_OPTIONS: NestedOptions = {
@@ -29,12 +30,18 @@ export const BLOCK_DRAG_NESTED_OPTIONS: NestedOptions = {
 export function BlockHandle() {
   const blockEditor = useBlockEditor()
   const editor = blockEditor.tiptap
+  const { state, controllerRef, setFloating, floatingStyles } =
+    useBlockSideMenu(editor)
+
+  if (!state.show || !state.blockNode || state.blockPos < 0) {
+    return null
+  }
 
   return (
-    <DragHandle
-      editor={editor}
-      nested={BLOCK_DRAG_NESTED_OPTIONS}
+    <div
+      ref={setFloating}
       className="editor-block-handle"
+      style={floatingStyles}
     >
       <button
         type="button"
@@ -42,9 +49,23 @@ export function BlockHandle() {
         aria-label="拖拽块"
         className="editor-block-handle__grip"
         tabIndex={-1}
+        draggable
+        onDragStart={(event) => {
+          controllerRef.current?.freezeMenu()
+
+          startBlockContainerDrag(
+            event.nativeEvent,
+            editor,
+            state.blockPos,
+            state.blockNode!
+          )
+        }}
+        onDragEnd={() => {
+          controllerRef.current?.unfreezeMenu()
+        }}
       >
-        <GripVerticalIcon aria-hidden className="size-4" />
+        <GripVerticalIcon aria-hidden className="size-[1.375rem]" />
       </button>
-    </DragHandle>
+    </div>
   )
 }
