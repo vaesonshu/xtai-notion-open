@@ -3,7 +3,7 @@ import {
   CURRENT_SCHEMA_VERSION,
   migrateV1YDocToV2,
   readYDocSchemaVersion,
-} from "@xtai-notion/editor-core"
+} from "@xtai-notion/editor-core/server"
 import * as Y from "yjs"
 import { DocumentsRepository } from "../documents/documents.repository"
 import { YjsPersistenceRepository } from "./yjs-persistence.repository"

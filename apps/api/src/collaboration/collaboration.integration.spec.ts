@@ -8,8 +8,8 @@ import {
   documentFromYjs,
   documentToPlainText,
   generateBlockId,
-} from "@xtai-notion/editor-core"
-import type { Block } from "@xtai-notion/editor-core"
+  type Block,
+} from "@xtai-notion/editor-core/server"
 import { randomUUID } from "node:crypto"
 import {
   afterAll,

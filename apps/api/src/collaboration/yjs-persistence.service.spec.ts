@@ -1,12 +1,12 @@
 ﻿import { afterEach, describe, expect, it, vi } from "vitest"
-import * as editorCore from "@xtai-notion/editor-core"
+import * as editorCore from "@xtai-notion/editor-core/server"
 import {
   encodeLegacyV1FixtureSnapshot,
   readYDocSchemaVersion,
   createBlockSchemaYDoc,
   documentToPlainText,
   documentFromYjs,
-} from "@xtai-notion/editor-core"
+} from "@xtai-notion/editor-core/server"
 import * as Y from "yjs"
 import type { DocumentsRepository } from "../documents/documents.repository"
 import type { YjsPersistenceRepository } from "./yjs-persistence.repository"

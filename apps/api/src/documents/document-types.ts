@@ -1,4 +1,4 @@
-﻿import type { Block } from "@xtai-notion/editor-core"
+﻿import type { Block } from "@xtai-notion/editor-core/server"
 
 export type DocumentRole = "owner" | "editor" | "viewer"
 export type PublicationStatus = "draft" | "pending" | "published"

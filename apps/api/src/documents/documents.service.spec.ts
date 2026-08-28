@@ -5,7 +5,7 @@
 } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import * as Y from "yjs"
-import * as editorCore from "@xtai-notion/editor-core"
+import * as editorCore from "@xtai-notion/editor-core/server"
 import type { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
 import type { UserRepository } from "../auth/user.repository"
@@ -327,11 +327,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(yDoc),
     }
-    const service = new DocumentsService(
-      repo,
-      undefined,
-      persistence as never
-    )
+    const service = new DocumentsService(repo, undefined, persistence as never)
 
     await expect(service.getPublishedArticle("doc-1")).resolves.toMatchObject({
       id: "doc-1",
@@ -429,11 +425,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(yDoc),
     }
-    const service = new DocumentsService(
-      repo,
-      undefined,
-      persistence as never
-    )
+    const service = new DocumentsService(repo, undefined, persistence as never)
 
     await expect(service.listDocumentGraph("user-1")).resolves.toEqual([
       { id: "doc-1", title: "Source", links: ["doc-2"] },
