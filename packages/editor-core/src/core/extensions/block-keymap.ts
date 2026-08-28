@@ -2,11 +2,12 @@ import { Extension } from "@tiptap/core"
 import { Fragment, type Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState, Transaction } from "@tiptap/pm/state"
 import { TextSelection } from "@tiptap/pm/state"
-import { BLOCK_CONTENT_NODE_NAMES } from "../block-schema/block-content"
 import { generateBlockId } from "../block-schema/ids"
+import { createDefaultBlockSchemaRegistry } from "../schema/default-specs"
 import type { BlockType } from "../block-schema/types"
 
-const BLOCK_CONTENT_TYPES = new Set<string>(BLOCK_CONTENT_NODE_NAMES)
+const DEFAULT_BLOCK_CONTENT_TYPES =
+  createDefaultBlockSchemaRegistry().getBlockContentTypes()
 
 /** 不可拆分的原子块：Enter 时在下方插入新段落 */
 const ATOM_BLOCK_TYPES = new Set(["divider", "image", "canvas"])
@@ -321,7 +322,7 @@ function appendInlineContent(
   target: PMNode,
   source: PMNode
 ): PMNode {
-  if (!BLOCK_CONTENT_TYPES.has(target.type.name)) {
+  if (!DEFAULT_BLOCK_CONTENT_TYPES.has(target.type.name)) {
     return target
   }
 
