@@ -1,5 +1,11 @@
 import { Inject, Injectable, Logger, Optional } from "@nestjs/common"
+import {
+  CURRENT_SCHEMA_VERSION,
+  migrateV1YDocToV2,
+  readYDocSchemaVersion,
+} from "@workspace/editor-core"
 import * as Y from "yjs"
+import { DocumentsRepository } from "../documents/documents.repository"
 import { YjsPersistenceRepository } from "./yjs-persistence.repository"
 
 export type YjsPersistenceOptions = {
@@ -25,13 +31,18 @@ export class YjsPersistenceService {
   private readonly buffers = new Map<string, DocumentBuffer>()
   // 同一文档的 flush 串行化，避免并发事务在 pg_advisory_xact_lock 上等待超时
   private readonly flushChains = new Map<string, Promise<void>>()
+  // 同一文档的 onLoad 迁移串行化，避免并发协作会话重复迁移
+  private readonly migrateChains = new Map<string, Promise<Y.Doc>>()
 
   constructor(
     @Inject(YjsPersistenceRepository)
     private readonly repository: YjsPersistenceRepository,
     @Optional()
     @Inject(YJS_PERSISTENCE_OPTIONS)
-    options: YjsPersistenceOptions | null = null
+    options: YjsPersistenceOptions | null = null,
+    @Optional()
+    @Inject(DocumentsRepository)
+    private readonly documents: DocumentsRepository | null = null
   ) {
     this.flushDelayMs = options?.flushDelayMs ?? DEFAULT_FLUSH_DELAY_MS
     this.compactUpdateCountThreshold =
@@ -40,6 +51,22 @@ export class YjsPersistenceService {
   }
 
   async loadDocument(documentId: string): Promise<Y.Doc> {
+    const previous = this.migrateChains.get(documentId) ?? Promise.resolve(null)
+    const current = previous
+      .catch(() => null)
+      .then(() => this.loadDocumentOnce(documentId))
+    this.migrateChains.set(documentId, current)
+
+    try {
+      return await current
+    } finally {
+      if (this.migrateChains.get(documentId) === current) {
+        this.migrateChains.delete(documentId)
+      }
+    }
+  }
+
+  private async loadDocumentOnce(documentId: string): Promise<Y.Doc> {
     const doc = new Y.Doc()
     const snapshot = await this.repository.getLatestSnapshot(documentId)
     if (snapshot) {
@@ -54,7 +81,51 @@ export class YjsPersistenceService {
     for (const row of updates) {
       Y.applyUpdate(doc, new Uint8Array(row.update))
     }
-    return doc
+
+    // 单元测试可不注入 DocumentsRepository，此时跳过 onLoad 迁移逻辑
+    if (!this.documents) {
+      return doc
+    }
+
+    const dbSchemaVersion = await this.documents.getSchemaVersion(documentId)
+    const yDocSchemaVersion = readYDocSchemaVersion(doc)
+    const needsMigration =
+      dbSchemaVersion < CURRENT_SCHEMA_VERSION ||
+      yDocSchemaVersion < CURRENT_SCHEMA_VERSION
+
+    if (!needsMigration) {
+      return doc
+    }
+
+    try {
+      const migratedDoc = migrateV1YDocToV2(doc)
+      doc.destroy()
+
+      const maxSequence = await this.repository.getMaxSequence(documentId)
+      if (maxSequence > 0) {
+        const migratedSnapshot = Y.encodeStateAsUpdate(migratedDoc)
+        await this.repository.insertSnapshot(
+          documentId,
+          migratedSnapshot,
+          maxSequence
+        )
+        await this.repository.deleteUpdatesUpTo(documentId, maxSequence)
+      }
+
+      await this.documents.updateSchemaVersion(
+        documentId,
+        CURRENT_SCHEMA_VERSION
+      )
+
+      return migratedDoc
+    } catch (error) {
+      this.logger.error(
+        `Failed to migrate Yjs document ${documentId} to schema v${CURRENT_SCHEMA_VERSION}`,
+        error instanceof Error ? error.stack : String(error)
+      )
+      // 迁移失败：保留 v1 快照与 DB schema_version，继续返回已加载的 doc
+      return doc
+    }
   }
 
   enqueueUpdate(documentId: string, update: Uint8Array): void {

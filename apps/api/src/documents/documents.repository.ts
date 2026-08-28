@@ -26,6 +26,7 @@ export class DocumentsRepository {
       created_at: document.createdAt,
       updated_at: document.updatedAt,
       publication_status: document.publicationStatus as PublicationStatus,
+      schema_version: document.schemaVersion,
       rejection_reason: document.rejectionReason,
       published_at: document.publishedAt,
       published_by: document.publishedBy,
@@ -48,6 +49,26 @@ export class DocumentsRepository {
       where: { id: documentId },
     })
     return document ? this.toDocumentRow(document) : null
+  }
+
+  /** 读取 document 表的 schema_version（缺省视为 v1）。 */
+  async getSchemaVersion(documentId: string): Promise<number> {
+    const document = await this.prisma.client.document.findUnique({
+      where: { id: documentId },
+      select: { schemaVersion: true },
+    })
+    return document?.schemaVersion ?? 1
+  }
+
+  /** 迁移成功后持久化新的协作 schema 版本。 */
+  async updateSchemaVersion(
+    documentId: string,
+    schemaVersion: number
+  ): Promise<void> {
+    await this.prisma.client.document.updateMany({
+      where: { id: documentId },
+      data: { schemaVersion, updatedAt: new Date() },
+    })
   }
 
   async listForUser(userId: string): Promise<DocumentListRow[]> {

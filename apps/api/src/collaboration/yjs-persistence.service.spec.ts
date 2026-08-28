@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import * as editorCore from "@workspace/editor-core"
+import {
+  encodeLegacyV1FixtureSnapshot,
+  readYDocSchemaVersion,
+} from "@workspace/editor-core"
 import * as Y from "yjs"
+import type { DocumentsRepository } from "../documents/documents.repository"
 import type { YjsPersistenceRepository } from "./yjs-persistence.repository"
 import { YjsPersistenceService } from "./yjs-persistence.service"
 
@@ -7,6 +13,21 @@ function encodeTextUpdate(text: string): Uint8Array {
   const doc = new Y.Doc()
   doc.getText("content").insert(0, text)
   return Y.encodeStateAsUpdate(doc)
+}
+
+function createDocumentsRepo(
+  overrides: Partial<DocumentsRepository> = {}
+): DocumentsRepository {
+  return {
+    getSchemaVersion: vi.fn().mockResolvedValue(1),
+    updateSchemaVersion: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  } as unknown as DocumentsRepository
+}
+
+/** 构造 v1 StarterKit 协作快照（paragraph + mention） */
+function createV1SnapshotBuffer(): Buffer {
+  return Buffer.from(encodeLegacyV1FixtureSnapshot())
 }
 
 function createRepo(
@@ -27,6 +48,7 @@ function createRepo(
 describe("YjsPersistenceService", () => {
   afterEach(() => {
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it("loadDocument applies latest snapshot then ordered updates", async () => {
@@ -239,5 +261,80 @@ describe("YjsPersistenceService", () => {
     await service.flushDocument("doc-1")
 
     expect(compactSpy).toHaveBeenCalledWith("doc-1")
+  })
+
+  it("loadDocument migrates v1 snapshots to schema v2 and persists the result", async () => {
+    const v1Snapshot = createV1SnapshotBuffer()
+    let storedSnapshot: Buffer = v1Snapshot
+    const insertSnapshot = vi
+      .fn()
+      .mockImplementation(async (_documentId, snapshot: Uint8Array) => {
+        storedSnapshot = Buffer.from(snapshot)
+      })
+    const deleteUpdatesUpTo = vi.fn().mockResolvedValue(undefined)
+    const getSchemaVersion = vi
+      .fn()
+      .mockResolvedValueOnce(1)
+      .mockResolvedValue(2)
+    const updateSchemaVersion = vi.fn().mockResolvedValue(undefined)
+    const repo = createRepo({
+      getLatestSnapshot: vi.fn().mockImplementation(async () => ({
+        snapshot: storedSnapshot,
+        sequence: 2,
+      })),
+      listUpdatesAfter: vi.fn().mockResolvedValue([]),
+      getMaxSequence: vi.fn().mockResolvedValue(2),
+      insertSnapshot,
+      deleteUpdatesUpTo,
+    })
+    const documents = createDocumentsRepo({
+      getSchemaVersion,
+      updateSchemaVersion,
+    })
+    const migrateSpy = vi.spyOn(editorCore, "migrateV1YDocToV2")
+    const service = new YjsPersistenceService(repo, null, documents)
+
+    const loaded = await service.loadDocument("doc-v1")
+    expect(readYDocSchemaVersion(loaded)).toBe(2)
+    expect(migrateSpy).toHaveBeenCalledTimes(1)
+    expect(insertSnapshot).toHaveBeenCalledTimes(1)
+    expect(deleteUpdatesUpTo).toHaveBeenCalledWith("doc-v1", 2)
+    expect(updateSchemaVersion).toHaveBeenCalledWith("doc-v1", 2)
+
+    migrateSpy.mockClear()
+    const loadedAgain = await service.loadDocument("doc-v1")
+    expect(readYDocSchemaVersion(loadedAgain)).toBe(2)
+    expect(migrateSpy).not.toHaveBeenCalled()
+    loaded.destroy()
+    loadedAgain.destroy()
+  })
+
+  it("loadDocument keeps v1 snapshot when migration fails", async () => {
+    const v1Snapshot = createV1SnapshotBuffer()
+    const insertSnapshot = vi.fn().mockResolvedValue(undefined)
+    const updateSchemaVersion = vi.fn().mockResolvedValue(undefined)
+    const repo = createRepo({
+      getLatestSnapshot: vi.fn().mockResolvedValue({
+        snapshot: v1Snapshot,
+        sequence: 1,
+      }),
+      listUpdatesAfter: vi.fn().mockResolvedValue([]),
+      getMaxSequence: vi.fn().mockResolvedValue(1),
+      insertSnapshot,
+    })
+    const documents = createDocumentsRepo({
+      getSchemaVersion: vi.fn().mockResolvedValue(1),
+      updateSchemaVersion,
+    })
+    vi.spyOn(editorCore, "migrateV1YDocToV2").mockImplementation(() => {
+      throw new Error("migrate failed")
+    })
+    const service = new YjsPersistenceService(repo, null, documents)
+
+    const loaded = await service.loadDocument("doc-broken")
+    expect(readYDocSchemaVersion(loaded)).toBe(1)
+    expect(insertSnapshot).not.toHaveBeenCalled()
+    expect(updateSchemaVersion).not.toHaveBeenCalled()
+    loaded.destroy()
   })
 })

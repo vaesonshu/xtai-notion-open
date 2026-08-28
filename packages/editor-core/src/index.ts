@@ -18,7 +18,14 @@ export {
   createStarterBlocks,
   isBlockArray,
 } from "./block-schema/documents"
-export { legacyJsonToBlocks } from "./migrate"
+export {
+  CURRENT_SCHEMA_VERSION,
+  encodeLegacyV1FixtureSnapshot,
+  legacyJsonToBlocks,
+  migrateV1YDocToV2,
+  readYDocSchemaVersion,
+  writeYDocSchemaVersion,
+} from "./migrate"
 export { createEditorExtensions } from "./extensions"
 export { createInitialDocument } from "./document/initial-document"
 export {

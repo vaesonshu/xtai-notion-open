@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { AuthModule } from "../auth/auth.module"
 import { YjsPersistenceModule } from "../collaboration/yjs-persistence.module"
+import { DocumentsRepositoryModule } from "./documents-repository.module"
 import {
   DocumentsController,
   PublicationAdminController,
@@ -13,7 +14,7 @@ import { ShareLinkRepository } from "./share-link.repository"
 import { ShareLinkService } from "./share-link.service"
 
 @Module({
-  imports: [AuthModule, YjsPersistenceModule],
+  imports: [AuthModule, YjsPersistenceModule, DocumentsRepositoryModule],
   controllers: [
     DocumentsController,
     ShareLinkController,
@@ -21,7 +22,6 @@ import { ShareLinkService } from "./share-link.service"
     PublicSquareController,
   ],
   providers: [
-    DocumentsRepository,
     DocumentsService,
     ShareLinkRepository,
     ShareLinkService,

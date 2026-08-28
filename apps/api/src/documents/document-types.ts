@@ -22,6 +22,7 @@ export interface DocumentRow {
   created_at: Date
   updated_at: Date
   publication_status?: PublicationStatus
+  schema_version?: number
   rejection_reason?: string | null
   published_at?: Date | null
   published_by?: string | null
