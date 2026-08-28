@@ -10,8 +10,8 @@ import type { Editor } from "@tiptap/core"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { use, useEffect } from "react"
 import { EditorContext } from "../../react/context/editor-context"
-import type { Block } from "../../core/block-schema/types"
-import type { MentionableItem } from "../../core/mention"
+import type { Block } from "@workspace/editor-core/block-schema/types"
+import type { MentionableItem } from "@workspace/editor-core/mention"
 import { DocumentEditor } from "../editor/document-editor"
 
 const emptyParagraph: Block[] = [

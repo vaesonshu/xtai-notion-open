@@ -6,6 +6,12 @@
     "paths": {
       "@workspace/editor/*": [
         "./src/*"
+      ],
+      "@workspace/editor-core": [
+        "../editor-core/src/index.ts"
+      ],
+      "@workspace/editor-core/*": [
+        "../editor-core/src/*"
       ]
     }
   },

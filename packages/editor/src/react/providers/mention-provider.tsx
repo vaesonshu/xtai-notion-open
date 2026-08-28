@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, use } from "react"
-import type { MentionProvider } from "../../core/mention"
+import type { MentionProvider } from "@workspace/editor-core/mention"
 
 /** 点击提及链接后的跳转动作，由宿主应用注入（例如使用路由 push）。 */
 export type MentionNavigate = (href: string) => void

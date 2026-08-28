@@ -1,6 +1,6 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type * as Y from "yjs"
-import type { CollaborationUser } from "../core/types"
+import type { CollaborationUser } from "../types"
 
 export type CollaborationStatus =
   | "connecting"

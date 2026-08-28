@@ -28,7 +28,7 @@ import {
   filterMentionItems,
   insertMention,
   type MentionableItem,
-} from "../../core/mention"
+} from "@workspace/editor-core/mention"
 import { useMentionProvider } from "../../react/providers/mention-provider"
 
 const mentionMenuPluginKey = new PluginKey("mentionMenu")

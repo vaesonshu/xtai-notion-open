@@ -4,25 +4,25 @@ export type {
   InlineContent,
   PartialBlock,
   TableContent,
-} from "./core/block-schema/types"
+} from "@workspace/editor-core"
 export {
   createEmptyBlocks,
   createStarterBlocks,
-} from "./core/block-schema/documents"
-export { BlockEditor } from "./core/block-editor"
+} from "@workspace/editor-core"
+export { BlockEditor } from "@workspace/editor-core"
 export type {
   CollaborationUser,
   EditorDocument,
   EditorExtensionOptions,
-} from "./core/types"
-export { createEditorExtensions } from "./core/extensions"
+} from "@workspace/editor-core"
+export { createEditorExtensions } from "@workspace/editor-core"
 export {
   createEmptyDocument,
   createInitialDocument,
   createStarterDocument,
   isEditorDocument,
-} from "./core/index"
-export type { SlashCommand } from "./core/slash-commands"
+} from "@workspace/editor-core"
+export type { SlashCommand } from "@workspace/editor-core"
 export {
   SLASH_COMMANDS,
   executeSlashCommand,
@@ -30,16 +30,16 @@ export {
   filterSlashCommands,
   getSlashCommands,
   UPLOAD_IMAGE_SLASH_COMMAND,
-} from "./core/slash-commands"
-export type { InlineMark } from "./core/commands"
-export { setEditorLink, toggleInlineMark } from "./core/commands"
+} from "@workspace/editor-core"
+export type { InlineMark } from "@workspace/editor-core"
+export { setEditorLink, toggleInlineMark } from "@workspace/editor-core"
 export type {
   MentionableItem,
   MentionOptions,
   MentionProvider,
-} from "./core/mention"
-export { filterMentionItems, insertMention } from "./core/mention"
-export { insertTable } from "./core/table"
+} from "@workspace/editor-core"
+export { filterMentionItems, insertMention } from "@workspace/editor-core"
+export { insertTable } from "@workspace/editor-core"
 export type {
   MentionContextValue,
   MentionNavigate,
@@ -50,7 +50,7 @@ export {
   insertUploadedImage,
   uploadImage,
   validateImageFile,
-} from "./core/image-upload"
+} from "@workspace/editor-core"
 export type {
   ImageMimeType,
   ImageUploadConfig,
@@ -58,4 +58,4 @@ export type {
   ImageUploadResult,
   ImageValidationErrorCode,
   ImageValidationResult,
-} from "./core/image-upload"
+} from "@workspace/editor-core"

@@ -61,3 +61,14 @@ export type {
   ImageValidationErrorCode,
   ImageValidationResult,
 } from "./image-upload"
+export type {
+  CollaborationConfig,
+  CollaborationSession,
+  CollaborationStatus,
+} from "./collaboration/types"
+export type {
+  CreateCollaborationSessionOptions,
+  CreateProvider,
+  CreateProviderOptions,
+} from "./collaboration/create-collaboration-session"
+export { createCollaborationSession } from "./collaboration/create-collaboration-session"

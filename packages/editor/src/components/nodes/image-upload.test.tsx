@@ -5,7 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { use, useEffect } from "react"
 import { EditorContext } from "../../react/context/editor-context"
 import { EditorProvider } from "../../react/providers/editor-provider"
-import { createEmptyBlocks } from "../../core/block-schema/documents"
+import { createEmptyBlocks } from "@workspace/editor-core/block-schema/documents"
 import { EditorSurface } from "../editor/editor-surface"
 import { ImageUpload } from "./image-upload"
 

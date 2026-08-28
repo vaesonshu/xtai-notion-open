@@ -1,3 +1,5 @@
+import type { Block } from "@workspace/editor-core"
+
 export type DocumentRole = "owner" | "editor" | "viewer"
 export type PublicationStatus = "draft" | "pending" | "published"
 
@@ -59,7 +61,7 @@ export interface PublishedArticle {
 }
 
 export interface PublishedArticleDetail extends PublishedArticle {
-  content: Record<string, unknown>
+  content: Block[]
 }
 
 export interface PublishedArticleSource {

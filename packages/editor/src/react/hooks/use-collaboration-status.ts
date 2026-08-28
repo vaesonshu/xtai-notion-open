@@ -1,7 +1,7 @@
 "use client"
 
 import { use } from "react"
-import type { CollaborationStatus } from "../../collaboration/types"
+import type { CollaborationStatus } from "@workspace/editor-core/collaboration/types"
 import { EditorContext } from "../context/editor-context"
 
 export function useCollaborationStatus(): CollaborationStatus {

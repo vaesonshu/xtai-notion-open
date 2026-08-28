@@ -22,10 +22,10 @@ import {
   filterCommands,
   getSlashCommands,
   type SlashCommand,
-} from "../../core/slash-commands"
-import type { Block, TableContent } from "../../core/block-schema/types"
-import { generateBlockId } from "../../core/block-schema/ids"
-import type { BlockEditor } from "../../core/block-editor"
+} from "@workspace/editor-core/slash-commands"
+import type { Block, TableContent } from "@workspace/editor-core/block-schema/types"
+import { generateBlockId } from "@workspace/editor-core/block-schema/ids"
+import type { BlockEditor } from "@workspace/editor-core"
 import { useBlockEditor } from "../../react/hooks/use-block-editor"
 import { useImageUpload } from "../nodes/image-upload"
 import { TableGridPicker } from "./table-grid-picker"

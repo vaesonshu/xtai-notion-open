@@ -1,9 +1,9 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import { describe, expect, it, vi } from "vitest"
-import type { CollaborationConfig } from "../../collaboration/types"
-import type { Block } from "../../core/block-schema/types"
-import type { CollaborationUser } from "../../core/types"
+import type { CollaborationConfig } from "@workspace/editor-core/collaboration/types"
+import type { Block } from "@workspace/editor-core/block-schema/types"
+import type { CollaborationUser } from "@workspace/editor-core"
 import { DocumentEditor, type DocumentEditorProps } from "./document-editor"
 
 type ProviderListener = (...args: unknown[]) => void

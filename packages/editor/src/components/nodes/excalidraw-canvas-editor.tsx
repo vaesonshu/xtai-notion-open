@@ -19,16 +19,16 @@ import {
   useRef,
 } from "react"
 import { toast } from "sonner"
-import { exportCanvasToBlob } from "../../core/canvas/canvas-export"
+import { exportCanvasToBlob } from "@workspace/editor-core/canvas/canvas-export"
 import {
   externalizeCanvasFiles,
   type CanvasImageFetchHandler,
-} from "../../core/canvas/canvas-files"
+} from "@workspace/editor-core/canvas/canvas-files"
 import {
   parseCanvasSnapshot,
   stringifyCanvasSnapshot,
-} from "../../core/canvas/canvas-snapshot"
-import type { ImageUploadHandler } from "../../core/image-upload"
+} from "@workspace/editor-core/canvas/canvas-snapshot"
+import type { ImageUploadHandler } from "@workspace/editor-core/image-upload"
 import { useDocumentTheme } from "../../react/hooks/use-document-theme"
 
 export type ExcalidrawCanvasEditorHandle = {

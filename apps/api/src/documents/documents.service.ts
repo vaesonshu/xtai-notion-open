@@ -10,7 +10,7 @@ import {
   documentFromYjs,
   documentToPlainText,
   collectMentionIds,
-} from "@workspace/editor/core"
+} from "@workspace/editor-core"
 import { UserRepository } from "../auth/user.repository"
 import { YjsPersistenceService } from "../collaboration/yjs-persistence.service"
 import type {

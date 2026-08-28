@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import type { CollaborationStatus as Status } from "../collaboration/types"
+import type { CollaborationStatus as Status } from "@workspace/editor-core/collaboration/types"
 import { EditorContext } from "../react/context/editor-context"
 import { CollaborationStatus } from "./collaboration-status"
 

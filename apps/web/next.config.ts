@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@workspace/ui",
     "@workspace/editor",
+    "@workspace/editor-core",
     "@workspace/icons",
     "@excalidraw/excalidraw",
   ],

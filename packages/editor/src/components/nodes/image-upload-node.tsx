@@ -9,7 +9,7 @@ import {
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react"
 import { useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
-import { uploadImage } from "../../core/image-upload"
+import { uploadImage } from "@workspace/editor-core/image-upload"
 
 type UploadState =
   | { status: "idle" }

@@ -27,7 +27,7 @@ import {
   setEditorLink,
   toggleInlineMark,
   type InlineMark,
-} from "../../core/commands"
+} from "@workspace/editor-core/commands"
 import { useBlockEditor } from "../../react/hooks/use-block-editor"
 
 export type ShouldShowBubbleToolbarProps = {

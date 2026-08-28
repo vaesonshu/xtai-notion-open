@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { CollaborationUser, EditorExtensionOptions } from "./index"
 import { createEmptyDocument, createStarterDocument } from "./index"
-import { isBlockArray } from "./core/block-schema/documents"
+import { isBlockArray } from "@workspace/editor-core"
 
 describe("editor package public types", () => {
   it("exposes collaboration types from the package root", () => {

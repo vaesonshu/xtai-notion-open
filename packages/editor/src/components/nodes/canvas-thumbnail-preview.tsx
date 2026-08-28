@@ -1,12 +1,12 @@
 "use client"
 
-import { exportCanvasToBlob } from "../../core/canvas/canvas-export"
-import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
+import { exportCanvasToBlob } from "@workspace/editor-core/canvas/canvas-export"
+import type { CanvasImageFetchHandler } from "@workspace/editor-core/canvas/canvas-files"
 import { useEffect, useState } from "react"
 import {
   hasCanvasContent,
   parseCanvasSnapshot,
-} from "../../core/canvas/canvas-snapshot"
+} from "@workspace/editor-core/canvas/canvas-snapshot"
 import { useDocumentTheme } from "../../react/hooks/use-document-theme"
 
 type CanvasThumbnailPreviewProps = {

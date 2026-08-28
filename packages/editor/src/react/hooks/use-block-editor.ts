@@ -1,7 +1,7 @@
 "use client"
 
 import { use } from "react"
-import type { BlockEditor } from "../../core/block-editor"
+import type { BlockEditor } from "@workspace/editor-core"
 import { EditorContext } from "../context/editor-context"
 
 /** 获取当前文档的 BlockEditor 门面（块 API + 内部 tiptap）。 */

@@ -6,17 +6,17 @@ import * as Y from "yjs"
 import {
   createCollaborationSession,
   type CreateProvider,
-} from "../../collaboration/create-collaboration-session"
+} from "@workspace/editor-core/collaboration/create-collaboration-session"
 import type {
   CollaborationConfig,
   CollaborationStatus,
-} from "../../collaboration/types"
-import { BlockEditor } from "../../core/block-editor"
-import { createStarterBlocks } from "../../core/block-schema/documents"
-import type { Block } from "../../core/block-schema/types"
-import type { CollaborationUser } from "../../core/types"
-import type { ImageUploadHandler } from "../../core/image-upload"
-import type { CanvasImageFetchHandler } from "../../core/canvas/canvas-files"
+} from "@workspace/editor-core/collaboration/types"
+import { BlockEditor } from "@workspace/editor-core"
+import { createStarterBlocks } from "@workspace/editor-core/block-schema/documents"
+import type { Block } from "@workspace/editor-core/block-schema/types"
+import type { CollaborationUser } from "@workspace/editor-core"
+import type { ImageUploadHandler } from "@workspace/editor-core/image-upload"
+import type { CanvasImageFetchHandler } from "@workspace/editor-core/canvas/canvas-files"
 import { CanvasBlockNode } from "../../components/nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../../components/nodes/image-upload-node-extension"
 import { EditorContext } from "../context/editor-context"

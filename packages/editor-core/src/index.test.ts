@@ -6,9 +6,9 @@ import {
 } from "./block-schema/documents"
 import {
   createEmptyDocument,
-  createInitialDocument,
   createStarterDocument,
-} from "./index"
+} from "./document"
+import { createInitialDocument } from "./document/initial-document"
 
 describe("core document entry point", () => {
   it("exposes the stable block document contract", () => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { ReactNodeViewRenderer } from "@tiptap/react"
-import { ImageUploadNode as CoreImageUploadNode } from "../../core/extensions/image-upload-node"
+import { ImageUploadNode as CoreImageUploadNode } from "@workspace/editor-core/extensions/image-upload-node"
 import { ImageUploadNode as ImageUploadNodeView } from "./image-upload-node"
 
 /**

@@ -1,9 +1,9 @@
 "use client"
 
 import { createContext } from "react"
-import type { BlockEditor } from "../../core/block-editor"
-import type { CollaborationStatus } from "../../collaboration/types"
-import type { CollaborationUser } from "../../core/types"
+import type { BlockEditor } from "@workspace/editor-core"
+import type { CollaborationStatus } from "@workspace/editor-core/collaboration/types"
+import type { CollaborationUser } from "@workspace/editor-core"
 
 export type EditorContextValue = {
   blockEditor: BlockEditor | null
