@@ -16,6 +16,7 @@
     "@excalidraw/excalidraw": "^0.18.1",
     "@floating-ui/react": "^0.27.20",
     "@tiptap/core": "3.29.2",
+    "@tiptap/extension-drag-handle": "3.29.2",
     "@tiptap/extension-drag-handle-react": "3.29.2",
     "@tiptap/extension-dropcursor": "3.29.2",
     "@tiptap/pm": "3.29.2",

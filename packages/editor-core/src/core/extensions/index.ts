@@ -12,6 +12,7 @@ import type { Extensions } from "@tiptap/core"
 import { blockContentExtensions } from "../block-schema/block-content"
 import { BlockContainer, BlockDoc, BlockGroup } from "../block-schema/pm-nodes"
 import type { EditorExtensionOptions } from "../types"
+import { BlockKeymap } from "./block-keymap"
 
 export type { EditorExtensionOptions } from "../types"
 
@@ -84,6 +85,7 @@ export function createBlockSchemaExtensions(
     BlockGroup,
     BlockContainer,
     ...blockContentExtensions,
+    BlockKeymap,
     TableRow,
     TableHeader,
     TableCell,

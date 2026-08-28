@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
-import { BLOCK_HANDLE_NESTED } from "./block-handle"
+import { BLOCK_DRAG_NESTED_OPTIONS } from "./block-handle"
 import { EditorSurface } from "../editor/editor-surface"
 
 const paragraphDoc: Block[] = [
@@ -70,8 +70,8 @@ describe("BlockHandle", () => {
     expect(screen.queryByTestId("block-handle")).not.toBeInTheDocument()
   })
 
-  it("enables nested dragging for the block tree model", () => {
-    expect(BLOCK_HANDLE_NESTED).toBe(true)
+  it("targets blockContainer nodes for nested dragging", () => {
+    expect(BLOCK_DRAG_NESTED_OPTIONS.rules[0]?.id).toBe("preferBlockContainer")
   })
 })
 
@@ -84,9 +84,8 @@ describe("editor styles", () => {
     const css = readFileSync(stylesPath, "utf8")
 
     expect(css).toContain(".ProseMirror")
-    expect(css).toContain(".ProseMirror > *")
-    expect(css).toContain("margin-inline-start: 0")
-    expect(css).toContain('ul[data-type="taskList"]')
+    expect(css).toContain('[data-node-type="blockGroup"]')
+    expect(css).toContain('[data-node-type="blockContainer"]')
     expect(css).toContain("is-editor-empty")
     expect(css).toContain("data-placeholder")
     expect(css).toContain(".ProseMirror-selectednode")
@@ -96,17 +95,10 @@ describe("editor styles", () => {
     expect(css).toContain(".ProseMirror h1")
     expect(css).toContain(".ProseMirror h2")
     expect(css).toContain(".ProseMirror h3")
-    expect(css).toContain('.ProseMirror ul:not([data-type="taskList"])')
-    expect(css).toContain(".ProseMirror ol")
-    expect(css).toContain('li[data-checked="true"] > div')
-    expect(css).toContain('input[type="checkbox"] + span')
-    expect(css).toContain('input[type="checkbox"]:checked + span')
-    expect(css).toContain('input[type="checkbox"] + span::after')
-    expect(css).toContain("align-items: center")
-    expect(css).toContain("display: flex")
-    expect(css).toContain("block-size: 1.5rem")
-    expect(css).toContain("outline-offset: 2px")
-    expect(css).toContain("@media (prefers-reduced-motion: reduce)")
+    expect(css).toContain('li[data-type="bulletListItem"]')
+    expect(css).toContain('li[data-type="numberedListItem"]')
+    expect(css).toContain('li[data-type="checkListItem"]')
+    expect(css).toContain('li[data-type="checkListItem"][data-checked="true"]')
     const normalizedCss = css.toUpperCase()
     expect(normalizedCss).toContain("#24866B")
     expect(normalizedCss).toContain("BACKGROUND: #24866B !IMPORTANT")

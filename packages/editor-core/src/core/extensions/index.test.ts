@@ -32,6 +32,7 @@ describe("editor core", () => {
         "blockContainer",
         "paragraph",
         "heading",
+        "blockKeymap",
         "placeholder",
         "mention",
       ])

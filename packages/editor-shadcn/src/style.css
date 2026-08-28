@@ -5,6 +5,39 @@
   position: relative;
 }
 
+/* 块树：同级 blockContainer 垂直排列 */
+.ProseMirror [data-node-type="blockGroup"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+}
+
+.ProseMirror [data-node-type="blockContainer"] {
+  position: relative;
+}
+
+/* 嵌套子块左侧缩进 */
+.ProseMirror [data-node-type="blockContainer"] > [data-node-type="blockGroup"] {
+  border-left: 2px solid #e8e6e1;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+}
+
+.ProseMirror [data-node-type="blockContainer"] > p,
+.ProseMirror [data-node-type="blockContainer"] > h1,
+.ProseMirror [data-node-type="blockContainer"] > h2,
+.ProseMirror [data-node-type="blockContainer"] > h3,
+.ProseMirror [data-node-type="blockContainer"] > blockquote,
+.ProseMirror [data-node-type="blockContainer"] > pre,
+.ProseMirror [data-node-type="blockContainer"] > li,
+.ProseMirror [data-node-type="blockContainer"] > hr,
+.ProseMirror [data-node-type="blockContainer"] > table,
+.ProseMirror [data-node-type="blockContainer"] > img,
+.ProseMirror [data-node-type="blockContainer"] > div[data-type="canvas-block"] {
+  margin: 0;
+}
+
 .editor-image-upload-node {
   margin: 1.5rem 0;
 }
@@ -100,10 +133,6 @@
   margin-inline-start: 0;
 }
 
-.ProseMirror > * + * {
-  margin-top: 0.75em;
-}
-
 .ProseMirror h1,
 .ProseMirror h2,
 .ProseMirror h3 {
@@ -125,6 +154,13 @@
 .ProseMirror h3 {
   font-size: 1.25rem;
   margin-top: 1rem;
+}
+
+/* 块容器内首个标题不需要额外上边距 */
+.ProseMirror [data-node-type="blockContainer"]:first-child h1,
+.ProseMirror [data-node-type="blockContainer"]:first-child h2,
+.ProseMirror [data-node-type="blockContainer"]:first-child h3 {
+  margin-top: 0;
 }
 
 .ProseMirror-dropcursor {
@@ -167,6 +203,40 @@
   list-style: decimal;
 }
 
+/* 块模型下列表项无 ul/ol 包裹，单独渲染为 li */
+.ProseMirror li[data-type="bulletListItem"] {
+  display: list-item;
+  list-style: disc;
+  margin-left: 1.5rem;
+  padding-left: 0.25rem;
+}
+
+.ProseMirror [data-node-type="blockGroup"] {
+  counter-reset: block-numbered-item;
+}
+
+.ProseMirror
+  [data-node-type="blockContainer"]:has(> [data-type="numberedListItem"]) {
+  counter-increment: block-numbered-item;
+}
+
+.ProseMirror li[data-type="numberedListItem"] {
+  display: list-item;
+  list-style: none;
+  margin-left: 1.5rem;
+  padding-left: 0.25rem;
+  position: relative;
+}
+
+.ProseMirror li[data-type="numberedListItem"]::before {
+  color: #5c574e;
+  content: counter(block-numbered-item) ".";
+  left: -1.5rem;
+  position: absolute;
+  text-align: right;
+  width: 1.25rem;
+}
+
 .ProseMirror ul:not([data-type="taskList"]) ul,
 .ProseMirror ol ol,
 .ProseMirror ol ul {
@@ -179,111 +249,55 @@
   padding-left: 0.25rem;
 }
 
-.ProseMirror ul[data-type="taskList"] li {
+/* 块模型待办：用 ::before 模拟复选框（无 ul 包裹） */
+.ProseMirror li[data-type="checkListItem"] {
   align-items: flex-start;
   display: flex;
   gap: 0.5rem;
   list-style: none;
+  margin-left: 0;
   min-height: 1.5rem;
-}
-
-.ProseMirror ul[data-type="taskList"] li + li {
-  margin-top: 0.25rem;
-}
-
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
-  color: #9a9488;
-  text-decoration: line-through;
-}
-
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div * {
-  text-decoration: line-through;
-}
-
-.ProseMirror ul[data-type="taskList"] li > label {
-  align-items: center;
-  block-size: 1.5rem;
-  display: flex;
-  flex: 0 0 auto;
-  line-height: 1.5;
+  padding-left: 1.75rem;
   position: relative;
-  user-select: none;
 }
 
-.ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
-  block-size: 1px;
-  clip: rect(0 0 0 0);
-  inline-size: 1px;
-  margin: -1px;
-  opacity: 0;
-  overflow: hidden;
-  position: absolute;
-}
-
-.ProseMirror ul[data-type="taskList"] input[type="checkbox"] + span {
+.ProseMirror li[data-type="checkListItem"]::before {
   align-items: center;
   background: #fff;
   block-size: 1rem;
   border: 1px solid #b8b1a5;
   border-radius: 0.25rem;
   box-sizing: border-box;
-  cursor: pointer;
+  content: "";
   display: inline-flex;
   inline-size: 1rem;
   justify-content: center;
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
+  left: 0.25rem;
+  position: absolute;
+  top: 0.125rem;
 }
 
-.ProseMirror ul[data-type="taskList"] input[type="checkbox"] + span::after {
-  block-size: 0.5rem;
-  border-bottom: 2px solid #fff;
-  border-right: 2px solid #fff;
-  content: "";
-  inline-size: 0.25rem;
-  opacity: 0;
-  transform: rotate(45deg) translate(-1px, -1px);
-}
-
-.ProseMirror ul[data-type="taskList"] input[type="checkbox"]:hover + span {
-  border-color: #24866b;
-}
-
-.ProseMirror
-  ul[data-type="taskList"]
-  input[type="checkbox"]:focus-visible
-  + span {
-  outline: 2px solid #24866b;
-  outline-offset: 2px;
-}
-
-.ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked + span {
+.ProseMirror li[data-type="checkListItem"][data-checked="true"]::before {
   background: #24866b;
   border-color: #24866b;
+  color: #fff;
+  content: "✓";
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.ProseMirror
-  ul[data-type="taskList"]
-  input[type="checkbox"]:checked
-  + span::after {
-  opacity: 1;
+.ProseMirror li[data-type="checkListItem"] + li[data-type="checkListItem"] {
+  margin-top: 0.25rem;
 }
 
-.ProseMirror ul[data-type="taskList"] li > div {
-  flex: 1 1 auto;
-  min-width: 0;
+.ProseMirror li[data-type="checkListItem"][data-checked="true"] {
+  color: #9a9488;
+  text-decoration: line-through;
 }
 
-.ProseMirror ul[data-type="taskList"] li > div > p {
-  line-height: 1.5;
-  margin: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ProseMirror ul[data-type="taskList"] input[type="checkbox"] + span {
-    transition: none;
-  }
+.ProseMirror li[data-type="checkListItem"][data-checked="true"] * {
+  text-decoration: line-through;
 }
 
 .ProseMirror pre {

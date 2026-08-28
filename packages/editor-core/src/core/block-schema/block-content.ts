@@ -18,21 +18,6 @@ export const BLOCK_CONTENT_NODE_NAMES: BlockType[] = [
   "canvas",
 ]
 
-const inlineBlock = (name: BlockType, tag: string) =>
-  Node.create({
-    name,
-    group: "blockContent",
-    content: "inline*",
-
-    parseHTML() {
-      return [{ tag }]
-    },
-
-    renderHTML({ HTMLAttributes }) {
-      return [tag, mergeAttributes(HTMLAttributes), 0]
-    },
-  })
-
 export const ParagraphBlock = Node.create({
   name: "paragraph",
   // 同时属于 blockContent 与 block，供 tableCell 内嵌段落
@@ -80,8 +65,41 @@ export const HeadingBlock = Node.create({
   },
 })
 
-export const BulletListItemBlock = inlineBlock("bulletListItem", "li")
-export const NumberedListItemBlock = inlineBlock("numberedListItem", "li")
+export const BulletListItemBlock = Node.create({
+  name: "bulletListItem",
+  group: "blockContent",
+  content: "inline*",
+
+  parseHTML() {
+    return [{ tag: 'li[data-type="bulletListItem"]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "li",
+      mergeAttributes({ "data-type": "bulletListItem" }, HTMLAttributes),
+      0,
+    ]
+  },
+})
+
+export const NumberedListItemBlock = Node.create({
+  name: "numberedListItem",
+  group: "blockContent",
+  content: "inline*",
+
+  parseHTML() {
+    return [{ tag: 'li[data-type="numberedListItem"]' }]
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "li",
+      mergeAttributes({ "data-type": "numberedListItem" }, HTMLAttributes),
+      0,
+    ]
+  },
+})
 
 export const CheckListItemBlock = Node.create({
   name: "checkListItem",
