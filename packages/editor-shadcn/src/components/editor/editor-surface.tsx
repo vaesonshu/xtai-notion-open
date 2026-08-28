@@ -1,9 +1,9 @@
 "use client"
 
 import { use, type MouseEvent } from "react"
-import { EditorContent } from "@xtai-notion/editor-react"
-import { EditorContext } from "@xtai-notion/editor-react"
-import { useMentionNavigate } from "@xtai-notion/editor-react"
+import { EditorContent } from "@xtai-notion/editor-react/editor-content"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
+import { useMentionNavigate } from "@xtai-notion/editor-react/providers/mention-provider"
 import { BlockHandle } from "../handles/block-handle"
 import { BubbleToolbar } from "../menus/bubble-toolbar"
 import { MentionMenu } from "../menus/mention-menu"
@@ -18,7 +18,7 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
   const context = use(EditorContext)
   const navigate = useMentionNavigate()
 
-  if (!context?.editor) {
+  if (!context?.blockEditor) {
     return (
       <div
         className="flex min-h-[28rem] w-full flex-col gap-5 px-10 py-8"
@@ -57,7 +57,7 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
   return (
     <div onClick={handleClick}>
       <EditorContent className={className} />
-      {context.editor.isEditable ? (
+      {context.blockEditor.tiptap.isEditable ? (
         <>
           <SlashMenu />
           <MentionMenu />

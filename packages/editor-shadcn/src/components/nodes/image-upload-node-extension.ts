@@ -1,7 +1,7 @@
-"use client"
+﻿"use client"
 
 import { ReactNodeViewRenderer } from "@tiptap/react"
-import { ImageUploadNode as CoreImageUploadNode } from "@xtai-notion/editor-core"
+import { ImageUploadNode as CoreImageUploadNode } from "@xtai-notion/editor-core/extensions/image-upload-node"
 import { ImageUploadNode as ImageUploadNodeView } from "./image-upload-node"
 
 /**

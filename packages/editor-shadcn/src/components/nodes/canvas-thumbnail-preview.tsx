@@ -1,13 +1,13 @@
 "use client"
 
-import { exportCanvasToBlob } from "@xtai-notion/editor-core"
-import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core"
+import { exportCanvasToBlob } from "@xtai-notion/editor-core/canvas/canvas-export"
+import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
 import { useEffect, useState } from "react"
 import {
   hasCanvasContent,
   parseCanvasSnapshot,
-} from "@xtai-notion/editor-core"
-import { useDocumentTheme } from "@xtai-notion/editor-react"
+} from "@xtai-notion/editor-core/canvas/canvas-snapshot"
+import { useDocumentTheme } from "@xtai-notion/editor-react/hooks/use-document-theme"
 
 type CanvasThumbnailPreviewProps = {
   snapshot: string

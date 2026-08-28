@@ -19,10 +19,10 @@ import {
 import { Button } from "../../ui/button"
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react"
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
-import type { ImageUploadHandler } from "@xtai-notion/editor-core"
-import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core"
-import { useCanvasCollaborationLock } from "@xtai-notion/editor-react"
-import { useInView } from "@xtai-notion/editor-react"
+import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
+import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
+import { useCanvasCollaborationLock } from "@xtai-notion/editor-react/hooks/use-canvas-collaboration-lock"
+import { useInView } from "@xtai-notion/editor-react/hooks/use-in-view"
 import type { ExcalidrawCanvasEditorHandle } from "./excalidraw-canvas-editor"
 
 const ExcalidrawCanvasEditor = lazy(() =>

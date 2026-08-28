@@ -2,7 +2,7 @@
 
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert"
 import { Skeleton } from "../ui/skeleton"
-import { useCollaborationStatus } from "@xtai-notion/editor-react"
+import { useCollaborationStatus } from "@xtai-notion/editor-react/hooks/use-collaboration-status"
 
 export function CollaborationStatus() {
   const status = useCollaborationStatus()

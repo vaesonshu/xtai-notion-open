@@ -8,15 +8,21 @@ import {
 } from "@testing-library/react"
 import type { Editor } from "@tiptap/core"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
-import type { EditorDocument } from "@xtai-notion/editor-core"
-import type { MentionableItem } from "@xtai-notion/editor-core"
-import { EditorProbe, latestEditor, resetLatestEditor } from "../../../test/editor-test-utils"
+import { use, useEffect } from "react"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
+import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { MentionableItem } from "@xtai-notion/editor-core/mention"
 import { DocumentEditor } from "../editor/document-editor"
 
-const emptyParagraph: EditorDocument = {
-  type: "doc",
-  content: [{ type: "paragraph" }],
-}
+const emptyParagraph: Block[] = [
+  {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    type: "paragraph",
+    props: {},
+    content: [],
+    children: [],
+  },
+]
 
 const mentionItems: MentionableItem[] = [
   { id: "doc-1", title: "产品需求文档", href: "/documents/doc-1" },
@@ -58,6 +64,29 @@ beforeAll(() => {
   }
 })
 
+let latestEditor: Editor | null = null
+
+function EditorProbe() {
+  const context = use(EditorContext)
+  useEffect(() => {
+    const blockEditor = context?.blockEditor
+    if (!blockEditor) {
+      return
+    }
+    latestEditor = blockEditor.tiptap
+    return blockEditor.onChange(() => {
+      latestEditor = blockEditor.tiptap
+    })
+  }, [context?.blockEditor])
+  return null
+}
+
+async function waitForEditor() {
+  await waitFor(() => {
+    expect(latestEditor).not.toBeNull()
+  })
+  return latestEditor!
+}
 
 function renderWithMention(
   provider: (query: string) => MentionableItem[] | Promise<MentionableItem[]>
@@ -88,14 +117,25 @@ function dispatchEditorKey(editor: Editor, key: string) {
   )
 }
 
+/** 块 schema 下第一段 blockContent 节点（通常为 paragraph） */
+function firstBlockContent(editor: Editor): Record<string, unknown> | undefined {
+  const doc = editor.getJSON() as {
+    content?: Array<{ content?: Array<{ content?: unknown[] }> }>
+  }
+  return doc.content?.[0]?.content?.[0]?.content?.[0] as
+    | Record<string, unknown>
+    | undefined
+}
+
 afterEach(() => {
   cleanup()
-  resetLatestEditor()
+  latestEditor = null
 })
 
 describe("MentionMenu", () => {
   it("opens on @ and lists candidate documents", async () => {
     renderWithMention(() => mentionItems)
+    await waitForEditor()
     const editor = latestEditor
     expect(editor).not.toBeNull()
 
@@ -112,6 +152,7 @@ describe("MentionMenu", () => {
 
   it("filters candidates as the query grows", async () => {
     renderWithMention(() => mentionItems)
+    await waitForEditor()
     const editor = latestEditor
 
     await act(async () => {
@@ -128,6 +169,7 @@ describe("MentionMenu", () => {
 
   it("inserts a mention node when an option is selected", async () => {
     renderWithMention(() => mentionItems)
+    await waitForEditor()
     const editor = latestEditor
 
     await act(async () => {
@@ -142,7 +184,7 @@ describe("MentionMenu", () => {
     })
 
     await waitFor(() => {
-      const paragraph = editor!.getJSON().content?.[0]
+      const paragraph = firstBlockContent(editor!)
       expect(paragraph).toMatchObject({
         type: "paragraph",
         content: [
@@ -161,6 +203,7 @@ describe("MentionMenu", () => {
 
   it("shows empty state when no candidates match", async () => {
     renderWithMention(() => [])
+    await waitForEditor()
     const editor = latestEditor
 
     await act(async () => {
@@ -172,6 +215,7 @@ describe("MentionMenu", () => {
 
   it("closes on Escape without changing the document", async () => {
     renderWithMention(() => mentionItems)
+    await waitForEditor()
     const editor = latestEditor
 
     await act(async () => {
@@ -197,6 +241,7 @@ describe("MentionMenu", () => {
 
   it("supports ArrowDown selection and Enter execution", async () => {
     renderWithMention(() => mentionItems)
+    await waitForEditor()
     const editor = latestEditor
 
     await act(async () => {
@@ -215,7 +260,7 @@ describe("MentionMenu", () => {
     })
 
     await waitFor(() => {
-      const paragraph = editor!.getJSON().content?.[0]
+      const paragraph = firstBlockContent(editor!)
       expect(paragraph).toMatchObject({
         content: [
           {
@@ -234,6 +279,7 @@ describe("MentionMenu", () => {
   it("supports async providers", async () => {
     const provider = vi.fn(() => Promise.resolve(mentionItems))
     renderWithMention(provider)
+    await waitForEditor()
     const editor = latestEditor
 
     await act(async () => {

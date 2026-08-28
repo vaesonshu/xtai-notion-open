@@ -1,48 +1,40 @@
 "use client"
 
 import { use, type ReactNode } from "react"
-import type {
-  CollaborationUser,
-  CanvasImageFetchHandler,
-  EditorDocument,
-  ImageUploadHandler,
-  MentionProvider,
-} from "@xtai-notion/editor-core"
-import {
-  CollaborationEditorProvider,
-  EditorContext,
-  EditorProvider,
-  MentionContext,
-  type MentionNavigate,
-} from "@xtai-notion/editor-react"
-import type {
-  CollaborationConfig,
-  CreateProvider,
-} from "@xtai-notion/editor-react/collaboration"
-import { ShadcnEditorProvider } from "../../shadcn-editor-provider"
+import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
+import type { CollaborationConfig } from "@xtai-notion/editor-react/collaboration/types"
+import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
+import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
+import { CollaborationEditorProvider } from "@xtai-notion/editor-react/providers/collaboration-editor-provider"
+import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
+import { MentionContext } from "@xtai-notion/editor-react/providers/mention-provider"
+import { EditorSurface } from "./editor-surface"
 import { CanvasBlockNode } from "../nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../nodes/image-upload-node-extension"
 import { ImageUpload } from "../nodes/image-upload"
-import { EditorSurface } from "./editor-surface"
+import type { MentionProvider } from "@xtai-notion/editor-core/mention"
+import type { MentionNavigate } from "@xtai-notion/editor-react/providers/mention-provider"
 
 type DocumentEditorSharedProps = {
   editable?: boolean
-  onChange?: (document: EditorDocument) => void
+  onChange?: (blocks: Block[]) => void
   className?: string
   children?: ReactNode
   renderToolbar?: () => ReactNode
   renderSurface?: (surface: ReactNode) => ReactNode
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
-  /** ?? @ ??????????????????????? */
+  /** 提供 @ 提及的候选文档；省略时提及菜单不显示任何结果。 */
   mentionProvider?: MentionProvider
-  /** ??????????????????????????? */
+  /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
   mentionNavigate?: MentionNavigate
 }
 
 export type DocumentEditorProps =
   | (DocumentEditorSharedProps & {
-      content?: EditorDocument
+      content?: Block[]
       collaboration?: never
       createProvider?: never
     })
@@ -54,7 +46,7 @@ export type DocumentEditorProps =
     })
 
 function assertExclusiveMode(props: {
-  content?: EditorDocument
+  content?: Block[]
   collaboration?: CollaborationConfig
 }) {
   if (props.content !== undefined && props.collaboration !== undefined) {
@@ -98,37 +90,33 @@ export function DocumentEditor(props: DocumentEditorProps) {
 
   if ("collaboration" in props && props.collaboration) {
     return (
-      <ShadcnEditorProvider>
-        <CollaborationEditorProvider
-          collaboration={props.collaboration}
-          editable={editable}
-          imageUpload={props.imageUpload}
-          canvasImageFetch={props.canvasImageFetch}
-          imageUploadNode={ImageUploadNode}
-          canvasBlockNode={CanvasBlockNode}
-          onChange={onChange}
-          createProvider={props.createProvider}
-        >
-          {framedContent}
-        </CollaborationEditorProvider>
-      </ShadcnEditorProvider>
-    )
-  }
-
-  return (
-    <ShadcnEditorProvider>
-      <EditorProvider
-        initialContent={props.content}
+      <CollaborationEditorProvider
+        collaboration={props.collaboration}
         editable={editable}
         imageUpload={props.imageUpload}
         canvasImageFetch={props.canvasImageFetch}
         imageUploadNode={ImageUploadNode}
         canvasBlockNode={CanvasBlockNode}
         onChange={onChange}
+        createProvider={props.createProvider}
       >
         {framedContent}
-      </EditorProvider>
-    </ShadcnEditorProvider>
+      </CollaborationEditorProvider>
+    )
+  }
+
+  return (
+    <EditorProvider
+      initialContent={props.content}
+      editable={editable}
+      imageUpload={props.imageUpload}
+      canvasImageFetch={props.canvasImageFetch}
+      imageUploadNode={ImageUploadNode}
+      canvasBlockNode={CanvasBlockNode}
+      onChange={onChange}
+    >
+      {framedContent}
+    </EditorProvider>
   )
 }
 
@@ -138,5 +126,5 @@ function EditorReadyToolbar({
   renderToolbar?: () => ReactNode
 }) {
   const context = use(EditorContext)
-  return context?.editor ? renderToolbar?.() : null
+  return context?.blockEditor ? renderToolbar?.() : null
 }

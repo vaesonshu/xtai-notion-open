@@ -2,9 +2,10 @@
 
 import type { CollaborationUser } from "@xtai-notion/editor-core"
 import { useEditorText } from "@xtai-notion/editor-react"
-import type { CreateProvider } from "@xtai-notion/editor-react/collaboration"
+import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import { DocumentEditor } from "@xtai-notion/editor-shadcn"
-import type { MentionProvider, MentionNavigate } from "@xtai-notion/editor-core"
+import type { MentionProvider } from "@xtai-notion/editor-core/mention"
+import type { MentionNavigate } from "@xtai-notion/editor-react/providers/mention-provider"
 import {
   Alert,
   AlertDescription,

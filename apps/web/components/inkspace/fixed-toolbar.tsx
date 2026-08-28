@@ -20,9 +20,13 @@ import {
   UnderlineIcon,
   UndoIcon,
 } from "@workspace/icons"
-import { EditorContext, type Editor } from "@xtai-notion/editor-react"
-import { TableGridPicker, useImageUpload } from "@xtai-notion/editor-shadcn"
-import { insertTable } from "@xtai-notion/editor-core"
+import type { Block, TableContent } from "@workspace/editor"
+import {
+  EditorContext,
+  useBlockEditor,
+} from "@workspace/editor/react"
+import { TableGridPicker, useImageUpload } from "@workspace/editor/components"
+import type { BlockEditor } from "@workspace/editor"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
@@ -45,27 +49,21 @@ const marks = [
   ["Inline code", CodeIcon, "code"],
 ] as const
 
-type EditorChain = ReturnType<Editor["chain"]> & {
-  toggleMark: (mark: string) => ReturnType<Editor["chain"]>
-  insertContent: (content: string) => ReturnType<Editor["chain"]>
-  setParagraph: () => ReturnType<Editor["chain"]>
-  toggleHeading: (options: { level: 1 | 2 | 3 }) => ReturnType<Editor["chain"]>
-  toggleBulletList: () => ReturnType<Editor["chain"]>
-  toggleOrderedList: () => ReturnType<Editor["chain"]>
-  toggleTaskList: () => ReturnType<Editor["chain"]>
-  toggleBlockquote: () => ReturnType<Editor["chain"]>
-  toggleCodeBlock: () => ReturnType<Editor["chain"]>
-  undo: () => ReturnType<Editor["chain"]>
-  redo: () => ReturnType<Editor["chain"]>
+export function insertEmoji(
+  editor: BlockEditor["tiptap"],
+  emoji: string
+): boolean {
+  return editor.chain().focus().insertContent(emoji).run()
 }
 
-/** StarterKit 块级/历史命令由 core 注册，默认 ChainedCommands 类型未合并。 */
-function editorChain(editor: Editor): EditorChain {
-  return editor.chain().focus() as EditorChain
-}
-
-export function insertEmoji(editor: Editor, emoji: string): boolean {
-  return editorChain(editor).insertContent(emoji).run()
+function blockHasVisibleContent(block: Block | undefined): boolean {
+  if (!block?.content) return false
+  if (Array.isArray(block.content)) {
+    return block.content.some((item) =>
+      item.type === "text" ? item.text.length > 0 : true
+    )
+  }
+  return true
 }
 
 function ToolbarTooltip({
@@ -87,7 +85,7 @@ function EmojiPicker({
   editor,
   onSelect,
 }: {
-  editor: Editor
+  editor: BlockEditor["tiptap"]
   onSelect: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -135,27 +133,20 @@ function EmojiPicker({
   )
 }
 
-export function FixedEditorToolbar() {
-  const context = use(EditorContext)
+function FixedEditorToolbarReady() {
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
   const { canUpload, openFilePicker } = useImageUpload()
-  const editor = context?.editor
-  const readState = () => {
-    // StarterKit 撤销栈在运行时注册，默认 CanCommands 类型未合并 undo/redo。
-    const historyCan = editor?.can() as unknown as
-      | { undo: () => boolean; redo: () => boolean }
-      | undefined
-    return {
-      active: editor ? marks.map(([, , mark]) => editor.isActive(mark)) : [],
-      canUndo: historyCan?.undo() ?? false,
-      canRedo: historyCan?.redo() ?? false,
-    }
-  }
+  const readState = () => ({
+    active: marks.map(([, , mark]) => editor.isActive(mark)),
+    canUndo: editor.can().undo(),
+    canRedo: editor.can().redo(),
+  })
   const [state, setState] = useState(readState)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [tablePickerOpen, setTablePickerOpen] = useState(false)
 
   useEffect(() => {
-    if (!editor) return
     const update = () => setState(readState())
     editor.on("transaction", update)
     editor.on("selectionUpdate", update)
@@ -165,7 +156,32 @@ export function FixedEditorToolbar() {
     }
   }, [editor])
 
-  if (!editor?.isEditable) return null
+  function insertTable(rows: number, cols: number) {
+    const tableBlock: Block = {
+      id: crypto.randomUUID(),
+      type: "table",
+      props: {},
+      content: {
+        headerRows: 1,
+        rows: Array.from({ length: rows }, () => ({
+          cells: Array.from({ length: cols }, () => ({ content: [] })),
+        })),
+      } satisfies TableContent,
+      children: [],
+    }
+    const selected = blockEditor.getSelectedBlocks()[0]
+    if (selected && !blockHasVisibleContent(selected)) {
+      blockEditor.updateBlock(selected.id, tableBlock)
+    } else {
+      blockEditor.insertBlocks(
+        [tableBlock],
+        selected?.id ?? blockEditor.document[0]!.id,
+        "after"
+      )
+    }
+  }
+
+  if (!editor.isEditable) return null
 
   return (
     <div
@@ -193,7 +209,7 @@ export function FixedEditorToolbar() {
             pressed={state.active[index] ?? false}
             aria-label={label}
             onPressedChange={() =>
-              editorChain(editor).toggleMark(mark).run()
+              editor.chain().focus().toggleMark(mark).run()
             }
           >
             <Icon />
@@ -223,7 +239,7 @@ export function FixedEditorToolbar() {
           variant="ghost"
           size="icon-sm"
           aria-label="Paragraph"
-          onClick={() => editorChain(editor).setParagraph().run()}
+          onClick={() => editor.chain().focus().setParagraph().run()}
         >
           <PilcrowIcon />
         </Button>
@@ -234,7 +250,7 @@ export function FixedEditorToolbar() {
           size="icon-sm"
           aria-label="Heading 1"
           onClick={() =>
-            editorChain(editor).toggleHeading({ level: 1 }).run()
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
           }
         >
           <Heading1Icon />
@@ -246,7 +262,7 @@ export function FixedEditorToolbar() {
           size="icon-sm"
           aria-label="Heading 2"
           onClick={() =>
-            editorChain(editor).toggleHeading({ level: 2 }).run()
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
           }
         >
           <Heading2Icon />
@@ -257,7 +273,7 @@ export function FixedEditorToolbar() {
           size="sm"
           aria-label="Bullet list"
           onPressedChange={() =>
-            editorChain(editor).toggleBulletList().run()
+            editor.chain().focus().toggleBulletList().run()
           }
         >
           <ListIcon />
@@ -268,7 +284,7 @@ export function FixedEditorToolbar() {
           size="sm"
           aria-label="Numbered list"
           onPressedChange={() =>
-            editorChain(editor).toggleOrderedList().run()
+            editor.chain().focus().toggleOrderedList().run()
           }
         >
           <ListOrderedIcon />
@@ -278,7 +294,7 @@ export function FixedEditorToolbar() {
         <Toggle
           size="sm"
           aria-label="Task list"
-          onPressedChange={() => editorChain(editor).toggleTaskList().run()}
+          onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
         >
           <ListTodoIcon />
         </Toggle>
@@ -288,7 +304,7 @@ export function FixedEditorToolbar() {
           size="sm"
           aria-label="Blockquote"
           onPressedChange={() =>
-            editorChain(editor).toggleBlockquote().run()
+            editor.chain().focus().toggleBlockquote().run()
           }
         >
           <QuoteIcon />
@@ -298,7 +314,7 @@ export function FixedEditorToolbar() {
         <Toggle
           size="sm"
           aria-label="Code block"
-          onPressedChange={() => editorChain(editor).toggleCodeBlock().run()}
+          onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
         >
           <CodeIcon />
         </Toggle>
@@ -321,7 +337,7 @@ export function FixedEditorToolbar() {
         <PopoverContent align="start" className="w-auto p-0">
           <TableGridPicker
             onSelect={(rows, cols) => {
-              insertTable(editor, rows, cols)
+              insertTable(rows, cols)
               setTablePickerOpen(false)
             }}
           />
@@ -362,7 +378,7 @@ export function FixedEditorToolbar() {
           size="icon-sm"
           aria-label="Undo"
           disabled={!state.canUndo}
-          onClick={() => editorChain(editor).undo().run()}
+          onClick={() => editor.chain().focus().undo().run()}
         >
           <UndoIcon />
         </Button>
@@ -373,11 +389,19 @@ export function FixedEditorToolbar() {
           size="icon-sm"
           aria-label="Redo"
           disabled={!state.canRedo}
-          onClick={() => editorChain(editor).redo().run()}
+          onClick={() => editor.chain().focus().redo().run()}
         >
           <RedoIcon />
         </Button>
       </ToolbarTooltip>
     </div>
   )
+}
+
+export function FixedEditorToolbar() {
+  const context = use(EditorContext)
+  if (!context?.blockEditor) {
+    return null
+  }
+  return <FixedEditorToolbarReady />
 }

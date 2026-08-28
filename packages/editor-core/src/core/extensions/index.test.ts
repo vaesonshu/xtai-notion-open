@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import { Editor } from "@tiptap/core"
+import type { JSONContent } from "@tiptap/core"
 import * as Y from "yjs"
+import { blocksToPmDoc } from "../block-schema/convert"
+import { createStarterBlocks } from "../block-schema/documents"
 import { createEditorExtensions } from "./index"
 import { createInitialDocument } from "../document/initial-document"
 import type { CollaborationUser } from "../types"
@@ -11,24 +14,26 @@ describe("editor core", () => {
     const document = createInitialDocument()
     const json = JSON.stringify(document)
 
-    expect(document.type).toBe("doc")
-    expect(document.content.length).toBeGreaterThan(0)
+    expect(document.length).toBeGreaterThan(0)
     expect(json).toContain('"heading"')
-    expect(json).toContain('"bulletList"')
-    expect(json).toContain('"blockquote"')
+    expect(json).toContain('"bulletListItem"')
+    expect(json).toContain('"quote"')
     expect(json).toContain('"codeBlock"')
   })
 
-  it("registers the MVP extensions", () => {
+  it("registers the block schema MVP extensions", () => {
     const names = createEditorExtensions().map((extension) => extension.name)
 
     expect(names).toEqual(
       expect.arrayContaining([
         "starterKit",
-        "taskList",
-        "taskItem",
+        "doc",
+        "blockGroup",
+        "blockContainer",
+        "paragraph",
+        "heading",
         "placeholder",
-        "imageUpload",
+        "mention",
       ])
     )
   })
@@ -38,7 +43,13 @@ describe("editor core", () => {
     const starterKit = extensions.find(
       (extension) => extension.name === "starterKit"
     )
-    const editor = new Editor({ extensions })
+    const editor = new Editor({
+      extensions,
+      content: blocksToPmDoc(
+        createStarterBlocks(),
+        new Editor({ extensions }).schema
+      ).toJSON() as JSONContent,
+    })
     const names = editor.extensionManager.extensions.map(
       (extension) => extension.name
     )

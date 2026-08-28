@@ -1,11 +1,11 @@
-import {
+﻿import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
 } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import * as Y from "yjs"
-import * as editorCore from "@xtai-notion/editor-core/server"
+import * as editorCore from "@xtai-notion/editor-core"
 import type { DocumentsRepository } from "./documents.repository"
 import { DocumentsService } from "./documents.service"
 import type { UserRepository } from "../auth/user.repository"
@@ -298,10 +298,15 @@ describe("DocumentsService", () => {
 
   it("returns published article detail with content for the public square", async () => {
     const yDoc = { destroy: vi.fn() }
-    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue({
-      type: "doc",
-      content: [],
-    })
+    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue([
+      {
+        id: "block-1",
+        type: "paragraph",
+        props: {},
+        content: [],
+        children: [],
+      },
+    ])
     vi.spyOn(editorCore, "documentToPlainText").mockReturnValue("hello")
     const repo = createRepo({
       findPublishedById: vi.fn().mockResolvedValue({
@@ -334,7 +339,15 @@ describe("DocumentsService", () => {
       author: "Ada",
       authorColor: "#24866B",
       category: "个人空间",
-      content: { type: "doc" },
+      content: [
+        {
+          id: "block-1",
+          type: "paragraph",
+          props: {},
+          content: [],
+          children: [],
+        },
+      ],
     })
     expect(persistence.loadDocument).toHaveBeenCalledWith("doc-1")
   })
@@ -358,22 +371,32 @@ describe("DocumentsService", () => {
     vi.spyOn(editorCore, "documentFromYjs").mockImplementation(() => {
       loadCount += 1
       if (loadCount === 1) {
-        return {
-          type: "doc",
-          content: [
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "mention",
-                  attrs: { id: "doc-2", label: "Other" },
-                },
-              ],
-            },
-          ],
-        }
+        return [
+          {
+            id: "block-1",
+            type: "paragraph",
+            props: {},
+            content: [
+              {
+                type: "mention",
+                id: "doc-2",
+                label: "Other",
+                href: "/documents/doc-2",
+              },
+            ],
+            children: [],
+          },
+        ]
       }
-      return { type: "doc", content: [] }
+      return [
+        {
+          id: "block-empty",
+          type: "paragraph",
+          props: {},
+          content: [],
+          children: [],
+        },
+      ]
     })
     const repo = createRepo({
       listForUser: vi.fn().mockResolvedValue([

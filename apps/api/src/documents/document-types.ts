@@ -1,3 +1,5 @@
+﻿import type { Block } from "@xtai-notion/editor-core"
+
 export type DocumentRole = "owner" | "editor" | "viewer"
 export type PublicationStatus = "draft" | "pending" | "published"
 
@@ -20,6 +22,7 @@ export interface DocumentRow {
   created_at: Date
   updated_at: Date
   publication_status?: PublicationStatus
+  schema_version?: number
   rejection_reason?: string | null
   published_at?: Date | null
   published_by?: string | null
@@ -59,7 +62,7 @@ export interface PublishedArticle {
 }
 
 export interface PublishedArticleDetail extends PublishedArticle {
-  content: Record<string, unknown>
+  content: Block[]
 }
 
 export interface PublishedArticleSource {

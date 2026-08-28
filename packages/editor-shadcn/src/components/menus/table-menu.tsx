@@ -10,65 +10,35 @@ import {
   XIcon,
 } from "../../icons"
 import { Button } from "../../ui/button"
-import { useEditorInstance } from "@xtai-notion/editor-react"
+import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 
 type TableAction = {
   label: string
   run: (editor: Editor) => void
 }
 
-/** Table 扩展命令由 core 注册；默认 ChainedCommands 类型未合并这些 API。 */
-type TableChain = ReturnType<Editor["chain"]> & {
-  addRowBefore: () => ReturnType<Editor["chain"]>
-  addRowAfter: () => ReturnType<Editor["chain"]>
-  addColumnBefore: () => ReturnType<Editor["chain"]>
-  addColumnAfter: () => ReturnType<Editor["chain"]>
-  deleteRow: () => ReturnType<Editor["chain"]>
-  deleteColumn: () => ReturnType<Editor["chain"]>
-  deleteTable: () => ReturnType<Editor["chain"]>
-}
-
-function tableChain(editor: Editor): TableChain {
-  return editor.chain().focus() as TableChain
-}
-
 // 行/列增删操作，直接映射到官方 table 命令。
 const TABLE_ACTIONS: TableAction[] = [
   {
     label: "在上方插入行",
-    run: (editor) => {
-      tableChain(editor).addRowBefore().run()
-    },
+    run: (editor) => editor.chain().focus().addRowBefore().run(),
   },
   {
     label: "在下方插入行",
-    run: (editor) => {
-      tableChain(editor).addRowAfter().run()
-    },
+    run: (editor) => editor.chain().focus().addRowAfter().run(),
   },
   {
     label: "在左侧插入列",
-    run: (editor) => {
-      tableChain(editor).addColumnBefore().run()
-    },
+    run: (editor) => editor.chain().focus().addColumnBefore().run(),
   },
   {
     label: "在右侧插入列",
-    run: (editor) => {
-      tableChain(editor).addColumnAfter().run()
-    },
+    run: (editor) => editor.chain().focus().addColumnAfter().run(),
   },
-  {
-    label: "删除行",
-    run: (editor) => {
-      tableChain(editor).deleteRow().run()
-    },
-  },
+  { label: "删除行", run: (editor) => editor.chain().focus().deleteRow().run() },
   {
     label: "删除列",
-    run: (editor) => {
-      tableChain(editor).deleteColumn().run()
-    },
+    run: (editor) => editor.chain().focus().deleteColumn().run(),
   },
 ]
 
@@ -79,7 +49,8 @@ function ActionIcon({ label }: { label: string }) {
 
 /** 表格选中时的浮动工具栏，提供行/列增删与删除表格操作。 */
 export function TableMenu() {
-  const editor = useEditorInstance()
+  const blockEditor = useBlockEditor()
+  const editor = blockEditor.tiptap
 
   const isInTable = useEditorState({
     editor,
@@ -121,7 +92,7 @@ export function TableMenu() {
           variant="ghost"
           size="icon-sm"
           aria-label="删除表格"
-          onClick={() => tableChain(editor).deleteTable().run()}
+          onClick={() => editor.chain().focus().deleteTable().run()}
         >
           <XIcon />
         </Button>

@@ -3,7 +3,24 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./*"],
-      "@workspace/ui/*": ["../../packages/ui/src/*"]
+      "@workspace/ui/*": ["../../packages/ui/src/*"],
+      "@workspace/editor": ["../../packages/editor/src/index.ts"],
+      "@workspace/editor/*": ["../../packages/editor/src/*"],
+      "@xtai-notion/editor-core": ["../../packages/editor-core/src/index.ts"],
+      "@xtai-notion/editor-core/*": ["../../packages/editor-core/src/core/*"],
+      "@xtai-notion/editor-react/collaboration/*": [
+        "../../packages/editor-react/src/collaboration/*"
+      ],
+      "@xtai-notion/editor-react": [
+        "../../packages/editor-react/src/index.ts"
+      ],
+      "@xtai-notion/editor-react/*": [
+        "../../packages/editor-react/src/react/*"
+      ],
+      "@xtai-notion/editor-shadcn": [
+        "../../packages/editor-shadcn/src/index.ts"
+      ],
+      "@xtai-notion/editor-shadcn/*": ["../../packages/editor-shadcn/src/*"]
     },
     "plugins": [
       {

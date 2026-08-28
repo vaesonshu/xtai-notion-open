@@ -1,53 +1,44 @@
-"use client"
+﻿"use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
 import type { Node } from "@tiptap/core"
-import { Editor } from "@tiptap/core"
-import {
-  createEditorExtensions,
-  createInitialDocument,
-  type CanvasImageFetchHandler,
-  type EditorDocument,
-  type ImageUploadHandler,
-} from "@xtai-notion/editor-core"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { BlockEditor } from "@xtai-notion/editor-core"
+import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import { createInitialDocument } from "@xtai-notion/editor-core/document/initial-document"
+import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
+import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
 import { EditorContext } from "../context/editor-context"
 
 export type EditorProviderProps = {
-  initialContent?: EditorDocument
+  initialContent?: Block[]
   editable?: boolean
-  onChange?: (document: EditorDocument) => void
+  onChange?: (blocks: Block[]) => void
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
-  /** ?? React NodeView ??????????? core ? Node? */
+  /** shadcn 等 UI 层注入的 NodeView 扩展；省略时使用 core 默认节点定义。 */
   imageUploadNode?: Node
-  /** ?? Excalidraw NodeView ???????? core ? Node? */
   canvasBlockNode?: Node
   children: ReactNode
 }
 
-type EditorInitOptions = ConstructorParameters<typeof Editor>[0] & {
-  immediatelyRender?: boolean
-}
-
-function createLocalEditor(options: {
-  initialContent?: EditorDocument
+function createLocalBlockEditor(options: {
+  initialContent?: Block[]
   editable: boolean
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
   imageUploadNode?: Node
   canvasBlockNode?: Node
-}): Editor {
-  return new Editor({
-    extensions: createEditorExtensions({
+}): BlockEditor {
+  return new BlockEditor({
+    initialContent: options.initialContent ?? createInitialDocument(),
+    editable: options.editable,
+    extensions: {
       imageUpload: options.imageUpload,
       canvasImageFetch: options.canvasImageFetch,
       imageUploadNode: options.imageUploadNode,
       canvasBlockNode: options.canvasBlockNode,
-    }),
-    content: options.initialContent ?? createInitialDocument(),
-    editable: options.editable,
-    immediatelyRender: false,
-  } as EditorInitOptions)
+    },
+  })
 }
 
 export function EditorProvider({
@@ -60,12 +51,13 @@ export function EditorProvider({
   onChange,
   children,
 }: EditorProviderProps) {
-  const editorRef = useRef<Editor | null>(null)
-  const [editor, setEditor] = useState<Editor | null>(null)
+  const blockEditorRef = useRef<BlockEditor | null>(null)
+  // 首帧保持 null，与服务端 SSR 一致，避免水合时骨架屏与正文 DOM 不匹配
+  const [blockEditor, setBlockEditor] = useState<BlockEditor | null>(null)
 
   useEffect(() => {
-    if (!editorRef.current) {
-      const instance = createLocalEditor({
+    if (!blockEditorRef.current) {
+      const instance = createLocalBlockEditor({
         initialContent,
         editable,
         imageUpload,
@@ -73,39 +65,32 @@ export function EditorProvider({
         imageUploadNode,
         canvasBlockNode,
       })
-      editorRef.current = instance
-      setEditor(instance)
+      blockEditorRef.current = instance
+      setBlockEditor(instance)
     }
 
     return () => {
-      editorRef.current?.destroy()
-      editorRef.current = null
-      setEditor(null)
+      blockEditorRef.current?.destroy()
+      blockEditorRef.current = null
+      setBlockEditor(null)
     }
-  }, [])
+  }, []) // 内容变更由父级 key 触发重挂载，避免误覆盖本地编辑
 
   useEffect(() => {
-    if (!editor) {
-      return
-    }
-    editor.setEditable(editable)
-  }, [editor, editable])
+    blockEditor?.setEditable(editable)
+  }, [blockEditor, editable])
 
   useEffect(() => {
-    if (!editor || !onChange) {
+    if (!blockEditor || !onChange) {
       return
     }
-    const handleUpdate = () => onChange(editor.getJSON() as EditorDocument)
-    editor.on("update", handleUpdate)
-    return () => {
-      editor.off("update", handleUpdate)
-    }
-  }, [editor, onChange])
+    return blockEditor.onChange(onChange)
+  }, [blockEditor, onChange])
 
   return (
     <EditorContext
       value={{
-        editor,
+        blockEditor,
         collaborationStatus: null,
         collaborators: [],
         collaborationUser: null,

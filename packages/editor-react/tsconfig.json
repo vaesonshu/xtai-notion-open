@@ -2,7 +2,13 @@
   "extends": "@workspace/typescript-config/react-library.json",
   "compilerOptions": {
     "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "paths": {
+      "@xtai-notion/editor-core": ["../editor-core/src/index.ts"],
+      "@xtai-notion/editor-core/*": ["../editor-core/src/core/*"],
+      "@xtai-notion/editor-react/collaboration/*": ["./src/collaboration/*"],
+      "@xtai-notion/editor-react/*": ["./src/react/*"]
+    }
   },
   "include": ["."],
   "exclude": ["node_modules", "dist"]

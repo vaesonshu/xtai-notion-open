@@ -23,13 +23,13 @@ import {
   useFloating,
   type VirtualElement,
 } from "@floating-ui/react"
-import { useEditorInstance } from "@xtai-notion/editor-react"
+import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 import {
   filterMentionItems,
   insertMention,
   type MentionableItem,
-} from "@xtai-notion/editor-core"
-import { useMentionProvider } from "@xtai-notion/editor-react"
+} from "@xtai-notion/editor-core/mention"
+import { useMentionProvider } from "@xtai-notion/editor-react/providers/mention-provider"
 
 const mentionMenuPluginKey = new PluginKey("mentionMenu")
 
@@ -41,7 +41,7 @@ type MentionSuggestionState = {
 }
 
 export function MentionMenu() {
-  const editor = useEditorInstance()
+  const editor = useBlockEditor().tiptap
   const mentionProvider = useMentionProvider()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<MentionableItem[]>([])

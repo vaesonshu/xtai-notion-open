@@ -1,6 +1,15 @@
-import { HocuspocusProvider } from "@hocuspocus/provider"
+﻿import { HocuspocusProvider } from "@hocuspocus/provider"
 import type { INestApplication } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
+import {
+  appendTextToBlockSchemaYDoc,
+  blockSchemaYDocHasContent,
+  createBlockSchemaYDoc,
+  documentFromYjs,
+  documentToPlainText,
+  generateBlockId,
+} from "@xtai-notion/editor-core"
+import type { Block } from "@xtai-notion/editor-core"
 import { randomUUID } from "node:crypto"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import * as Y from "yjs"
@@ -37,6 +46,20 @@ function waitFor(
     }
     tick()
   })
+}
+
+function createParagraphBlock(text: string): Block {
+  return {
+    id: generateBlockId(),
+    type: "paragraph",
+    props: {},
+    content: [{ type: "text", text, styles: {} }],
+    children: [],
+  }
+}
+
+function yDocPlainText(doc: Y.Doc): string {
+  return documentToPlainText(documentFromYjs(doc))
 }
 
 describe("collaboration (integration)", () => {
@@ -104,7 +127,7 @@ describe("collaboration (integration)", () => {
 
   function connect(
     userId: string,
-    ydoc = new Y.Doc()
+    ydoc = createBlockSchemaYDoc()
   ): {
     document: Y.Doc
     provider: HocuspocusProvider
@@ -119,13 +142,12 @@ describe("collaboration (integration)", () => {
   }
 
   it("replays snapshot plus ordered updates after flush and compact", async () => {
-    const first = new Y.Doc()
-    first.getText("content").insert(0, "Hello")
+    const first = createBlockSchemaYDoc([createParagraphBlock("Hello")])
     const firstUpdate = Y.encodeStateAsUpdate(first)
 
     const second = new Y.Doc()
     Y.applyUpdate(second, firstUpdate)
-    second.getText("content").insert(5, " world")
+    appendTextToBlockSchemaYDoc(second, " world")
     const secondUpdate = Y.encodeStateAsUpdate(
       second,
       Y.encodeStateVector(first)
@@ -136,7 +158,7 @@ describe("collaboration (integration)", () => {
     await persistence.flushDocument(documentId)
 
     const loadedAfterFlush = await persistence.loadDocument(documentId)
-    expect(loadedAfterFlush.getText("content").toString()).toBe("Hello world")
+    expect(yDocPlainText(loadedAfterFlush)).toBe("Hello world")
     loadedAfterFlush.destroy()
 
     await persistence.compactDocument(documentId)
@@ -154,13 +176,13 @@ describe("collaboration (integration)", () => {
     expect(snapshotCount).toBeGreaterThan(0)
 
     const loadedAfterCompact = await persistence.loadDocument(documentId)
-    expect(loadedAfterCompact.getText("content").toString()).toBe("Hello world")
+    expect(yDocPlainText(loadedAfterCompact)).toBe("Hello world")
     loadedAfterCompact.destroy()
     first.destroy()
     second.destroy()
   })
 
-  it("syncs text between two editors in real time", async () => {
+  it("syncs block schema text between two editors in real time", async () => {
     const a = connect(USERS.owner)
     const b = connect(USERS.editor)
 
@@ -169,13 +191,12 @@ describe("collaboration (integration)", () => {
       waitFor(() => b.provider.synced),
     ])
 
-    a.document.getText("content").insert(0, "pair-sync")
+    appendTextToBlockSchemaYDoc(a.document, "pair-sync")
 
-    await waitFor(() =>
-      b.document.getText("content").toString().includes("pair-sync")
-    )
+    await waitFor(() => yDocPlainText(b.document).includes("pair-sync"))
 
-    expect(b.document.getText("content").toString()).toContain("pair-sync")
+    expect(yDocPlainText(b.document)).toContain("pair-sync")
+    expect(blockSchemaYDocHasContent(b.document)).toBe(true)
 
     a.provider.destroy()
     b.provider.destroy()
@@ -192,18 +213,16 @@ describe("collaboration (integration)", () => {
       waitFor(() => viewer.provider.synced),
     ])
 
-    editor.document.getText("content").insert(0, "baseline-")
-    await waitFor(() =>
-      viewer.document.getText("content").toString().includes("baseline-")
-    )
+    appendTextToBlockSchemaYDoc(editor.document, "baseline-")
+    await waitFor(() => yDocPlainText(viewer.document).includes("baseline-"))
 
-    const before = viewer.document.getText("content").toString()
-    viewer.document.getText("content").insert(0, "viewer-write-")
+    const before = yDocPlainText(viewer.document)
+    appendTextToBlockSchemaYDoc(viewer.document, "viewer-write-")
 
     await new Promise((resolve) => setTimeout(resolve, 400))
 
-    expect(editor.document.getText("content").toString()).toBe(before)
-    expect(viewer.document.getText("content").toString()).not.toBe(before)
+    expect(yDocPlainText(editor.document)).toBe(before)
+    expect(yDocPlainText(viewer.document)).not.toBe(before)
 
     editor.provider.destroy()
     viewer.provider.destroy()
@@ -212,7 +231,7 @@ describe("collaboration (integration)", () => {
   })
 
   it("does not sync document state to non-members", async () => {
-    const outsiderDoc = new Y.Doc()
+    const outsiderDoc = createBlockSchemaYDoc()
     let authFailed = false
     const provider = new HocuspocusProvider({
       url: websocketUrl,
@@ -229,19 +248,17 @@ describe("collaboration (integration)", () => {
     )
 
     expect(authFailed).toBe(true)
-    expect(outsiderDoc.getText("content").toString()).not.toContain("pair-sync")
+    expect(yDocPlainText(outsiderDoc)).not.toContain("pair-sync")
 
     provider.destroy()
     outsiderDoc.destroy()
   })
 
-  it("restores persisted content after collaboration service restart", async () => {
+  it("restores persisted block schema content after collaboration service restart", async () => {
     const before = connect(USERS.owner)
     await waitFor(() => before.provider.synced)
-    before.document.getText("content").insert(0, "persist-me")
-    await waitFor(() =>
-      before.document.getText("content").toString().includes("persist-me")
-    )
+    appendTextToBlockSchemaYDoc(before.document, "persist-me")
+    await waitFor(() => yDocPlainText(before.document).includes("persist-me"))
 
     const snapshotUpdate = Y.encodeStateAsUpdate(before.document)
     persistence.enqueueUpdate(documentId, snapshotUpdate)
@@ -271,16 +288,16 @@ describe("collaboration (integration)", () => {
     websocketUrl = server.webSocketURL
 
     const loaded = await persistence.loadDocument(documentId)
-    expect(loaded.getText("content").toString()).toContain("persist-me")
+    expect(yDocPlainText(loaded)).toContain("persist-me")
     loaded.destroy()
 
     const after = connect(USERS.editor)
     await waitFor(() => after.provider.synced, 10_000)
     await waitFor(
-      () => after.document.getText("content").toString().includes("persist-me"),
+      () => yDocPlainText(after.document).includes("persist-me"),
       10_000
     )
-    expect(after.document.getText("content").toString()).toContain("persist-me")
+    expect(yDocPlainText(after.document)).toContain("persist-me")
 
     after.provider.destroy()
     after.document.destroy()

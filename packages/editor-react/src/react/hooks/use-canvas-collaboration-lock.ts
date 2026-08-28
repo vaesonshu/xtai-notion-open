@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { use, useCallback, useEffect, useRef } from "react"
 import { EditorContext } from "../context/editor-context"

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import {
   ImageIcon,
@@ -9,7 +9,7 @@ import {
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react"
 import { useRef, useState } from "react"
 import { Button } from "../../ui/button"
-import { uploadImage } from "@xtai-notion/editor-core"
+import { uploadImage } from "@xtai-notion/editor-core/image-upload"
 
 type UploadState =
   | { status: "idle" }

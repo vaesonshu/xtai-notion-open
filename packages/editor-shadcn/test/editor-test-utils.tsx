@@ -1,7 +1,8 @@
 import { useEffect, type ReactNode } from "react"
 import { use } from "react"
-import type { EditorProviderProps } from "@xtai-notion/editor-react"
-import { EditorContext, EditorProvider } from "@xtai-notion/editor-react"
+import type { EditorProviderProps } from "@xtai-notion/editor-react/providers/editor-provider"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
+import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
 import { ShadcnEditorProvider } from "../src/shadcn-editor-provider"
 import { CanvasBlockNode } from "../src/components/nodes/canvas-block-node-extension"
 import { ImageUploadNode } from "../src/components/nodes/image-upload-node-extension"
@@ -17,10 +18,10 @@ export function resetLatestEditor() {
 export function EditorProbe() {
   const context = use(EditorContext)
   useEffect(() => {
-    if (context?.editor) {
-      latestEditor = context.editor
+    if (context?.blockEditor) {
+      latestEditor = context.blockEditor.tiptap
     }
-  }, [context?.editor])
+  }, [context?.blockEditor])
   return null
 }
 

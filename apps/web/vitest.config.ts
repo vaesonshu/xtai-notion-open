@@ -13,10 +13,31 @@ export default defineConfig({
         ),
       },
       {
+        find: /^@xtai-notion\/editor-core\/(.+)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor-core/src/core/$1"
+        ),
+      },
+      {
         find: "@xtai-notion/editor-core",
         replacement: path.resolve(
           __dirname,
           "../../packages/editor-core/src/index.ts"
+        ),
+      },
+      {
+        find: /^@xtai-notion\/editor-react\/collaboration\/(.+)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor-react/src/collaboration/$1"
+        ),
+      },
+      {
+        find: /^@xtai-notion\/editor-react\/(.+)$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor-react/src/react/$1"
         ),
       },
       {
@@ -31,6 +52,48 @@ export default defineConfig({
         replacement: path.resolve(
           __dirname,
           "../../packages/editor-shadcn/src/index.ts"
+        ),
+      },
+      {
+        find: "@workspace/editor/styles.css",
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor/src/styles/editor.css"
+        ),
+      },
+      {
+        find: "@workspace/editor/react",
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor/src/react/index.ts"
+        ),
+      },
+      {
+        find: "@workspace/editor/components",
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor/src/components/index.ts"
+        ),
+      },
+      {
+        find: "@workspace/editor/core",
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor/src/core/index.ts"
+        ),
+      },
+      {
+        find: "@workspace/editor/collaboration",
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor/src/collaboration/index.ts"
+        ),
+      },
+      {
+        find: "@workspace/editor",
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/editor/src/index.ts"
         ),
       },
       {

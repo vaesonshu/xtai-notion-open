@@ -2,9 +2,17 @@
 import { formatEditorSnapshot } from "./playground-utils"
 
 describe("formatEditorSnapshot", () => {
-  it("formats the latest editor document as inspectable JSON", () => {
-    expect(formatEditorSnapshot({ type: "doc", content: [] })).toBe(
-      '{\n  "type": "doc",\n  "content": []\n}',
-    )
+  it("formats the latest block document as inspectable JSON", () => {
+    expect(
+      formatEditorSnapshot([
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "paragraph",
+          props: {},
+          content: [],
+          children: [],
+        },
+      ])
+    ).toContain('"type": "paragraph"')
   })
 })

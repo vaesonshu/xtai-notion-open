@@ -47,6 +47,12 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
+    "./migrate": {
+      "import": "./dist/migrate/index.js",
+      "require": "./dist/migrate/index.cjs",
+      "types": "./dist/migrate/index.d.ts"
+    },
+    "./*": "./src/core/*",
     "./server": {
       "import": "./dist/server.js",
       "require": "./dist/server.cjs",

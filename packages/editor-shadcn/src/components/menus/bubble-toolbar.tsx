@@ -27,8 +27,8 @@ import {
   setEditorLink,
   toggleInlineMark,
   type InlineMark,
-} from "@xtai-notion/editor-core"
-import { useEditorInstance } from "@xtai-notion/editor-react"
+} from "@xtai-notion/editor-core/commands"
+import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 
 export type ShouldShowBubbleToolbarProps = {
   editor: Editor
@@ -190,7 +190,7 @@ function BubbleToolbarControls({ editor }: { editor: Editor }) {
 }
 
 export function BubbleToolbar() {
-  const editor = useEditorInstance()
+  const editor = useBlockEditor().tiptap
 
   if (!editor.isEditable) {
     return null

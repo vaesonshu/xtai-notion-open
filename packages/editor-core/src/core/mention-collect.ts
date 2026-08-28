@@ -1,18 +1,35 @@
-import type { JSONContent } from "@tiptap/core"
+import type { Block, InlineContent, TableContent } from "./block-schema/types"
 
-/** 从 TipTap JSON 递归收集 mention 节点引用的文档 id（@提及关系）。 */
-export function collectMentionIds(document: JSONContent): string[] {
+/** 从 Block[] 递归收集 mention 引用的文档 id（@提及关系）。 */
+export function collectMentionIds(blocks: Block[]): string[] {
   const ids: string[] = []
 
-  const visit = (node: JSONContent) => {
-    if (node.type === "mention" && typeof node.attrs?.id === "string") {
-      ids.push(node.attrs.id)
-    }
-    if (Array.isArray(node.content)) {
-      for (const child of node.content) visit(child)
+  const visitInline = (content: InlineContent[]) => {
+    for (const item of content) {
+      if (item.type === "mention" && item.id) {
+        ids.push(item.id)
+      } else if (item.type === "link") {
+        visitInline(item.content)
+      }
     }
   }
 
-  visit(document)
+  const visit = (items: Block[]) => {
+    for (const block of items) {
+      if (Array.isArray(block.content)) {
+        visitInline(block.content)
+      } else if (block.content && "rows" in block.content) {
+        const table = block.content as TableContent
+        for (const row of table.rows) {
+          for (const cell of row.cells) {
+            visitInline(cell.content)
+          }
+        }
+      }
+      visit(block.children)
+    }
+  }
+
+  visit(blocks)
   return ids
 }

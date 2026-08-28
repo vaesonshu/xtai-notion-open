@@ -19,6 +19,7 @@
     "@xtai-notion/editor-core": "workspace:*",
     "@xtai-notion/editor-react": "workspace:*",
     "@xtai-notion/editor-shadcn": "workspace:*",
+    "@workspace/editor": "workspace:*",
     "@workspace/icons": "workspace:*",
     "@workspace/ui": "workspace:*",
     "@xyflow/react": "^12.11.3",

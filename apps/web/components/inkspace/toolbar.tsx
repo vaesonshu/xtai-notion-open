@@ -1,10 +1,11 @@
 "use client"
 
-import type { CollaborationStatus } from "@xtai-notion/editor-react/collaboration"
+import type { CollaborationStatus } from "@xtai-notion/editor-react/collaboration/types"
 import {
   useCollaborationStatus,
   useCollaborators,
 } from "@xtai-notion/editor-react"
+import type { CollaborationUser } from "@xtai-notion/editor-core"
 import {
   ChevronDownIcon,
   CloudCheckIcon,
@@ -157,7 +158,7 @@ function CollaboratorAvatars() {
   return (
     <TooltipProvider delay={0}>
       <AvatarGroup>
-        {visible.map((user) => (
+        {visible.map((user: CollaborationUser) => (
           <Tooltip key={user.id}>
             <TooltipTrigger
               render={

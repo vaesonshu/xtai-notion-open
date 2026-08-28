@@ -4,6 +4,13 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
+      "@xtai-notion/editor-core": ["../editor-core/src/index.ts"],
+      "@xtai-notion/editor-core/*": ["../editor-core/src/core/*"],
+      "@xtai-notion/editor-react/collaboration/*": [
+        "../editor-react/src/collaboration/*"
+      ],
+      "@xtai-notion/editor-react": ["../editor-react/src/index.ts"],
+      "@xtai-notion/editor-react/*": ["../editor-react/src/react/*"],
       "@xtai-notion/editor-shadcn/ui/*": ["./src/ui/*"]
     }
   },

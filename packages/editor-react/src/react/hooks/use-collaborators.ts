@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { use } from "react"
 import type { CollaborationUser } from "@xtai-notion/editor-core"

@@ -1,14 +1,14 @@
-import { render, screen } from "@testing-library/react"
+﻿import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import type { CollaborationStatus as Status } from "@xtai-notion/editor-react/collaboration"
-import { EditorContext } from "@xtai-notion/editor-react"
+import type { CollaborationStatus as Status } from "@xtai-notion/editor-react/collaboration/types"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { CollaborationStatus } from "./collaboration-status"
 
 function renderStatus(status: Status) {
   return render(
     <EditorContext
       value={{
-        editor: null,
+        blockEditor: null,
         collaborationStatus: status,
         collaborators: [],
         collaborationUser: null,

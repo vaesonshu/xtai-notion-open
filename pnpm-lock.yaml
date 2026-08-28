@@ -129,6 +129,9 @@ importers:
       '@emoji-mart/data':
         specifier: ^1.2.1
         version: 1.2.1
+      '@workspace/editor':
+        specifier: workspace:*
+        version: link:../../packages/editor
       '@workspace/icons':
         specifier: workspace:*
         version: link:../../packages/icons
@@ -339,6 +342,12 @@ importers:
       '@xtai-notion/editor-core':
         specifier: workspace:*
         version: link:../editor-core
+      react:
+        specifier: 19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: 19.2.4
+        version: 19.2.4(react@19.2.4)
       yjs:
         specifier: 13.6.32
         version: 13.6.32
@@ -364,12 +373,6 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1
-      react:
-        specifier: 19.2.4
-        version: 19.2.4
-      react-dom:
-        specifier: 19.2.4
-        version: 19.2.4(react@19.2.4)
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(tsx@4.20.3)(typescript@5.9.3)

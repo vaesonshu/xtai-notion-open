@@ -1,0 +1,2 @@
+ALTER TABLE "document"
+ADD COLUMN "schema_version" INTEGER NOT NULL DEFAULT 1;

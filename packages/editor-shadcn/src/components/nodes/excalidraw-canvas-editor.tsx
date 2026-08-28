@@ -19,17 +19,17 @@ import {
   useRef,
 } from "react"
 import { toast } from "sonner"
-import { exportCanvasToBlob } from "@xtai-notion/editor-core"
+import { exportCanvasToBlob } from "@xtai-notion/editor-core/canvas/canvas-export"
 import {
   externalizeCanvasFiles,
   type CanvasImageFetchHandler,
-} from "@xtai-notion/editor-core"
+} from "@xtai-notion/editor-core/canvas/canvas-files"
 import {
   parseCanvasSnapshot,
   stringifyCanvasSnapshot,
-} from "@xtai-notion/editor-core"
-import type { ImageUploadHandler } from "@xtai-notion/editor-core"
-import { useDocumentTheme } from "@xtai-notion/editor-react"
+} from "@xtai-notion/editor-core/canvas/canvas-snapshot"
+import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
+import { useDocumentTheme } from "@xtai-notion/editor-react/hooks/use-document-theme"
 
 export type ExcalidrawCanvasEditorHandle = {
   flushPending: () => Promise<void>

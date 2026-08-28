@@ -3,7 +3,34 @@ export type {
   EditorDocument,
   EditorExtensionOptions,
 } from "./types"
-export { createEditorExtensions, MentionNode } from "./extensions"
+export type {
+  Block,
+  BlockType,
+  InlineContent,
+  InlineStyles,
+  PartialBlock,
+  TableContent,
+} from "./block-schema/types"
+export { BlockEditor } from "./block-editor"
+export { MAX_NEST_DEPTH, generateBlockId } from "./block-schema/ids"
+export {
+  createEmptyBlocks,
+  createStarterBlocks,
+  isBlockArray,
+} from "./block-schema/documents"
+export {
+  CURRENT_SCHEMA_VERSION,
+  encodeLegacyV1FixtureSnapshot,
+  legacyJsonToBlocks,
+  migrateV1YDocToV2,
+  readYDocSchemaVersion,
+  writeYDocSchemaVersion,
+} from "./migrate"
+export {
+  createBlockSchemaExtensions,
+  createEditorExtensions,
+  MentionNode,
+} from "./extensions"
 export { CanvasBlockNode } from "./extensions/canvas-block-node"
 export { ImageUploadNode } from "./extensions/image-upload-node"
 export { createInitialDocument } from "./document/initial-document"
@@ -37,7 +64,13 @@ export {
   uploadImage,
   validateImageFile,
 } from "./image-upload"
-export { documentFromYjs, documentToPlainText } from "./yjs-document"
+export {
+  appendTextToBlockSchemaYDoc,
+  blockSchemaYDocHasContent,
+  createBlockSchemaYDoc,
+  documentFromYjs,
+  documentToPlainText,
+} from "./yjs-document"
 export { collectMentionIds } from "./mention-collect"
 export type {
   ImageMimeType,

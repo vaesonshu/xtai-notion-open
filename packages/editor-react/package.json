@@ -16,6 +16,8 @@
     "@tiptap/core": "3.29.2",
     "@tiptap/react": "3.29.2",
     "@xtai-notion/editor-core": "workspace:*",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "yjs": "13.6.32"
   },
   "devDependencies": {
@@ -26,8 +28,6 @@
     "@workspace/typescript-config": "workspace:*",
     "eslint": "^9.39.4",
     "jsdom": "^30.0.1",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
     "tsup": "^8.5.0",
     "typescript": "^5",
     "vitest": "^4.1.10"
@@ -46,7 +46,9 @@
       "import": "./dist/collaboration/index.js",
       "require": "./dist/collaboration/index.cjs",
       "types": "./dist/collaboration/index.d.ts"
-    }
+    },
+    "./collaboration/*": "./src/collaboration/*",
+    "./*": "./src/react/*"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

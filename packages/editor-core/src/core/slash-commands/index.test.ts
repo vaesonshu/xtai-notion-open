@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { Editor } from "@tiptap/core"
-import { createEditorExtensions } from "../extensions"
+import { BlockEditor } from "../block-editor"
 import {
   executeSlashCommand,
   filterCommands,
@@ -9,14 +8,40 @@ import {
   SLASH_COMMANDS,
 } from "./index"
 
-const editors: Editor[] = []
+const editors: BlockEditor[] = []
+const EMPTY_BLOCK_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+const TEXT_BLOCK_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 
-function createTestEditor(): Editor {
-  const editor = new Editor({
-    extensions: createEditorExtensions(),
-    content: "<p>Convert this block</p>",
+function createEmptyBlockEditor(): BlockEditor {
+  const editor = new BlockEditor({
+    initialContent: [
+      {
+        id: EMPTY_BLOCK_ID,
+        type: "paragraph",
+        props: {},
+        content: [],
+        children: [],
+      },
+    ],
   })
+  editor.tiptap.commands.setTextSelection(3)
+  editors.push(editor)
+  return editor
+}
 
+function createTextBlockEditor(): BlockEditor {
+  const editor = new BlockEditor({
+    initialContent: [
+      {
+        id: TEXT_BLOCK_ID,
+        type: "paragraph",
+        props: {},
+        content: [{ type: "text", text: "Convert this block", styles: {} }],
+        children: [],
+      },
+    ],
+  })
+  editor.tiptap.commands.setTextSelection(5)
   editors.push(editor)
   return editor
 }
@@ -100,41 +125,50 @@ describe("filterSlashCommands", () => {
 })
 
 describe("executeSlashCommand", () => {
-  it("converts the current block through the editor chain contract", () => {
-    const editor = createTestEditor()
+  it("converts an empty block in place", () => {
+    const editor = createEmptyBlockEditor()
 
     expect(executeSlashCommand(editor, "code-block")).toBe(true)
-    expect(editor.getJSON().content?.[0]).toMatchObject({ type: "codeBlock" })
+    expect(editor.document[0]?.type).toBe("codeBlock")
+    expect(editor.document[0]?.id).toBe(EMPTY_BLOCK_ID)
+  })
+
+  it("inserts a new block after a block that already has text", () => {
+    const editor = createTextBlockEditor()
+
+    expect(executeSlashCommand(editor, "code-block")).toBe(true)
+    expect(editor.document[0]?.type).toBe("paragraph")
+    expect(editor.document[1]?.type).toBe("codeBlock")
   })
 
   it("returns false without changing the document for an unknown command", () => {
-    const editor = createTestEditor()
-    const before = editor.getJSON()
+    const editor = createEmptyBlockEditor()
+    const before = editor.document
 
     expect(executeSlashCommand(editor, "not-a-command")).toBe(false)
-    expect(editor.getJSON()).toEqual(before)
+    expect(editor.document).toEqual(before)
   })
 
   it.each([
     ["heading-2", 2],
     ["heading-3", 3],
-  ])("converts the current block to a level %i heading", (id, level) => {
-    const editor = createTestEditor()
+  ])("converts an empty block to a level %i heading", (id, level) => {
+    const editor = createEmptyBlockEditor()
 
     expect(executeSlashCommand(editor, id)).toBe(true)
-    expect(editor.getJSON().content?.[0]).toMatchObject({
+    expect(editor.document[0]).toMatchObject({
       type: "heading",
-      attrs: { level },
+      props: { level },
     })
   })
 
   it("keeps the legacy heading id as an alias for a level 1 heading", () => {
-    const editor = createTestEditor()
+    const editor = createEmptyBlockEditor()
 
     expect(executeSlashCommand(editor, "heading")).toBe(true)
-    expect(editor.getJSON().content?.[0]).toMatchObject({
+    expect(editor.document[0]).toMatchObject({
       type: "heading",
-      attrs: { level: 1 },
+      props: { level: 1 },
     })
   })
 })
