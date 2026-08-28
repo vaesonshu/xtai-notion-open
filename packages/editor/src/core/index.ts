@@ -11,6 +11,7 @@ export type {
   PartialBlock,
   TableContent,
 } from "./block-schema/types"
+export { BlockEditor } from "./block-editor"
 export { MAX_NEST_DEPTH, generateBlockId } from "./block-schema/ids"
 export {
   createEmptyBlocks,
