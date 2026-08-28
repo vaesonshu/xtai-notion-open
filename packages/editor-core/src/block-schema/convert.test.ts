@@ -1,5 +1,6 @@
-import { Editor } from "@tiptap/core"
+import { Editor, Node } from "@tiptap/core"
 import { afterEach, describe, expect, it } from "vitest"
+import { generateBlockId } from "./ids"
 import { createEmptyBlocks, createStarterBlocks } from "./documents"
 import { createBlockSchemaExtensions } from "../extensions"
 import { blocksToPmDoc, pmDocToBlocks } from "./convert"
@@ -111,5 +112,42 @@ describe("block pm roundtrip", () => {
   it("keeps at least one paragraph for empty input", () => {
     const editor = createEditor(createEmptyBlocks())
     expect(pmDocToBlocks(editor.state.doc)).toHaveLength(1)
+  })
+
+  it("falls back unknown PM blockContent nodes to paragraph blocks", () => {
+    const UnknownLegacyBlock = Node.create({
+      name: "unknownLegacyBlock",
+      group: "blockContent",
+      content: "inline*",
+    })
+    const extensions = [...createBlockSchemaExtensions(), UnknownLegacyBlock]
+    const editor = new Editor({ extensions })
+    const schema = editor.schema
+    const unknownLegacyBlock = schema.nodes.unknownLegacyBlock
+    const blockContainer = schema.nodes.blockContainer
+    const blockGroup = schema.nodes.blockGroup
+    const docType = schema.nodes.doc
+    if (!unknownLegacyBlock || !blockContainer || !blockGroup || !docType) {
+      throw new Error("block schema nodes missing for unknown type test")
+    }
+
+    const unknownContent = unknownLegacyBlock.create(
+      null,
+      schema.text("legacy inline")
+    )
+    const container = blockContainer.create({ id: generateBlockId() }, [
+      unknownContent,
+    ])
+    const group = blockGroup.create(null, [container])
+    const doc = docType.create(null, group)
+
+    const blocks = pmDocToBlocks(doc)
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]?.type).toBe("paragraph")
+    expect(blocks[0]?.content).toEqual([
+      { type: "text", text: "legacy inline", styles: {} },
+    ])
+
+    editor.destroy()
   })
 })

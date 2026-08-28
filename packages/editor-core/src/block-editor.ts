@@ -4,6 +4,7 @@ import type { EditorState, Transaction } from "@tiptap/pm/state"
 import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
 import { createEmptyBlocks } from "./block-schema/documents"
 import { generateBlockId, MAX_NEST_DEPTH } from "./block-schema/ids"
+import { handleTableBlockPaste } from "./block-schema/table-paste"
 import type { Block, PartialBlock } from "./block-schema/types"
 import { createBlockSchemaExtensions } from "./extensions"
 import type { EditorExtensionOptions } from "./types"
@@ -289,7 +290,12 @@ export class BlockEditor {
       editable: options.editable ?? true,
       editorProps: {
         handleKeyDown: (_view, event) => {
-          if (event.key === "Tab" && !event.altKey && !event.metaKey && !event.ctrlKey) {
+          if (
+            event.key === "Tab" &&
+            !event.altKey &&
+            !event.metaKey &&
+            !event.ctrlKey
+          ) {
             event.preventDefault()
             if (event.shiftKey) {
               this.unnestBlock()
@@ -300,6 +306,8 @@ export class BlockEditor {
           }
           return false
         },
+        // 表格单元格内粘贴块 JSON 时压成纯文本，避免嵌套块结构
+        handlePaste: (view, event) => handleTableBlockPaste(view, event),
       },
       // Next.js 需显式关闭首帧渲染，避免 SSR/水合与软导航后正文空白
       immediatelyRender: false,

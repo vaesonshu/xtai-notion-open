@@ -1,10 +1,15 @@
 import { TiptapTransformer } from "@hocuspocus/transformer"
 import { Editor } from "@tiptap/core"
 import type * as Y from "yjs"
-import { pmDocToBlocks } from "./block-schema/convert"
 import type { Block, InlineContent, TableContent } from "./block-schema/types"
+import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
+import { createStarterBlocks } from "./block-schema/documents"
 import { createEditorExtensions } from "./extensions"
 import { legacyJsonToBlocks } from "./migrate/legacy-json-to-blocks"
+import {
+  CURRENT_SCHEMA_VERSION,
+  writeYDocSchemaVersion,
+} from "./migrate/migrate-ydoc"
 
 /** 判断 fromYdoc 结果是否为块 schema（根下第一层为 blockGroup） */
 function isBlockSchemaJson(json: { content?: { type?: string }[] }): boolean {
@@ -74,4 +79,49 @@ export function documentToPlainText(blocks: Block[]): string {
 
   visit(blocks)
   return parts.join("\n").trim()
+}
+
+/** 用块 schema v2 初始化协作 Y.Doc（default XmlFragment + schemaVersion=2） */
+export function createBlockSchemaYDoc(blocks?: Block[]): Y.Doc {
+  const extensions = createEditorExtensions()
+  const editor = new Editor({ extensions })
+  const json = blocksToPmDoc(
+    blocks ?? createStarterBlocks(),
+    editor.schema
+  ).toJSON()
+  editor.destroy()
+
+  const yDoc = TiptapTransformer.extensions(extensions).toYdoc(json, "default")
+  writeYDocSchemaVersion(yDoc, CURRENT_SCHEMA_VERSION)
+  return yDoc
+}
+
+/** 在已有块 schema Y.Doc 末尾插入纯文本（供协作集成测试使用） */
+export function appendTextToBlockSchemaYDoc(yDoc: Y.Doc, text: string): void {
+  const extensions = createEditorExtensions({ document: yDoc })
+  const editor = new Editor({ extensions })
+  editor.chain().focus("end").insertContent(text).run()
+  editor.destroy()
+}
+
+/** 判断 Y.Doc 的 default fragment 是否已有块内容 */
+export function blockSchemaYDocHasContent(yDoc: Y.Doc): boolean {
+  return documentFromYjs(yDoc).some((block) => {
+    if (Array.isArray(block.content)) {
+      return block.content.some(
+        (item) => item.type === "text" && item.text.trim().length > 0
+      )
+    }
+    if (block.content && "rows" in block.content) {
+      const table = block.content as TableContent
+      return table.rows.some((row) =>
+        row.cells.some((cell) =>
+          cell.content.some(
+            (item) => item.type === "text" && item.text.trim().length > 0
+          )
+        )
+      )
+    }
+    return block.children.length > 0
+  })
 }
