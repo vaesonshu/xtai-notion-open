@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useRef, useState, type ReactElement } from "react"
+import { use, type MouseEvent, type ReactElement } from "react"
 import {
   BoldIcon,
   CodeIcon,
@@ -22,8 +22,16 @@ import {
 } from "@workspace/icons"
 import type { Block, TableContent } from "@workspace/editor"
 import {
+  convertBlockCommand,
+  getActiveBlockToolbarCommand,
+  toggleInlineMark,
+  type BlockToolbarCommand,
+  type InlineMark,
+} from "@workspace/editor"
+import {
   EditorContext,
   useBlockEditor,
+  useEditorState,
 } from "@workspace/editor/react"
 import { TableGridPicker, useImageUpload } from "@workspace/editor/components"
 import type { BlockEditor } from "@workspace/editor"
@@ -40,14 +48,74 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@workspace/ui/components/popover"
+import { useEffect, useRef, useState } from "react"
 
-const marks = [
-  ["Bold", BoldIcon, "bold"],
-  ["Italic", ItalicIcon, "italic"],
-  ["Underline", UnderlineIcon, "underline"],
-  ["Strike", StrikethroughIcon, "strike"],
-  ["Inline code", CodeIcon, "code"],
-] as const
+// Base UI Toggle 用 aria-pressed 表示选中态，不用 Radix 的 data-state=on
+const TOGGLE_ACTIVE_CLASS =
+  "hover:!bg-[#F3F2EF] hover:!text-[#242321] aria-pressed:!bg-[#E6F3EC] aria-pressed:!text-[#24866B]"
+
+const marks: Array<{
+  label: string
+  icon: typeof BoldIcon
+  mark: InlineMark
+}> = [
+  { label: "粗体", icon: BoldIcon, mark: "bold" },
+  { label: "斜体", icon: ItalicIcon, mark: "italic" },
+  { label: "下划线", icon: UnderlineIcon, mark: "underline" },
+  { label: "删除线", icon: StrikethroughIcon, mark: "strike" },
+  { label: "行内代码", icon: CodeIcon, mark: "code" },
+]
+
+const blockTypeButtons = [
+  { id: "paragraph", label: "正文", icon: PilcrowIcon, ariaLabel: "Paragraph" },
+  {
+    id: "heading-1",
+    label: "一级标题",
+    icon: Heading1Icon,
+    ariaLabel: "Heading 1",
+  },
+  {
+    id: "heading-2",
+    label: "二级标题",
+    icon: Heading2Icon,
+    ariaLabel: "Heading 2",
+  },
+  {
+    id: "bullet-list",
+    label: "项目符号列表",
+    icon: ListIcon,
+    ariaLabel: "Bullet list",
+  },
+  {
+    id: "ordered-list",
+    label: "编号列表",
+    icon: ListOrderedIcon,
+    ariaLabel: "Numbered list",
+  },
+  {
+    id: "task-list",
+    label: "待办列表",
+    icon: ListTodoIcon,
+    ariaLabel: "Task list",
+  },
+  {
+    id: "blockquote",
+    label: "引用",
+    icon: QuoteIcon,
+    ariaLabel: "Blockquote",
+  },
+  {
+    id: "code-block",
+    label: "代码块",
+    icon: CodeIcon,
+    ariaLabel: "Code block",
+  },
+] as const satisfies ReadonlyArray<{
+  id: BlockToolbarCommand
+  label: string
+  icon: typeof PilcrowIcon
+  ariaLabel: string
+}>
 
 export function insertEmoji(
   editor: BlockEditor["tiptap"],
@@ -64,6 +132,11 @@ function blockHasVisibleContent(block: Block | undefined): boolean {
     )
   }
   return true
+}
+
+/** 阻止工具栏点击抢走编辑器选区 */
+function keepEditorSelection(event: MouseEvent) {
+  event.preventDefault()
 }
 
 function ToolbarTooltip({
@@ -137,24 +210,31 @@ function FixedEditorToolbarReady() {
   const blockEditor = useBlockEditor()
   const editor = blockEditor.tiptap
   const { canUpload, openFilePicker } = useImageUpload()
-  const readState = () => ({
-    active: marks.map(([, , mark]) => editor.isActive(mark)),
-    canUndo: editor.can().undo(),
-    canRedo: editor.can().redo(),
-  })
-  const [state, setState] = useState(readState)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [tablePickerOpen, setTablePickerOpen] = useState(false)
 
-  useEffect(() => {
-    const update = () => setState(readState())
-    editor.on("transaction", update)
-    editor.on("selectionUpdate", update)
-    return () => {
-      editor.off("transaction", update)
-      editor.off("selectionUpdate", update)
-    }
-  }, [editor])
+  const toolbarState = useEditorState({
+    editor,
+    selector: ({ editor: activeEditor }) => ({
+      activeMarks: {
+        bold: activeEditor.isActive("bold"),
+        italic: activeEditor.isActive("italic"),
+        underline: activeEditor.isActive("underline"),
+        strike: activeEditor.isActive("strike"),
+        code: activeEditor.isActive("code"),
+      },
+      activeBlockCommand: getActiveBlockToolbarCommand(activeEditor.state),
+      canUndo: activeEditor.can().undo(),
+      canRedo: activeEditor.can().redo(),
+    }),
+  })
+
+  function toggleBlockCommand(
+    commandId: BlockToolbarCommand,
+    pressed: boolean
+  ) {
+    convertBlockCommand(blockEditor, pressed ? commandId : "paragraph")
+  }
 
   function insertTable(rows: number, cols: number) {
     const tableBlock: Block = {
@@ -189,28 +269,15 @@ function FixedEditorToolbarReady() {
       role="toolbar"
       aria-label="Editor toolbar"
     >
-      {marks.map(([label, Icon, mark], index) => (
-        <ToolbarTooltip
-          key={mark}
-          label={
-            label === "Bold"
-              ? "粗体"
-              : label === "Italic"
-                ? "斜体"
-                : label === "Underline"
-                  ? "下划线"
-                  : label === "Strike"
-                    ? "删除线"
-                    : "行内代码"
-          }
-        >
+      {marks.map(({ label, icon: Icon, mark }) => (
+        <ToolbarTooltip key={mark} label={label}>
           <Toggle
             size="sm"
-            pressed={state.active[index] ?? false}
+            className={TOGGLE_ACTIVE_CLASS}
+            pressed={toolbarState.activeMarks[mark]}
             aria-label={label}
-            onPressedChange={() =>
-              editor.chain().focus().toggleMark(mark).run()
-            }
+            onMouseDown={keepEditorSelection}
+            onPressedChange={() => toggleInlineMark(editor, mark)}
           >
             <Icon />
           </Toggle>
@@ -225,6 +292,7 @@ function FixedEditorToolbarReady() {
                 variant="ghost"
                 size="icon-sm"
                 aria-label="上传图片"
+                onMouseDown={keepEditorSelection}
                 onClick={openFilePicker}
               >
                 <ImageIcon />
@@ -234,98 +302,32 @@ function FixedEditorToolbarReady() {
           <TooltipContent>上传图片</TooltipContent>
         </Tooltip>
       ) : null}
-      <ToolbarTooltip label="正文">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Paragraph"
-          onClick={() => editor.chain().focus().setParagraph().run()}
-        >
-          <PilcrowIcon />
-        </Button>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="一级标题">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Heading 1"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-        >
-          <Heading1Icon />
-        </Button>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="二级标题">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Heading 2"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-        >
-          <Heading2Icon />
-        </Button>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="项目符号列表">
-        <Toggle
-          size="sm"
-          aria-label="Bullet list"
-          onPressedChange={() =>
-            editor.chain().focus().toggleBulletList().run()
-          }
-        >
-          <ListIcon />
-        </Toggle>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="编号列表">
-        <Toggle
-          size="sm"
-          aria-label="Numbered list"
-          onPressedChange={() =>
-            editor.chain().focus().toggleOrderedList().run()
-          }
-        >
-          <ListOrderedIcon />
-        </Toggle>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="待办列表">
-        <Toggle
-          size="sm"
-          aria-label="Task list"
-          onPressedChange={() => editor.chain().focus().toggleTaskList().run()}
-        >
-          <ListTodoIcon />
-        </Toggle>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="引用">
-        <Toggle
-          size="sm"
-          aria-label="Blockquote"
-          onPressedChange={() =>
-            editor.chain().focus().toggleBlockquote().run()
-          }
-        >
-          <QuoteIcon />
-        </Toggle>
-      </ToolbarTooltip>
-      <ToolbarTooltip label="代码块">
-        <Toggle
-          size="sm"
-          aria-label="Code block"
-          onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
-        >
-          <CodeIcon />
-        </Toggle>
-      </ToolbarTooltip>
+      {blockTypeButtons.map(({ id, label, icon: Icon, ariaLabel }) => (
+        <ToolbarTooltip key={id} label={label}>
+          <Toggle
+            size="sm"
+            className={TOGGLE_ACTIVE_CLASS}
+            aria-label={ariaLabel}
+            pressed={toolbarState.activeBlockCommand === id}
+            onMouseDown={keepEditorSelection}
+            onPressedChange={(pressed) => toggleBlockCommand(id, pressed)}
+          >
+            <Icon />
+          </Toggle>
+        </ToolbarTooltip>
+      ))}
       <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
         <Tooltip>
           <TooltipTrigger
             render={
               <PopoverTrigger
                 render={
-                  <Button variant="ghost" size="icon-sm" aria-label="插入表格">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="插入表格"
+                    onMouseDown={keepEditorSelection}
+                  >
                     <TableIcon />
                   </Button>
                 }
@@ -353,6 +355,7 @@ function FixedEditorToolbarReady() {
                     variant="ghost"
                     size="icon-sm"
                     aria-label="Insert emoji"
+                    onMouseDown={keepEditorSelection}
                   >
                     <SmileIcon />
                   </Button>
@@ -377,7 +380,8 @@ function FixedEditorToolbarReady() {
           variant="ghost"
           size="icon-sm"
           aria-label="Undo"
-          disabled={!state.canUndo}
+          disabled={!toolbarState.canUndo}
+          onMouseDown={keepEditorSelection}
           onClick={() => editor.chain().focus().undo().run()}
         >
           <UndoIcon />
@@ -388,7 +392,8 @@ function FixedEditorToolbarReady() {
           variant="ghost"
           size="icon-sm"
           aria-label="Redo"
-          disabled={!state.canRedo}
+          disabled={!toolbarState.canRedo}
+          onMouseDown={keepEditorSelection}
           onClick={() => editor.chain().focus().redo().run()}
         >
           <RedoIcon />

@@ -43,24 +43,32 @@
   },
   "exports": {
     ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./migrate": {
+      "types": "./src/core/migrate/index.ts",
+      "development": "./src/core/migrate/index.ts",
       "import": "./dist/migrate/index.js",
       "require": "./dist/migrate/index.cjs",
-      "types": "./dist/migrate/index.d.ts"
+      "default": "./dist/migrate/index.js"
     },
     "./*": "./src/core/*",
     "./server": {
+      "types": "./src/server.ts",
+      "development": "./src/server.ts",
       "import": "./dist/server.js",
       "require": "./dist/server.cjs",
-      "types": "./dist/server.d.ts"
+      "default": "./dist/server.js"
     }
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": ["dist"]
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "dist"
+  ]
 }

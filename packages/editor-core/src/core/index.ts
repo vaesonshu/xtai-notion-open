@@ -13,6 +13,8 @@ export type {
 } from "./block-schema/types"
 export { BlockEditor } from "./block-editor"
 export type { BlockSideMenuState } from "./block-side-menu"
+export type { BlockToolbarCommand } from "./block-toolbar"
+export { getActiveBlockToolbarCommand } from "./block-toolbar"
 export {
   getDraggableBlockFromElement,
   startBlockContainerDrag,
@@ -44,9 +46,10 @@ export {
   createStarterDocument,
   isEditorDocument,
 } from "./document"
-export type { SlashCommand } from "./slash-commands"
+export type { BlockCommandMode, SlashCommand } from "./slash-commands"
 export {
   SLASH_COMMANDS,
+  convertBlockCommand,
   executeSlashCommand,
   filterCommands,
   filterSlashCommands,

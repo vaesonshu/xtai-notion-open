@@ -13,6 +13,7 @@ import { blockContentExtensions } from "../block-schema/block-content"
 import { BlockContainer, BlockDoc, BlockGroup } from "../block-schema/pm-nodes"
 import type { EditorExtensionOptions } from "../types"
 import { BlockKeymap } from "./block-keymap"
+import { CheckListItemClick } from "./check-list-item-click"
 
 export type { EditorExtensionOptions } from "../types"
 
@@ -86,6 +87,7 @@ export function createBlockSchemaExtensions(
     BlockContainer,
     ...blockContentExtensions,
     BlockKeymap,
+    CheckListItemClick,
     TableRow,
     TableHeader,
     TableCell,

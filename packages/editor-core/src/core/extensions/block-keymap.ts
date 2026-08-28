@@ -1,5 +1,5 @@
 import { Extension } from "@tiptap/core"
-import type { Node as PMNode } from "@tiptap/pm/model"
+import { Fragment, type Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState, Transaction } from "@tiptap/pm/state"
 import { TextSelection } from "@tiptap/pm/state"
 import { BLOCK_CONTENT_NODE_NAMES } from "../block-schema/block-content"
@@ -75,16 +75,29 @@ function getInlineOffset(state: EditorState, container: ContainerRef): number {
   return Math.min(from - innerStart, contentNode.content.size)
 }
 
-/** 在 blockContainer 之后插入新块；list 项保持同类型，其余默认为段落 */
+/** 有内容时在下方续建同类型块（对应工具栏块类型命令） */
+const REPEAT_BLOCK_ON_ENTER = new Set([
+  "bulletListItem",
+  "numberedListItem",
+  "checkListItem",
+  "heading",
+  "quote",
+])
+
+/** 空块再按 Enter 时就地转为段落，退出当前块类型 */
+const EXIT_TO_PARAGRAPH_ON_EMPTY_ENTER = REPEAT_BLOCK_ON_ENTER
+
+/** 行首空块按 Backspace：与 Enter 对称，退出当前类型而非删除整块 */
+const EXIT_TO_PARAGRAPH_ON_EMPTY_BACKSPACE = EXIT_TO_PARAGRAPH_ON_EMPTY_ENTER
+
+/** 在 blockContainer 之后插入新块；同类型块保持类型，其余默认为段落 */
 function createBlockAfterType(contentNode: PMNode): BlockType {
   const typeName = contentNode.type.name
-  if (
-    typeName === "bulletListItem" ||
-    typeName === "numberedListItem" ||
-    typeName === "checkListItem"
-  ) {
-    return typeName
+
+  if (REPEAT_BLOCK_ON_ENTER.has(typeName)) {
+    return typeName as BlockType
   }
+
   return "paragraph"
 }
 
@@ -98,8 +111,12 @@ function buildContentNode(
     case "heading":
       return requireNodeType(schema, "heading").create(source.attrs, content)
     case "checkListItem":
+      // Enter 新建的空待办项默认未勾选
       return requireNodeType(schema, "checkListItem").create(
-        source.attrs,
+        {
+          ...source.attrs,
+          checked: content.size === 0 ? false : Boolean(source.attrs.checked),
+        },
         content
       )
     case "quote":
@@ -120,13 +137,66 @@ function buildContainer(
   contentNode: PMNode,
   childGroup?: PMNode
 ): PMNode {
-  const children = childGroup
-    ? [contentNode, childGroup]
-    : [contentNode]
+  const children = childGroup ? [contentNode, childGroup] : [contentNode]
   return requireNodeType(schema, "blockContainer").create(
     { id: generateBlockId() },
     children
   )
+}
+
+/** 将光标定位到 blockContainer 内首个 textblock 的起始处 */
+function getTextblockStartInContainer(
+  doc: PMNode,
+  containerPos: number
+): number {
+  const container = doc.nodeAt(containerPos)
+
+  if (!container || container.type.name !== "blockContainer") {
+    return containerPos + 2
+  }
+
+  const content = container.firstChild
+
+  if (!content?.isTextblock) {
+    return containerPos + 2
+  }
+
+  // blockContainer 开标签 + textblock 开标签之后即为可输入位置
+  return containerPos + 2
+}
+
+/** 将 blockContainer 内的 blockContent 就地改为段落，用于退出空待办项 */
+function convertContainerContentToParagraph(
+  state: EditorState,
+  dispatch: (tr: Transaction) => void,
+  current: ContainerRef
+): boolean {
+  const { schema } = state
+  const contentNode = current.node.child(0)
+  const childGroup =
+    current.node.childCount > 1 ? current.node.child(1) : undefined
+  const paragraphNode = requireNodeType(schema, "paragraph").create(
+    null,
+    contentNode.content
+  )
+  const newContainer = requireNodeType(schema, "blockContainer").create(
+    current.node.attrs,
+    childGroup ? [paragraphNode, childGroup] : [paragraphNode]
+  )
+
+  const tr = state.tr.replaceWith(
+    current.pos,
+    current.pos + current.node.nodeSize,
+    newContainer
+  )
+  tr.setSelection(
+    TextSelection.create(
+      tr.doc,
+      getTextblockStartInContainer(tr.doc, current.pos)
+    )
+  )
+  dispatch(tr.scrollIntoView())
+  return true
 }
 
 /** 在当前 blockContainer 之后插入空块 */
@@ -139,13 +209,22 @@ function insertBlockAfter(
   const { schema } = state
   const sourceContent = current.node.child(0)
   const blockType = options.type ?? createBlockAfterType(sourceContent)
-  const contentNode = buildContentNode(schema, blockType, sourceContent, [])
+  const contentNode = buildContentNode(
+    schema,
+    blockType,
+    sourceContent,
+    Fragment.empty
+  )
   const newContainer = buildContainer(schema, contentNode)
   const insertPos = current.pos + current.node.nodeSize
 
   const tr = state.tr.insert(insertPos, newContainer)
-  // 光标落在新块行首
-  tr.setSelection(TextSelection.create(tr.doc, insertPos + 2))
+  tr.setSelection(
+    TextSelection.create(
+      tr.doc,
+      getTextblockStartInContainer(tr.doc, insertPos)
+    )
+  )
   dispatch(tr.scrollIntoView())
   return true
 }
@@ -188,12 +267,18 @@ function splitBlockAtCursor(
     current.pos + current.node.nodeSize,
     [beforeContainer, afterContainer]
   )
-  tr.setSelection(TextSelection.create(tr.doc, current.pos + beforeContainer.nodeSize + 2))
+  const afterContainerPos = current.pos + beforeContainer.nodeSize
+  tr.setSelection(
+    TextSelection.create(
+      tr.doc,
+      getTextblockStartInContainer(tr.doc, afterContainerPos)
+    )
+  )
   dispatch(tr.scrollIntoView())
   return true
 }
 
-function handleEnter(state: EditorState, dispatch?: (tr: Transaction) => void) {
+export function handleEnter(state: EditorState, dispatch?: (tr: Transaction) => void) {
   if (!dispatch || !state.selection.empty) {
     return false
   }
@@ -218,6 +303,11 @@ function handleEnter(state: EditorState, dispatch?: (tr: Transaction) => void) {
   const offset = getInlineOffset(state, current)
   const isEmpty = isContentEmpty(contentNode)
   const atEnd = offset >= contentNode.content.size
+
+  // 空块再按 Enter：退出当前类型，就地转为段落（Notion 式列表/标题/引用行为）
+  if (EXIT_TO_PARAGRAPH_ON_EMPTY_ENTER.has(typeName) && isEmpty) {
+    return convertContainerContentToParagraph(state, dispatch, current)
+  }
 
   if (isEmpty || atEnd) {
     return insertBlockAfter(state, dispatch, current)
@@ -246,7 +336,7 @@ function appendInlineContent(
   )
 }
 
-function handleBackspace(
+export function handleBackspace(
   state: EditorState,
   dispatch?: (tr: Transaction) => void
 ) {
@@ -260,6 +350,7 @@ function handleBackspace(
   }
 
   const contentNode = current.node.child(0)
+  const typeName = contentNode.type.name
   const offset = getInlineOffset(state, current)
 
   if (offset > 0) {
@@ -268,7 +359,15 @@ function handleBackspace(
 
   const { schema, doc } = state
 
-  // 行首 Backspace：空块则删除；否则与上一同级块合并行内内容
+  // 行首 Backspace：空标题/列表/引用等待办 → 就地转段落（Notion 式退出块类型）
+  if (
+    isContentEmpty(contentNode) &&
+    EXIT_TO_PARAGRAPH_ON_EMPTY_BACKSPACE.has(typeName)
+  ) {
+    return convertContainerContentToParagraph(state, dispatch, current)
+  }
+
+  // 行首 Backspace：空段落则删除；否则与上一同级块合并行内内容
   if (isContentEmpty(contentNode)) {
     const rootGroup = doc.firstChild
     const blockCount =
@@ -279,9 +378,11 @@ function handleBackspace(
 
     const previous = findPreviousSiblingContainer(doc, current.pos)
     const tr = state.tr.delete(current.pos, current.pos + current.node.nodeSize)
-    const focusPos = previous
-      ? previous.pos + previous.node.nodeSize - 2
-      : 1
+    const prevContent = previous?.node.child(0)
+    const focusPos =
+      previous && prevContent?.isTextblock
+        ? previous.pos + 1 + prevContent.nodeSize - 1
+        : 2
     tr.setSelection(TextSelection.create(tr.doc, Math.max(1, focusPos)))
     dispatch(tr.scrollIntoView())
     return true
@@ -327,7 +428,7 @@ function handleBackspace(
     current.pos + current.node.nodeSize,
     mergedContainer
   )
-  const focusPos = previous.pos + mergedContent.nodeSize - 1
+  const focusPos = previous.pos + 1 + mergedContent.nodeSize - 1
   tr.setSelection(TextSelection.create(tr.doc, Math.max(1, focusPos)))
   dispatch(tr.scrollIntoView())
   return true
@@ -335,16 +436,8 @@ function handleBackspace(
 
 /**
  * 块文档键盘映射：Enter 拆块/新建块，Backspace 合并或删除空块。
- * StarterKit 禁用了 paragraph 等节点，必须在此接管块级换行逻辑。
+ * 实际按键处理在 BlockEditor.editorProps.handleKeyDown，需先于 baseKeymap 执行。
  */
 export const BlockKeymap = Extension.create({
   name: "blockKeymap",
-
-  addKeyboardShortcuts() {
-    return {
-      Enter: ({ editor }) => handleEnter(editor.state, editor.view.dispatch),
-      Backspace: ({ editor }) =>
-        handleBackspace(editor.state, editor.view.dispatch),
-    }
-  },
 })

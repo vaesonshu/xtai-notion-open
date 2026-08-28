@@ -11,6 +11,7 @@ import {
   createBlockSideMenuController,
 } from "./block-side-menu"
 import { createBlockSchemaExtensions } from "./extensions"
+import { handleBackspace, handleEnter } from "./extensions/block-keymap"
 import type { EditorExtensionOptions } from "./types"
 
 type BlockEditorOptions = {
@@ -296,7 +297,37 @@ export class BlockEditor {
       extensions: createBlockSchemaExtensions(extensionOptions),
       editable: options.editable ?? true,
       editorProps: {
-        handleKeyDown: (_view, event) => {
+        handleKeyDown: (view, event) => {
+          // 块级 Enter/Backspace 需在 baseKeymap 之前处理（见 block-keymap.ts）
+          if (
+            event.key === "Enter" &&
+            !event.shiftKey &&
+            !event.altKey &&
+            !event.metaKey &&
+            !event.ctrlKey
+          ) {
+            const handled = handleEnter(view.state, view.dispatch)
+            if (handled) {
+              event.preventDefault()
+              this.editor.commands.focus()
+              return true
+            }
+          }
+
+          if (
+            event.key === "Backspace" &&
+            !event.altKey &&
+            !event.metaKey &&
+            !event.ctrlKey
+          ) {
+            const handled = handleBackspace(view.state, view.dispatch)
+            if (handled) {
+              event.preventDefault()
+              this.editor.commands.focus()
+              return true
+            }
+          }
+
           if (
             event.key === "Tab" &&
             !event.altKey &&

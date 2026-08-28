@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { BlockEditor } from "../block-editor"
 import {
+  convertBlockCommand,
   executeSlashCommand,
   filterCommands,
   filterSlashCommands,
@@ -139,6 +140,21 @@ describe("executeSlashCommand", () => {
     expect(executeSlashCommand(editor, "code-block")).toBe(true)
     expect(editor.document[0]?.type).toBe("paragraph")
     expect(editor.document[1]?.type).toBe("codeBlock")
+  })
+
+  it("converts a block with text in place for toolbar commands", () => {
+    const editor = createTextBlockEditor()
+
+    expect(convertBlockCommand(editor, "heading-1")).toBe(true)
+    expect(editor.document).toHaveLength(1)
+    expect(editor.document[0]).toMatchObject({
+      id: TEXT_BLOCK_ID,
+      type: "heading",
+      props: { level: 1 },
+    })
+    expect(editor.document[0]?.content).toEqual([
+      { type: "text", text: "Convert this block", styles: {} },
+    ])
   })
 
   it("returns false without changing the document for an unknown command", () => {

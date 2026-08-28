@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { BlockEditor } from "../block-editor"
+import { handleBackspace } from "./block-keymap"
 
 const editors: BlockEditor[] = []
 
@@ -19,37 +20,37 @@ function createWithText(text: string, id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
   return editor
 }
 
-/** 模拟按下 Enter，走与浏览器一致的 keydown 路径 */
-function pressEnter(editor: BlockEditor) {
+/** 模拟按键：走 BlockEditor.editorProps.handleKeyDown，与浏览器一致 */
+function dispatchKey(editor: BlockEditor, key: string, code: string) {
   const event = new KeyboardEvent("keydown", {
-    key: "Enter",
-    code: "Enter",
+    key,
+    code,
     bubbles: true,
     cancelable: true,
   })
+  const view = editor.tiptap.view
+  const handleKeyDown = view.props.handleKeyDown
+
+  if (handleKeyDown?.(view, event)) {
+    return true
+  }
+
   let handled = false
-  editor.tiptap.view.someProp("handleKeyDown", (handleKeyDown) => {
-    if (handleKeyDown(editor.tiptap.view, event)) {
+  view.someProp("handleKeyDown", (handler) => {
+    if (handler(view, event)) {
       handled = true
     }
   })
   return handled
 }
 
+/** 模拟按下 Enter，走与浏览器一致的 keydown 路径 */
+function pressEnter(editor: BlockEditor) {
+  return dispatchKey(editor, "Enter", "Enter")
+}
+
 function pressBackspace(editor: BlockEditor) {
-  const event = new KeyboardEvent("keydown", {
-    key: "Backspace",
-    code: "Backspace",
-    bubbles: true,
-    cancelable: true,
-  })
-  let handled = false
-  editor.tiptap.view.someProp("handleKeyDown", (handleKeyDown) => {
-    if (handleKeyDown(editor.tiptap.view, event)) {
-      handled = true
-    }
-  })
-  return handled
+  return dispatchKey(editor, "Backspace", "Backspace")
 }
 
 /** 定位到文档末尾（段落文字结尾） */
@@ -70,20 +71,18 @@ function selectTextOffset(editor: BlockEditor, offset: number) {
   })
 }
 
-/** 定位到第二个 blockContainer 内的空段落开头 */
+/** 定位到第二个顶层 blockContainer 内的 textblock 开头 */
 function selectSecondBlockStart(editor: BlockEditor) {
-  let targetPos = 0
-  let seen = 0
-  editor.tiptap.state.doc.descendants((node, pos) => {
-    if (node.type.name !== "blockContainer") {
-      return
-    }
-    seen += 1
-    if (seen === 2) {
-      targetPos = pos + 2
-    }
-  })
-  editor.tiptap.commands.setTextSelection(targetPos)
+  const doc = editor.tiptap.state.doc
+  const blockGroup = doc.firstChild
+
+  if (!blockGroup || blockGroup.type.name !== "blockGroup") {
+    return
+  }
+
+  const firstContainer = blockGroup.child(0)
+  const secondContainerPos = 1 + firstContainer.nodeSize
+  editor.tiptap.commands.setTextSelection(secondContainerPos + 2)
 }
 
 afterEach(() => {
@@ -116,6 +115,117 @@ describe("BlockKeymap", () => {
     ])
   })
 
+  it("moves the cursor into a new checkListItem when Enter is pressed at the end", () => {
+    const editor = new BlockEditor({
+      initialContent: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "checkListItem",
+          props: { checked: false },
+          content: [{ type: "text", text: "buy milk", styles: {} }],
+          children: [],
+        },
+      ],
+    })
+    editors.push(editor)
+    selectEnd(editor)
+    expect(pressEnter(editor)).toBe(true)
+    expect(editor.document).toHaveLength(2)
+    expect(editor.document[1]?.type).toBe("checkListItem")
+
+    let secondContainerPos = 0
+    let seen = 0
+    editor.tiptap.state.doc.descendants((node, pos) => {
+      if (node.type.name !== "blockContainer") {
+        return
+      }
+      seen += 1
+      if (seen === 2) {
+        secondContainerPos = pos
+      }
+    })
+
+    expect(editor.tiptap.state.selection.from).toBe(secondContainerPos + 2)
+    expect(editor.tiptap.state.selection.empty).toBe(true)
+  })
+
+  it("converts an empty checkListItem to paragraph when Enter is pressed again", () => {
+    const editor = new BlockEditor({
+      initialContent: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "checkListItem",
+          props: { checked: false },
+          content: [{ type: "text", text: "buy milk", styles: {} }],
+          children: [],
+        },
+      ],
+    })
+    editors.push(editor)
+    selectEnd(editor)
+    expect(pressEnter(editor)).toBe(true)
+    expect(editor.document[1]?.type).toBe("checkListItem")
+
+    expect(pressEnter(editor)).toBe(true)
+    expect(editor.document).toHaveLength(2)
+    expect(editor.document[0]?.type).toBe("checkListItem")
+    expect(editor.document[1]?.type).toBe("paragraph")
+  })
+
+  it("converts a lone empty checkListItem to paragraph on Enter", () => {
+    const editor = new BlockEditor({
+      initialContent: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "checkListItem",
+          props: { checked: false },
+          content: [],
+          children: [],
+        },
+      ],
+    })
+    editors.push(editor)
+    editor.tiptap.commands.setTextSelection(2)
+    expect(pressEnter(editor)).toBe(true)
+    expect(editor.document).toHaveLength(1)
+    expect(editor.document[0]?.type).toBe("paragraph")
+  })
+
+  it.each([
+    ["bulletListItem", { type: "bulletListItem" as const, props: {} }],
+    ["numberedListItem", { type: "numberedListItem" as const, props: {} }],
+    [
+      "heading",
+      { type: "heading" as const, props: { level: 1 } },
+    ],
+    ["quote", { type: "quote" as const, props: {} }],
+  ])(
+    "continues %s on Enter at end, then exits to paragraph when empty",
+    (_label, block) => {
+      const editor = new BlockEditor({
+        initialContent: [
+          {
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            ...block,
+            content: [{ type: "text", text: "line one", styles: {} }],
+            children: [],
+          },
+        ],
+      })
+      editors.push(editor)
+      selectEnd(editor)
+
+      expect(pressEnter(editor)).toBe(true)
+      expect(editor.document).toHaveLength(2)
+      expect(editor.document[1]?.type).toBe(block.type)
+
+      expect(pressEnter(editor)).toBe(true)
+      expect(editor.document).toHaveLength(2)
+      expect(editor.document[0]?.type).toBe(block.type)
+      expect(editor.document[1]?.type).toBe("paragraph")
+    }
+  )
+
   it("deletes an empty trailing block on Backspace at start", () => {
     const editor = new BlockEditor({
       initialContent: [
@@ -140,4 +250,88 @@ describe("BlockKeymap", () => {
     expect(pressBackspace(editor)).toBe(true)
     expect(editor.document).toHaveLength(1)
   })
+
+  it("converts an empty checkListItem to paragraph on Backspace at start", () => {
+    const editor = new BlockEditor({
+      initialContent: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "checkListItem",
+          props: { checked: false },
+          content: [],
+          children: [],
+        },
+      ],
+    })
+    editors.push(editor)
+    editor.tiptap.commands.setTextSelection(2)
+    expect(pressBackspace(editor)).toBe(true)
+    expect(editor.document).toHaveLength(1)
+    expect(editor.document[0]?.type).toBe("paragraph")
+  })
+
+  it("converts empty bulletListItem via handleBackspace directly", () => {
+    const editor = new BlockEditor({
+      initialContent: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "paragraph",
+          props: {},
+          content: [{ type: "text", text: "above", styles: {} }],
+          children: [],
+        },
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          type: "bulletListItem",
+          props: {},
+          content: [],
+          children: [],
+        },
+      ],
+    })
+    editors.push(editor)
+    selectSecondBlockStart(editor)
+    expect(
+      handleBackspace(editor.tiptap.state, editor.tiptap.view.dispatch)
+    ).toBe(true)
+    expect(editor.document).toHaveLength(2)
+    expect(editor.document[1]?.type).toBe("paragraph")
+  })
+
+  it.each([
+    ["bulletListItem", { type: "bulletListItem" as const, props: {} }],
+    ["numberedListItem", { type: "numberedListItem" as const, props: {} }],
+    [
+      "heading",
+      { type: "heading" as const, props: { level: 1 } },
+    ],
+    ["quote", { type: "quote" as const, props: {} }],
+  ])(
+    "converts empty %s to paragraph on Backspace at start instead of deleting",
+    (_label, block) => {
+      const editor = new BlockEditor({
+        initialContent: [
+          {
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            type: "paragraph",
+            props: {},
+            content: [{ type: "text", text: "above", styles: {} }],
+            children: [],
+          },
+          {
+            id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            ...block,
+            content: [],
+            children: [],
+          },
+        ],
+      })
+      editors.push(editor)
+      selectSecondBlockStart(editor)
+      expect(pressBackspace(editor)).toBe(true)
+      expect(editor.document).toHaveLength(2)
+      expect(editor.document[0]?.type).toBe("paragraph")
+      expect(editor.document[1]?.type).toBe("paragraph")
+    }
+  )
 })

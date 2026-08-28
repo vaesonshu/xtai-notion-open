@@ -11,9 +11,7 @@
       "@xtai-notion/editor-react/collaboration/*": [
         "../../packages/editor-react/src/collaboration/*"
       ],
-      "@xtai-notion/editor-react": [
-        "../../packages/editor-react/src/index.ts"
-      ],
+      "@xtai-notion/editor-react": ["../../packages/editor-react/src/index.ts"],
       "@xtai-notion/editor-react/*": [
         "../../packages/editor-react/src/react/*"
       ],

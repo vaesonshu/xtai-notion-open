@@ -103,12 +103,48 @@ function findBlockById(blocks: Block[], id: string): Block | null {
   return null
 }
 
-type SlashHandler = (editor: BlockEditor, refId: string, empty: boolean) => void
+export type BlockCommandMode = "slash" | "convert"
+
+type SlashHandler = (
+  editor: BlockEditor,
+  refId: string,
+  empty: boolean,
+  inPlace: boolean
+) => void
+
+/** 转换完成后把光标恢复到 blockContainer 的内容区 */
+function focusBlockContent(editor: BlockEditor, blockId: string) {
+  const { doc } = editor.tiptap.state
+  let cursorPos: number | null = null
+
+  doc.descendants((node, pos) => {
+    if (cursorPos !== null) {
+      return false
+    }
+
+    if (node.type.name === "blockContainer" && node.attrs.id === blockId) {
+      const content = node.firstChild
+
+      if (content?.isTextblock) {
+        cursorPos = pos + 1 + content.nodeSize - 1
+      }
+
+      return false
+    }
+
+    return undefined
+  })
+
+  if (cursorPos !== null) {
+    editor.tiptap.chain().focus().setTextSelection(Math.max(1, cursorPos)).run()
+  }
+}
 
 function applyTypeChange(
   editor: BlockEditor,
   refId: string,
   empty: boolean,
+  inPlace: boolean,
   type: BlockType,
   options: {
     props?: Record<string, unknown>
@@ -120,65 +156,75 @@ function applyTypeChange(
     props: options.props,
     content: options.content,
   }
-  if (empty) {
+
+  // 斜杠菜单：空块就地改类型；有内容则在后面插入新块。工具栏：始终就地转换并保留文字。
+  if (empty || inPlace) {
     editor.updateBlock(refId, {
       type,
       props: options.props,
-      content: options.content,
+      ...(empty ? { content: options.content } : {}),
     })
+
+    if (inPlace) {
+      focusBlockContent(editor, refId)
+    }
   } else {
     editor.insertBlocks([partial], refId, "after")
   }
 }
 
 const SLASH_HANDLERS: Record<string, SlashHandler> = {
-  "heading-1": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "heading", {
+  "heading-1": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "heading", {
       props: { level: 1 },
       content: [],
     }),
-  "heading-2": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "heading", {
+  "heading-2": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "heading", {
       props: { level: 2 },
       content: [],
     }),
-  "heading-3": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "heading", {
+  "heading-3": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "heading", {
       props: { level: 3 },
       content: [],
     }),
-  paragraph: (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "paragraph", { content: [] }),
-  "bullet-list": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "bulletListItem", { content: [] }),
-  "ordered-list": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "numberedListItem", {
+  paragraph: (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "paragraph", {
       content: [],
     }),
-  "task-list": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "checkListItem", {
+  "bullet-list": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "bulletListItem", {
+      content: [],
+    }),
+  "ordered-list": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "numberedListItem", {
+      content: [],
+    }),
+  "task-list": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "checkListItem", {
       props: { checked: false },
       content: [],
     }),
-  blockquote: (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "quote", { content: [] }),
-  "code-block": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "codeBlock", {
+  blockquote: (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "quote", { content: [] }),
+  "code-block": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "codeBlock", {
       props: { language: null },
       content: [],
     }),
-  "horizontal-rule": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "divider"),
-  table: (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "table", {
+  "horizontal-rule": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "divider"),
+  table: (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "table", {
       content: createDefaultTableContent(),
     }),
-  "canvas-block": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "canvas", {
+  "canvas-block": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "canvas", {
       props: { canvasId: null, snapshot: "" },
     }),
-  "upload-image": (editor, refId, empty) =>
-    applyTypeChange(editor, refId, empty, "image", {
+  "upload-image": (editor, refId, empty, inPlace) =>
+    applyTypeChange(editor, refId, empty, inPlace, "image", {
       props: { src: null, uploadStatus: "idle" },
     }),
 }
@@ -297,7 +343,11 @@ const LEGACY_COMMAND_ALIASES: Record<string, string> = {
   heading: "heading-1",
 }
 
-export function executeSlashCommand(editor: BlockEditor, id: string): boolean {
+export function executeSlashCommand(
+  editor: BlockEditor,
+  id: string,
+  options: { mode?: BlockCommandMode } = {}
+): boolean {
   const resolvedId = LEGACY_COMMAND_ALIASES[id] ?? id
   const handler = SLASH_HANDLERS[resolvedId]
   if (!handler) {
@@ -314,6 +364,12 @@ export function executeSlashCommand(editor: BlockEditor, id: string): boolean {
     return false
   }
 
-  handler(editor, refId, isBlockEmpty(target))
+  const inPlace = options.mode === "convert"
+  handler(editor, refId, isBlockEmpty(target), inPlace)
   return true
+}
+
+/** 工具栏块类型切换：就地转换当前块并保留已有文字 */
+export function convertBlockCommand(editor: BlockEditor, id: string): boolean {
+  return executeSlashCommand(editor, id, { mode: "convert" })
 }

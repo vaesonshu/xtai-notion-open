@@ -32,6 +32,17 @@ function blockHasVisibleContent(block: Block | null): boolean {
   return true
 }
 
+/** 计算 blockContainer 内 textblock 的可编辑光标位置 */
+function getInlineCursorPos(
+  containerPos: number,
+  contentNode: { nodeSize: number },
+  atEnd: boolean
+) {
+  const contentStart = containerPos + 1
+
+  return atEnd ? contentStart + contentNode.nodeSize - 1 : containerPos + 2
+}
+
 /** 将文本光标定位到 blockContainer 的内容区 */
 function setTextCursorInBlock(blockEditor: BlockEditor, blockId: string) {
   const { doc } = blockEditor.tiptap.state
@@ -45,8 +56,8 @@ function setTextCursorInBlock(blockEditor: BlockEditor, blockId: string) {
     if (node.type.name === "blockContainer" && node.attrs.id === blockId) {
       const content = node.firstChild
 
-      if (content) {
-        cursorPos = pos + 1 + Math.max(0, content.content.size)
+      if (content?.isTextblock) {
+        cursorPos = getInlineCursorPos(pos, content, true)
       }
 
       return false
