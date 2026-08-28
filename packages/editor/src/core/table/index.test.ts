@@ -1,12 +1,38 @@
 import { Editor } from "@tiptap/core"
+import type { JSONContent } from "@tiptap/core"
 import { describe, expect, it } from "vitest"
+import { blocksToPmDoc } from "../block-schema/convert"
+import { createEmptyBlocks } from "../block-schema/documents"
 import { createEditorExtensions } from "../extensions"
 import { insertTable } from "./index"
 
+function findNodeByType(
+  node: JSONContent,
+  type: string
+): JSONContent | undefined {
+  if (node.type === type) {
+    return node
+  }
+  for (const child of node.content ?? []) {
+    const found = findNodeByType(child, type)
+    if (found) {
+      return found
+    }
+  }
+  return undefined
+}
+
 function createEditor() {
-  return new Editor({
-    extensions: createEditorExtensions(),
+  const extensions = createEditorExtensions()
+  const editor = new Editor({
+    extensions,
+    content: blocksToPmDoc(
+      createEmptyBlocks(),
+      new Editor({ extensions }).schema
+    ).toJSON() as JSONContent,
   })
+  editor.commands.setTextSelection(3)
+  return editor
 }
 
 describe("insertTable", () => {
@@ -16,10 +42,7 @@ describe("insertTable", () => {
     insertTable(editor, 3, 2)
 
     const json = editor.getJSON()
-    // 文档根节点包含一个 table 块。
-    const table = (json.content ?? []).find(
-      (node) => node.type === "table"
-    ) as { type: string; content?: unknown[] } | undefined
+    const table = findNodeByType(json, "table")
 
     expect(table).toBeDefined()
     expect(table?.type).toBe("table")
@@ -33,7 +56,6 @@ describe("insertTable", () => {
 
     const firstRowCells = rows[0]!.content ?? []
     expect(firstRowCells).toHaveLength(2)
-    // 首行是表头单元格（withHeaderRow 为 true）。
     expect((firstRowCells[0] as { type: string }).type).toBe("tableHeader")
     expect((firstRowCells[1] as { type: string }).type).toBe("tableHeader")
 

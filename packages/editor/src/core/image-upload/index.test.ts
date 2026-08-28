@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { Editor } from "@tiptap/core"
+import type { JSONContent } from "@tiptap/core"
+import { blocksToPmDoc } from "../block-schema/convert"
+import { createEmptyBlocks } from "../block-schema/documents"
 import { createEditorExtensions } from "../extensions"
 import {
   IMAGE_MIME_TYPES,
@@ -11,11 +14,32 @@ import {
 
 const editors: Editor[] = []
 
+function findNodeByType(
+  node: JSONContent,
+  type: string
+): JSONContent | undefined {
+  if (node.type === type) {
+    return node
+  }
+  for (const child of node.content ?? []) {
+    const found = findNodeByType(child, type)
+    if (found) {
+      return found
+    }
+  }
+  return undefined
+}
+
 function createTestEditor(): Editor {
+  const extensions = createEditorExtensions()
   const editor = new Editor({
-    extensions: createEditorExtensions(),
-    content: "<p>before</p>",
+    extensions,
+    content: blocksToPmDoc(
+      createEmptyBlocks(),
+      new Editor({ extensions }).schema
+    ).toJSON() as JSONContent,
   })
+  editor.commands.setTextSelection(3)
   editors.push(editor)
   return editor
 }
@@ -86,16 +110,14 @@ describe("insertUploadedImage", () => {
         contentType: "image/png",
       })
     ).toBe(true)
-    expect(editor.getJSON().content).toEqual(
-      expect.arrayContaining([
-        {
-          type: "image",
-          attrs: expect.objectContaining({
-            src: "https://cdn.example/image.png",
-          }),
-        },
-      ])
-    )
+
+    const image = findNodeByType(editor.getJSON(), "image")
+    expect(image).toMatchObject({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "https://cdn.example/image.png",
+      }),
+    })
   })
 
   it("preserves the original upload error and does not insert an image", async () => {
@@ -105,8 +127,6 @@ describe("insertUploadedImage", () => {
     const file = new File(["image"], "image.png", { type: "image/png" })
 
     await expect(uploadImage(file, { upload })).rejects.toBe(error)
-    expect(editor.getJSON()).not.toMatchObject({
-      content: expect.arrayContaining([{ type: "image" }]),
-    })
+    expect(findNodeByType(editor.getJSON(), "image")).toBeUndefined()
   })
 })

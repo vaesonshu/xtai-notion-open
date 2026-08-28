@@ -1,49 +1,54 @@
 import { describe, expect, it } from "vitest"
+import type { Block } from "./block-schema/types"
 import { collectMentionIds } from "./mention-collect"
 
 describe("collectMentionIds", () => {
   it("collects mention ids from nested content", () => {
-    const ids = collectMentionIds({
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [
-            { type: "text", text: "see " },
-            {
-              type: "mention",
-              attrs: { id: "doc-a", label: "A", href: "/documents/doc-a" },
-            },
-          ],
-        },
-        {
-          type: "bulletList",
-          content: [
-            {
-              type: "listItem",
-              content: [
-                {
-                  type: "paragraph",
-                  content: [
-                    {
-                      type: "mention",
-                      attrs: { id: "doc-b", label: "B" },
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    })
+    const blocks: Block[] = [
+      {
+        id: "block-1",
+        type: "paragraph",
+        props: {},
+        content: [
+          { type: "text", text: "see ", styles: {} },
+          {
+            type: "mention",
+            id: "doc-a",
+            label: "A",
+            href: "/documents/doc-a",
+          },
+        ],
+        children: [],
+      },
+      {
+        id: "block-2",
+        type: "bulletListItem",
+        props: {},
+        content: [
+          {
+            type: "mention",
+            id: "doc-b",
+            label: "B",
+            href: "",
+          },
+        ],
+        children: [],
+      },
+    ]
 
-    expect(ids).toEqual(["doc-a", "doc-b"])
+    expect(collectMentionIds(blocks)).toEqual(["doc-a", "doc-b"])
   })
 
   it("returns empty array when no mentions", () => {
-    expect(
-      collectMentionIds({ type: "doc", content: [{ type: "paragraph" }] })
-    ).toEqual([])
+    const blocks: Block[] = [
+      {
+        id: "block-1",
+        type: "paragraph",
+        props: {},
+        content: [],
+        children: [],
+      },
+    ]
+    expect(collectMentionIds(blocks)).toEqual([])
   })
 })

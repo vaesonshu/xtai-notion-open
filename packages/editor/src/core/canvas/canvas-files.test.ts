@@ -45,9 +45,9 @@ describe("externalizeCanvasFiles", () => {
   })
 
   it("inlines remote image URLs before export", async () => {
-    const fetchRemote = vi.fn().mockResolvedValue(
-      new Blob(["pixels"], { type: "image/png" })
-    )
+    const fetchRemote = vi
+      .fn()
+      .mockResolvedValue(new Blob(["pixels"], { type: "image/png" }))
     const files = {
       "file-1": {
         id: "file-1",
