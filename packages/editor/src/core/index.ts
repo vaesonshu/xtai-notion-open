@@ -17,6 +17,7 @@ export {
   createStarterBlocks,
   isBlockArray,
 } from "./block-schema/documents"
+export { legacyJsonToBlocks } from "./migrate"
 export { createEditorExtensions } from "./extensions"
 export { createInitialDocument } from "./document/initial-document"
 export {
