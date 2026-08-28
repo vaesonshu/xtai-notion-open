@@ -1,0 +1,86 @@
+import { Node } from "@tiptap/core"
+import type { DOMOutputSpec, RawCommands } from "@tiptap/core"
+import type { Node as PMNode, Schema, TagParseRule } from "@tiptap/pm/model"
+import type { PartialBlock } from "../block-schema/types"
+import { propsToAttributes, type PropSchema } from "./prop-types"
+
+/** blockContent 节点承载的内容形态，驱动 convert 默认分支 */
+export type BlockContentMode = "inline" | "none" | "table" | "text"
+
+export type BlockConfig = {
+  type: string
+  propSchema: PropSchema
+  content: BlockContentMode
+  isAtom?: boolean
+  isSelectable?: boolean
+  /** paragraph 需同时属于 block 组，供 tableCell 内嵌 */
+  alsoBlockGroup?: boolean
+  /** codeBlock 等纯文本节点 */
+  code?: boolean
+}
+
+export type ConvertContext = {
+  contentNode: PMNode
+  blockId: string
+}
+
+export type BlockSpec = {
+  config: BlockConfig
+  node: Node
+  toBlock?: (ctx: ConvertContext) => PartialBlock | null
+  fromBlock?: (block: PartialBlock, schema: Schema) => PMNode
+}
+
+export type DeclarativeBlockImplementation = {
+  parseHTML?: TagParseRule[]
+  renderHTML?: (props: {
+    node: PMNode
+    HTMLAttributes: Record<string, unknown>
+  }) => DOMOutputSpec
+  addCommands?: Partial<RawCommands>
+}
+
+function resolveNodeContent(config: BlockConfig): string {
+  switch (config.content) {
+    case "inline":
+      return "inline*"
+    case "text":
+      return "text*"
+    case "table":
+      return "tableRow+"
+    case "none":
+      return ""
+  }
+}
+
+/**
+ * 根据 BlockConfig 生成 Tiptap blockContent 节点与 BlockSpec。
+ * 复杂块（canvas / image）可在后续用 NodeView 版 spec 覆盖。
+ */
+export function defineBlockSpec(
+  config: BlockConfig,
+  implementation: DeclarativeBlockImplementation = {}
+): BlockSpec {
+  const node = Node.create({
+    name: config.type,
+    group: config.alsoBlockGroup ? "blockContent block" : "blockContent",
+    content: resolveNodeContent(config),
+    atom: config.isAtom,
+    code: config.code,
+    selectable: config.isSelectable ?? true,
+    addAttributes() {
+      return propsToAttributes(config.propSchema)
+    },
+    parseHTML() {
+      return implementation.parseHTML ?? []
+    },
+    ...(implementation.renderHTML
+      ? { renderHTML: implementation.renderHTML }
+      : {}),
+    addCommands() {
+      return implementation.addCommands ?? {}
+    },
+  })
+
+  return { config, node }
+}

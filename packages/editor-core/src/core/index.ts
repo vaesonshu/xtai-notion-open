@@ -34,6 +34,24 @@ export {
   createEditorExtensions,
   MentionNode,
 } from "./extensions"
+export type {
+  BlockConfig,
+  BlockContentMode,
+  BlockSpec,
+  CreateEditorSchemaOptions,
+  DeclarativeBlockImplementation,
+  EditorSchema,
+  PropSchema,
+  PropSpec,
+} from "./schema"
+export {
+  BlockSchemaRegistry,
+  createDefaultBlockSchemaRegistry,
+  createEditorSchema,
+  DEFAULT_BUILTIN_BLOCK_COUNT,
+  defineBlockSpec,
+  propsToAttributes,
+} from "./schema"
 export { ImageUploadNode } from "./extensions/image-upload-node"
 export type { BlockCommandMode, SlashCommand } from "./slash-commands"
 export {

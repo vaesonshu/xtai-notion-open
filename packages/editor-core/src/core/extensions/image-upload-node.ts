@@ -15,7 +15,7 @@ declare module "@tiptap/core" {
  * 此节点只负责 schema、HTML 序列化与插入命令，不包含任何 React 渲染逻辑。
  * 具体的 React 节点视图由 `@xtai-notion/editor-react` / shadcn 层通过
  * `ImageUploadNode.extend({ addNodeView })` 挂载，从而让 core 保持
- * 不依赖 React（参考 BlockNote 的 core/react 分层思想）。
+ * 不依赖 React（core / react 分层：Node 定义在 core，NodeView 在 react/shadcn）。
  */
 export const ImageUploadNode = Node.create<{ upload?: ImageUploadHandler }>({
   name: "imageUpload",
