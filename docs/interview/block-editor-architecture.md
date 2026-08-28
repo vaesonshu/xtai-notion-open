@@ -2,23 +2,21 @@
 
 **日期：** 2026-08-28  
 **状态：** 当前实现  
-**参考：** [BlockNote](https://github.com/TypeCellOS/BlockNote)（分层与块模型，非源码依赖）
 
 本文描述 xtai-notion-open 的块文档编辑器架构：对外以 `Block[]` 为文档单位，内部基于 Tiptap 3 + ProseMirror + Yjs 实现，协同经 Hocuspocus 持久化到 Postgres。
 
 ---
 
-## 1. 与 BlockNote 的关系
+## 1. 架构定位
 
-| 维度 | 本项目 | BlockNote |
-|------|--------|-----------|
-| 对外文档类型 | `Block[]` | `Block[]` |
-| 底层引擎 | Tiptap + ProseMirror + Yjs | Tiptap + ProseMirror + Yjs |
-| NPM 依赖 | **无** `@blocknote/*` | `@blocknote/core` / `react` / `mantine` |
-| 实现方式 | 自研 `editor-core` 等包 | 独立开源项目 |
-| 内部 PM 树 | `blockGroup` → `blockContainer` → `blockContent` | 同形文档树 |
+| 维度 | 说明 |
+|------|------|
+| 对外文档类型 | `Block[]` |
+| 底层引擎 | Tiptap + ProseMirror + Yjs |
+| 包结构 | `@xtai-notion/editor-core` → `editor-react` → `editor-shadcn` |
+| 内部 PM 树 | `blockGroup` → `blockContainer` → `blockContent` |
 
-> 学 BlockNote 的分层与块模型，不复制其源码。详见 [块文档架构设计](./superpowers/specs/2026-08-28-block-document-architecture-design.md)。
+> 详见 [块文档架构设计](./superpowers/specs/2026-08-28-block-document-architecture-design.md)。
 
 ---
 
@@ -130,7 +128,7 @@ classDiagram
 
 ## 4. 内部 ProseMirror 文档树
 
-块 API 操作的是 `Block[]`，编辑器内部映射为与 BlockNote 同形的 PM 树：
+块 API 操作的是 `Block[]`，编辑器内部映射为标准块树 ProseMirror 结构：
 
 ```mermaid
 flowchart TD
@@ -333,7 +331,7 @@ stateDiagram-v2
 
 ---
 
-## 9. 交互模型（BlockNote 对齐）
+## 9. 交互模型
 
 | 操作 | 行为 |
 |------|------|

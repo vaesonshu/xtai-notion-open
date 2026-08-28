@@ -7,6 +7,7 @@ export type {
   BlockSpec,
   ConvertContext,
   DeclarativeBlockImplementation,
+  SlashCommandMeta,
 } from "./block-spec"
 export { defineBlockSpec } from "./block-spec"
 

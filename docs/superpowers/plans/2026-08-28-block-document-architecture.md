@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 不复制 BlockNote / `learn-miaoma-docs` 源码；只实现本 spec 的类型与行为。
+- 全部在本仓库自研实现，只实现本 spec 的类型与行为。
 - `@workspace/editor-core` 源码不得 `import` `react`、`@tiptap/react`、`@workspace/ui`。
 - 公共文档类型是 `Block[]`；删除公共 `EditorDocument` 与 `export type Editor from "@tiptap/core"`。
 - Yjs 字段名仍为 `"default"`。`schemaVersion`：`1` = 旧 StarterKit 树，`2` = 块树。

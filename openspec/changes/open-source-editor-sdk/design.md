@@ -2,7 +2,7 @@
 
 当前 `@workspace/editor` 已在逻辑上分为 `core/`、`react/`、`collaboration/`、`components/`，并通过 `package.json` 的 subpath exports 暴露。`apps/api` 仅使用 `@workspace/editor/core`；`apps/web` 使用完整栈含默认 UI。编辑器组件中有 6 个文件直接依赖 `@workspace/ui` 与 `@workspace/icons`。动机与能力范围见 [proposal.md](proposal.md)。
 
-参考架构模式（仅借鉴分层思路，不复制源码）：learn-miaoma-docs 的 `core → react → shadcn` 多包发布模型。
+采用 `core → react → shadcn` 三层多包发布模型。
 
 ## Goals / Non-Goals
 

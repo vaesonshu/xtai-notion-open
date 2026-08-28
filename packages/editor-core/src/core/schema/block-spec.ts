@@ -4,6 +4,13 @@ import type { Node as PMNode, Schema, TagParseRule } from "@tiptap/pm/model"
 import type { PartialBlock } from "../block-schema/types"
 import { propsToAttributes, type PropSchema } from "./prop-types"
 
+/** 斜杠菜单项元数据，注册在 BlockConfig 上供 registry 聚合 */
+export type SlashCommandMeta = {
+  id: string
+  label: string
+  keywords: string[]
+}
+
 /** blockContent 节点承载的内容形态，驱动 convert 默认分支 */
 export type BlockContentMode = "inline" | "none" | "table" | "text"
 
@@ -13,10 +20,12 @@ export type BlockConfig = {
   content: BlockContentMode
   isAtom?: boolean
   isSelectable?: boolean
-  /** paragraph 需同时属于 block 组，供 tableCell 内嵌 */
+  /** paragraph 需同时 group: blockContent block（tableCell 内嵌） */
   alsoBlockGroup?: boolean
   /** codeBlock 等纯文本节点 */
   code?: boolean
+  /** 可选：该块类型对应的斜杠菜单项（自定义块用） */
+  slashCommands?: SlashCommandMeta[]
 }
 
 export type ConvertContext = {

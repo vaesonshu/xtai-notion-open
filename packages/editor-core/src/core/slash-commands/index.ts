@@ -7,6 +7,8 @@ import type {
   PartialBlock,
   TableContent,
 } from "../block-schema/types"
+import { createDefaultBlockSchemaRegistry } from "../schema/default-specs"
+import type { BlockSchemaRegistry } from "../schema/registry"
 
 export type SlashCommand = {
   id: string
@@ -20,14 +22,53 @@ export const UPLOAD_IMAGE_SLASH_COMMAND: SlashCommand = {
   keywords: ["upload-image", "image", "图片"],
 }
 
+/** 内置斜杠项对应的 block type；heading-* 共用 heading */
+const SLASH_COMMAND_BLOCK_TYPE: Record<string, string> = {
+  "heading-1": "heading",
+  "heading-2": "heading",
+  "heading-3": "heading",
+  paragraph: "paragraph",
+  "bullet-list": "bulletListItem",
+  "ordered-list": "numberedListItem",
+  "task-list": "checkListItem",
+  blockquote: "quote",
+  "code-block": "codeBlock",
+  "horizontal-rule": "divider",
+  table: "table",
+  "canvas-block": "canvas",
+  "upload-image": "image",
+}
+
+function collectCustomSlashCommands(
+  registry: BlockSchemaRegistry
+): SlashCommand[] {
+  const commands: SlashCommand[] = []
+  for (const type of registry.getAllBlockTypes()) {
+    const spec = registry.get(type)
+    if (spec?.config.slashCommands?.length) {
+      commands.push(...spec.config.slashCommands)
+    }
+  }
+  return commands
+}
+
+/** 按 registry 过滤内置斜杠项，并追加 spec 上声明的自定义项 */
 export function getSlashCommands({
   includeImageUpload = false,
+  registry = createDefaultBlockSchemaRegistry(),
 }: {
   includeImageUpload?: boolean
+  registry?: BlockSchemaRegistry
 } = {}): SlashCommand[] {
-  return includeImageUpload
-    ? [...SLASH_COMMANDS, UPLOAD_IMAGE_SLASH_COMMAND]
-    : SLASH_COMMANDS
+  const types = registry.getBlockContentTypes()
+  const builtins = SLASH_DEFINITIONS.filter((command) => {
+    const blockType = SLASH_COMMAND_BLOCK_TYPE[command.id]
+    return !blockType || types.has(blockType)
+  })
+  const commands = [...builtins, ...collectCustomSlashCommands(registry)]
+  return includeImageUpload && types.has("image")
+    ? [...commands, UPLOAD_IMAGE_SLASH_COMMAND]
+    : commands
 }
 
 /** 行内是否有实质内容（mention 算有内容，纯空白 text 不算） */
@@ -317,7 +358,7 @@ const SLASH_DEFINITIONS: SlashCommand[] = [
   },
 ]
 
-export const SLASH_COMMANDS: SlashCommand[] = SLASH_DEFINITIONS
+export const SLASH_COMMANDS: SlashCommand[] = getSlashCommands()
 
 export function filterSlashCommands(query: string): SlashCommand[] {
   return filterCommands(SLASH_COMMANDS, query)

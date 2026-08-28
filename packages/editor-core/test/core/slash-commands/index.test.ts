@@ -8,6 +8,7 @@ import {
   getSlashCommands,
   SLASH_COMMANDS,
 } from "@core/slash-commands/index"
+import { createEditorSchema } from "@core/schema/create-editor-schema"
 
 const editors: BlockEditor[] = []
 const EMPTY_BLOCK_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -122,6 +123,12 @@ describe("filterSlashCommands", () => {
     expect(filterSlashCommands("h2")).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "heading-2" })])
     )
+  })
+
+  it("omits canvas slash command when registry excludes canvas", () => {
+    const registry = createEditorSchema({ omit: ["canvas"] }).registry
+    const commands = getSlashCommands({ registry })
+    expect(commands.map((command) => command.id)).not.toContain("canvas-block")
   })
 })
 

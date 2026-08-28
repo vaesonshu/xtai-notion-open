@@ -5,9 +5,9 @@
 
 ## 目标
 
-把本项目做成 Notion / 飞书文档这一类产品：文档的对外单位是**块**，不是 Tiptap/ProseMirror JSON。第一期完成块数据模型、块结构的编辑器核心、两包分层，以及旧协作文档的一次性迁移。
+把本项目做成 Notion / 飞书文档这一类产品：文档的对外单位是**块**，不是 Tiptap/ProseMirror JSON。第一期完成块数据模型、块结构的编辑器核心、分包分层，以及旧协作文档的一次性迁移。
 
-学 [BlockNote](https://github.com/TypeCellOS/BlockNote) 的分层与块模型，不复制其源码。`learn-miaoma-docs` 是 BlockNote 源码级移植，本仓库不走那条路。
+采用块优先分层架构：对外 `Block[]`，对内 Tiptap + 块容器 ProseMirror 树；全部在本仓库自研实现。
 
 ## 非目标
 
@@ -71,7 +71,7 @@ doc
       └─ blockGroup?           // 仅当 children 非空
 ```
 
-这是 BlockNote 的文档形状，节点实现自写。`blockContainer` 带稳定 `id`，协同与块操作都针对该 id。
+上述为块 schema v2 的标准文档树形状。`blockContainer` 带稳定 `id`，协同与块操作都针对该 id。
 
 ## 第一期块类型
 

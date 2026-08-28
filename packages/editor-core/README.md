@@ -36,6 +36,47 @@ toggleInlineMark(editor.tiptap, "bold")
 console.log(isBlockArray(editor.document)) // true
 ```
 
+## 可扩展 Block Schema
+
+SDK 可通过 `createEditorSchema` 追加、覆盖或排除块类型，并与现有 `Block[]` / Yjs 协作兼容。
+
+```ts
+import {
+  createEditorSchema,
+  defineBlockSpec,
+} from "@xtai-notion/editor-core/schema"
+import { defineReactBlockSpec } from "@xtai-notion/editor-react"
+
+// 追加自定义块
+const callout = defineBlockSpec({
+  type: "callout",
+  propSchema: { variant: { default: "info" } },
+  content: "inline",
+  slashCommands: [
+    { id: "callout", label: "提示框", keywords: ["callout", "提示"] },
+  ],
+})
+
+const schema = createEditorSchema({ blocks: [callout] })
+
+// React 层挂载 NodeView
+const canvasWithUi = defineReactBlockSpec(
+  { type: "canvas", propSchema: { canvasId: { default: "" }, snapshot: { default: "" } }, content: "none", isAtom: true },
+  { component: MyCanvasNodeView }
+)
+
+const uiSchema = createEditorSchema({
+  override: { canvas: canvasWithUi },
+  omit: ["image"],
+})
+
+// 生成 Tiptap 扩展或传给 BlockEditor
+const extensions = schema.getExtensions()
+new BlockEditor({ editorSchema: schema })
+```
+
+完整 callout 示例见 `examples/callout-block.ts`；设计文档见仓库 `docs/superpowers/specs/2026-08-29-extensible-block-schema-design.md`。
+
 ## 主要导出
 
 | 类别 | 示例 |
