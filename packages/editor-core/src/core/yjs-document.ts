@@ -1,9 +1,11 @@
 import { TiptapTransformer } from "@hocuspocus/transformer"
-import { Editor } from "@tiptap/core"
-import type * as Y from "yjs"
+import { getSchema } from "@tiptap/core"
+import { Node as PMNode } from "@tiptap/pm/model"
+import * as Y from "yjs"
 import type { Block, InlineContent, TableContent } from "./block-schema/types"
 import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
 import { createStarterBlocks } from "./block-schema/documents"
+import { generateBlockId } from "./block-schema/ids"
 import { createEditorExtensions } from "./extensions"
 import { legacyJsonToBlocks } from "./migrate/legacy-json-to-blocks"
 import {
@@ -26,10 +28,9 @@ export function documentFromYjs(yDoc: Y.Doc): Block[] {
 
   // 新块 schema：经 PM 再 pmDocToBlocks，保证与编辑器内块树一致
   if (isBlockSchemaJson(json)) {
-    const editor = new Editor({ extensions, content: json })
-    const blocks = pmDocToBlocks(editor.state.doc)
-    editor.destroy()
-    return blocks
+    const schema = getSchema(extensions)
+    const pmDoc = PMNode.fromJSON(schema, json)
+    return pmDocToBlocks(pmDoc)
   }
 
   // 旧 doc > paragraph 结构：纯 JSON 迁移兜底
@@ -84,24 +85,84 @@ export function documentToPlainText(blocks: Block[]): string {
 /** 用块 schema v2 初始化协作 Y.Doc（default XmlFragment + schemaVersion=2） */
 export function createBlockSchemaYDoc(blocks?: Block[]): Y.Doc {
   const extensions = createEditorExtensions()
-  const editor = new Editor({ extensions })
-  const json = blocksToPmDoc(
-    blocks ?? createStarterBlocks(),
-    editor.schema
-  ).toJSON()
-  editor.destroy()
-
+  const schema = getSchema(extensions)
+  const json = blocksToPmDoc(blocks ?? createStarterBlocks(), schema).toJSON()
   const yDoc = TiptapTransformer.extensions(extensions).toYdoc(json, "default")
   writeYDocSchemaVersion(yDoc, CURRENT_SCHEMA_VERSION)
   return yDoc
 }
 
-/** 在已有块 schema Y.Doc 末尾插入纯文本（供协作集成测试使用） */
+/** 在 Tiptap XmlFragment 树中找到第一段可插入的 Y.XmlText */
+function findFirstXmlText(parent: Y.XmlFragment): Y.XmlText | null {
+  for (const child of parent.toArray()) {
+    if (child instanceof Y.XmlText) {
+      return child
+    }
+    if (child instanceof Y.XmlElement) {
+      const nested = findFirstXmlText(child)
+      if (nested) {
+        return nested
+      }
+    }
+  }
+  return null
+}
+
+/** 将 Block[] 写回已有块 schema Y.Doc（仅用于空文档初始化，避免跨客户端整树替换） */
+function writeBlocksToBlockSchemaYDoc(yDoc: Y.Doc, blocks: Block[]): void {
+  const extensions = createEditorExtensions()
+  const schema = getSchema(extensions)
+  const json = blocksToPmDoc(blocks, schema).toJSON()
+  const next = TiptapTransformer.extensions(extensions).toYdoc(json, "default")
+  Y.applyUpdate(yDoc, Y.encodeStateAsUpdate(next))
+  next.destroy()
+  writeYDocSchemaVersion(yDoc, CURRENT_SCHEMA_VERSION)
+}
+
+function appendTextToBlocks(blocks: Block[], text: string): void {
+  const visit = (items: Block[]): boolean => {
+    for (const block of items) {
+      if (Array.isArray(block.content)) {
+        const textNode = block.content.find((item) => item.type === "text")
+        if (textNode && textNode.type === "text") {
+          textNode.text += text
+          return true
+        }
+        if (block.type === "paragraph") {
+          block.content = [{ type: "text", text, styles: {} }]
+          return true
+        }
+      }
+      if (visit(block.children)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  if (!visit(blocks)) {
+    blocks.push({
+      id: generateBlockId(),
+      type: "paragraph",
+      props: {},
+      content: [{ type: "text", text, styles: {} }],
+      children: [],
+    })
+  }
+}
+
+/** 在已有块 schema Y.Doc 中追加纯文本（协作安全：优先原地插入 XmlText） */
 export function appendTextToBlockSchemaYDoc(yDoc: Y.Doc, text: string): void {
-  const extensions = createEditorExtensions({ document: yDoc })
-  const editor = new Editor({ extensions })
-  editor.chain().focus("end").insertContent(text).run()
-  editor.destroy()
+  const fragment = yDoc.getXmlFragment("default")
+  const xmlText = findFirstXmlText(fragment)
+  if (xmlText) {
+    xmlText.insert(xmlText.length, text)
+    return
+  }
+
+  const blocks = documentFromYjs(yDoc)
+  appendTextToBlocks(blocks, text)
+  writeBlocksToBlockSchemaYDoc(yDoc, blocks)
 }
 
 /** 判断 Y.Doc 的 default fragment 是否已有块内容 */

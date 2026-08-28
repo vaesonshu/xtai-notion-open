@@ -23,6 +23,16 @@ type DocumentBuffer = {
 const DEFAULT_FLUSH_DELAY_MS = 250
 const DEFAULT_COMPACT_UPDATE_COUNT_THRESHOLD = 50
 
+/** document 已删除时的 FK 违反：重试无意义，应丢弃缓冲避免死循环 flush */
+function isDocumentMissingError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: string }).code === "P2003"
+  )
+}
+
 @Injectable()
 export class YjsPersistenceService {
   private readonly logger = new Logger(YjsPersistenceService.name)
@@ -89,11 +99,15 @@ export class YjsPersistenceService {
 
     const dbSchemaVersion = await this.documents.getSchemaVersion(documentId)
     const yDocSchemaVersion = readYDocSchemaVersion(doc)
-    const needsMigration =
-      dbSchemaVersion < CURRENT_SCHEMA_VERSION ||
-      yDocSchemaVersion < CURRENT_SCHEMA_VERSION
 
-    if (!needsMigration) {
+    // Y.Doc 已是块 schema v2：只同步 DB 列，避免用 v1 解析器误迁移导致内容丢失
+    if (yDocSchemaVersion >= CURRENT_SCHEMA_VERSION) {
+      if (dbSchemaVersion < CURRENT_SCHEMA_VERSION) {
+        await this.documents.updateSchemaVersion(
+          documentId,
+          CURRENT_SCHEMA_VERSION
+        )
+      }
       return doc
     }
 
@@ -165,6 +179,12 @@ export class YjsPersistenceService {
     try {
       await this.repository.insertUpdates(documentId, updates)
     } catch (error) {
+      if (isDocumentMissingError(error)) {
+        this.logger.warn(
+          `Discarding ${updates.length} Yjs update(s) for missing document ${documentId}`
+        )
+        return
+      }
       // 写入失败时把 updates 合并回缓冲区，避免协作内容丢失
       const failedBuffer = this.getOrCreateBuffer(documentId)
       failedBuffer.updates.unshift(...updates)

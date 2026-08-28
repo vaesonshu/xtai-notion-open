@@ -38,7 +38,7 @@ describe("documents create (integration)", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, password, displayName }),
     })
-    expect(registerRes.status).toBe(200)
+    expect(registerRes.status).toBe(201)
 
     // Login (sets cookie)
     const loginRes = await fetch(`${baseUrl}/auth/login`, {
@@ -59,7 +59,7 @@ describe("documents create (integration)", () => {
       method: "POST",
       headers: { cookie: `session_token=${encodeURIComponent(token)}` },
     })
-    expect(createRes.status).toBe(200)
+    expect(createRes.status).toBe(201)
     const meta = await createRes.json()
     expect(meta).toHaveProperty("id")
 

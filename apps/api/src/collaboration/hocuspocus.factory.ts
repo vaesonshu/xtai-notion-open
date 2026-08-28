@@ -36,8 +36,8 @@ export class HocuspocusFactory {
       port: this.env.COLLABORATION_PORT,
       quiet: this.env.NODE_ENV === "test",
       stopOnSignals: false,
-      debounce: 2_000,
-      maxDebounce: 10_000,
+      debounce: this.env.NODE_ENV === "test" ? 100 : 2_000,
+      maxDebounce: this.env.NODE_ENV === "test" ? 500 : 10_000,
       async onAuthenticate(data) {
         return hooks.onAuthenticate({
           documentName: data.documentName,

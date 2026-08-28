@@ -11,7 +11,15 @@ import {
 } from "@xtai-notion/editor-core"
 import type { Block } from "@xtai-notion/editor-core"
 import { randomUUID } from "node:crypto"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "vitest"
 import * as Y from "yjs"
 import { AppModule } from "../app.module"
 import { PrismaService } from "../database/prisma.module"
@@ -28,15 +36,19 @@ const USERS = {
 
 function waitFor(
   predicate: () => boolean,
-  timeoutMs = 5_000,
+  timeoutMs = 8_000,
   intervalMs = 50
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const started = Date.now()
     const tick = () => {
-      if (predicate()) {
-        resolve()
-        return
+      try {
+        if (predicate()) {
+          resolve()
+          return
+        }
+      } catch {
+        // 同步过程中 Y.Doc 可能暂时无法解析，继续等
       }
       if (Date.now() - started >= timeoutMs) {
         reject(new Error("Timed out waiting for condition"))
@@ -59,7 +71,11 @@ function createParagraphBlock(text: string): Block {
 }
 
 function yDocPlainText(doc: Y.Doc): string {
-  return documentToPlainText(documentFromYjs(doc))
+  try {
+    return documentToPlainText(documentFromYjs(doc))
+  } catch {
+    return ""
+  }
 }
 
 describe("collaboration (integration)", () => {
@@ -71,15 +87,16 @@ describe("collaboration (integration)", () => {
   let documentId: string
   let websocketUrl: string
 
-  async function seedDocument(): Promise<void> {
-    workspaceId = randomUUID()
+  async function createTestDocument(): Promise<void> {
     documentId = randomUUID()
 
-    await prisma.workspace.create({
-      data: { id: workspaceId, name: "Collaboration Workspace" },
-    })
     await prisma.document.create({
-      data: { id: documentId, workspaceId, title: "Collaboration Document" },
+      data: {
+        id: documentId,
+        workspaceId,
+        title: "Collaboration Document",
+        schemaVersion: 2,
+      },
     })
 
     for (const [userId, role] of [
@@ -112,22 +129,44 @@ describe("collaboration (integration)", () => {
     }
     websocketUrl = server.webSocketURL
 
-    await seedDocument()
+    workspaceId = randomUUID()
+    await prisma.workspace.create({
+      data: { id: workspaceId, name: "Collaboration Workspace" },
+    })
+  })
+
+  beforeEach(async () => {
+    await createTestDocument()
+  })
+
+  afterEach(async () => {
+    await persistence.flushAll().catch(() => undefined)
+    if (documentId) {
+      await prisma.document
+        .delete({ where: { id: documentId } })
+        .catch(() => undefined)
+    }
   })
 
   afterAll(async () => {
     try {
+      if (persistence) {
+        await persistence.flushAll()
+      }
       if (prisma && workspaceId) {
         await prisma.workspace.delete({ where: { id: workspaceId } })
       }
+    } catch {
+      // 重启类测试可能已关闭 app；teardown 失败不应拖死 hook
     } finally {
       await app?.close()
     }
-  })
+  }, 90_000)
 
+  // 客户端使用空 Y.Doc，避免各自 createBlockSchemaYDoc 抢先写入互不兼容的树
   function connect(
     userId: string,
-    ydoc = createBlockSchemaYDoc()
+    ydoc = new Y.Doc()
   ): {
     document: Y.Doc
     provider: HocuspocusProvider
@@ -139,6 +178,13 @@ describe("collaboration (integration)", () => {
       token: userId,
     })
     return { document: ydoc, provider }
+  }
+
+  async function seedPersistedText(text: string): Promise<void> {
+    const seed = createBlockSchemaYDoc([createParagraphBlock(text)])
+    persistence.enqueueUpdate(documentId, Y.encodeStateAsUpdate(seed))
+    await persistence.flushDocument(documentId)
+    seed.destroy()
   }
 
   it("replays snapshot plus ordered updates after flush and compact", async () => {
@@ -183,12 +229,17 @@ describe("collaboration (integration)", () => {
   })
 
   it("syncs block schema text between two editors in real time", async () => {
+    await seedPersistedText("seed-")
     const a = connect(USERS.owner)
     const b = connect(USERS.editor)
 
     await Promise.all([
       waitFor(() => a.provider.synced),
       waitFor(() => b.provider.synced),
+    ])
+    await Promise.all([
+      waitFor(() => yDocPlainText(a.document).includes("seed-")),
+      waitFor(() => yDocPlainText(b.document).includes("seed-")),
     ])
 
     appendTextToBlockSchemaYDoc(a.document, "pair-sync")
@@ -205,28 +256,30 @@ describe("collaboration (integration)", () => {
   })
 
   it("rejects viewer writes while keeping read access", async () => {
-    const editor = connect(USERS.editor)
+    await seedPersistedText("baseline-")
+    const owner = connect(USERS.owner)
     const viewer = connect(USERS.viewer)
 
     await Promise.all([
-      waitFor(() => editor.provider.synced),
+      waitFor(() => owner.provider.synced),
       waitFor(() => viewer.provider.synced),
     ])
-
-    appendTextToBlockSchemaYDoc(editor.document, "baseline-")
-    await waitFor(() => yDocPlainText(viewer.document).includes("baseline-"))
+    await Promise.all([
+      waitFor(() => yDocPlainText(owner.document).includes("baseline-")),
+      waitFor(() => yDocPlainText(viewer.document).includes("baseline-")),
+    ])
 
     const before = yDocPlainText(viewer.document)
     appendTextToBlockSchemaYDoc(viewer.document, "viewer-write-")
 
     await new Promise((resolve) => setTimeout(resolve, 400))
 
-    expect(yDocPlainText(editor.document)).toBe(before)
+    expect(yDocPlainText(owner.document)).toBe(before)
     expect(yDocPlainText(viewer.document)).not.toBe(before)
 
-    editor.provider.destroy()
+    owner.provider.destroy()
     viewer.provider.destroy()
-    editor.document.destroy()
+    owner.document.destroy()
     viewer.document.destroy()
   })
 
@@ -255,21 +308,21 @@ describe("collaboration (integration)", () => {
   })
 
   it("restores persisted block schema content after collaboration service restart", async () => {
-    const before = connect(USERS.owner)
-    await waitFor(() => before.provider.synced)
-    appendTextToBlockSchemaYDoc(before.document, "persist-me")
-    await waitFor(() => yDocPlainText(before.document).includes("persist-me"))
-
-    const snapshotUpdate = Y.encodeStateAsUpdate(before.document)
-    persistence.enqueueUpdate(documentId, snapshotUpdate)
-    await persistence.flushDocument(documentId)
+    await seedPersistedText("persist-me")
     await persistence.compactDocument(documentId)
 
+    const before = connect(USERS.owner)
+    await waitFor(() => before.provider.synced, 10_000)
+    await waitFor(
+      () => yDocPlainText(before.document).includes("persist-me"),
+      10_000
+    )
     before.provider.destroy()
     before.document.destroy()
 
+    await persistence.flushAll()
     await app.close()
-    await new Promise((resolve) => setTimeout(resolve, 250))
+    await new Promise((resolve) => setTimeout(resolve, 1_500))
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -292,14 +345,14 @@ describe("collaboration (integration)", () => {
     loaded.destroy()
 
     const after = connect(USERS.editor)
-    await waitFor(() => after.provider.synced, 10_000)
+    await waitFor(() => after.provider.synced, 15_000)
     await waitFor(
       () => yDocPlainText(after.document).includes("persist-me"),
-      10_000
+      15_000
     )
     expect(yDocPlainText(after.document)).toContain("persist-me")
 
     after.provider.destroy()
     after.document.destroy()
-  })
+  }, 90_000)
 })

@@ -3,6 +3,9 @@ import * as editorCore from "@xtai-notion/editor-core"
 import {
   encodeLegacyV1FixtureSnapshot,
   readYDocSchemaVersion,
+  createBlockSchemaYDoc,
+  documentToPlainText,
+  documentFromYjs,
 } from "@xtai-notion/editor-core"
 import * as Y from "yjs"
 import type { DocumentsRepository } from "../documents/documents.repository"
@@ -107,6 +110,22 @@ describe("YjsPersistenceService", () => {
 
     expect(insertUpdates).toHaveBeenCalledTimes(1)
     expect(insertUpdates).toHaveBeenCalledWith("doc-1", [first, second])
+  })
+
+  it("flushDocument discards updates when document row was deleted (FK P2003)", async () => {
+    const insertUpdates = vi.fn().mockRejectedValue({ code: "P2003" })
+    const repo = createRepo({ insertUpdates })
+    const service = new YjsPersistenceService(repo, {
+      flushDelayMs: 10_000,
+    })
+
+    service.enqueueUpdate("doc-deleted", encodeTextUpdate("orphan"))
+    await expect(service.flushDocument("doc-deleted")).resolves.toBeUndefined()
+    expect(insertUpdates).toHaveBeenCalledTimes(1)
+
+    insertUpdates.mockClear()
+    await service.flushDocument("doc-deleted")
+    expect(insertUpdates).not.toHaveBeenCalled()
   })
 
   it("auto-flushes buffered updates after the flush delay", async () => {
@@ -261,6 +280,34 @@ describe("YjsPersistenceService", () => {
     await service.flushDocument("doc-1")
 
     expect(compactSpy).toHaveBeenCalledWith("doc-1")
+  })
+
+  it("loadDocument skips v1 migration when Y.Doc is already schema v2", async () => {
+    const v2Snapshot = Buffer.from(
+      Y.encodeStateAsUpdate(createBlockSchemaYDoc())
+    )
+    const updateSchemaVersion = vi.fn().mockResolvedValue(undefined)
+    const repo = createRepo({
+      getLatestSnapshot: vi.fn().mockResolvedValue({
+        snapshot: v2Snapshot,
+        sequence: 1,
+      }),
+      listUpdatesAfter: vi.fn().mockResolvedValue([]),
+    })
+    const documents = createDocumentsRepo({
+      getSchemaVersion: vi.fn().mockResolvedValue(1),
+      updateSchemaVersion,
+    })
+    const migrateSpy = vi.spyOn(editorCore, "migrateV1YDocToV2")
+    const service = new YjsPersistenceService(repo, null, documents)
+
+    const loaded = await service.loadDocument("doc-v2")
+    expect(migrateSpy).not.toHaveBeenCalled()
+    expect(updateSchemaVersion).toHaveBeenCalledWith("doc-v2", 2)
+    expect(documentToPlainText(documentFromYjs(loaded)).length).toBeGreaterThan(
+      0
+    )
+    loaded.destroy()
   })
 
   it("loadDocument migrates v1 snapshots to schema v2 and persists the result", async () => {
