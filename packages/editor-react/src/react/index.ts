@@ -6,6 +6,14 @@ export { EditorContent } from "./editor-content"
 export { useBlockEditor } from "./hooks/use-block-editor"
 export { useEditorInstance } from "./hooks/use-editor-instance"
 export { useEditorChange } from "./hooks/use-editor-change"
+export {
+  useEditorBlocks,
+  type UseEditorBlocksOptions,
+} from "./hooks/use-editor-blocks"
+export {
+  useEditorPmJson,
+  type UseEditorPmJsonOptions,
+} from "./hooks/use-editor-pm-json"
 export { useEditorSelection } from "./hooks/use-editor-selection"
 export { useEditorState } from "@tiptap/react"
 export { getEditorText, useEditorText } from "./hooks/use-editor-text"

@@ -18,6 +18,9 @@ import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
 import { createDocumentCanvasImageFetcher, createDocumentImageUploader } from "./image-upload"
 import { AiAssistantPanel } from "./ai-assistant-panel"
+import { BlockStructureDebugger } from "./block-structure-debugger"
+
+const showBlockStructureDebugger = process.env.NODE_ENV === "development"
 
 export type DocumentWorkspaceUser = CollaborationUser
 
@@ -313,6 +316,7 @@ export function DocumentWorkspace({
           aiOpen={aiOpen}
           onAiToggle={() => setAiOpen((open) => !open)}
         />
+        {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
       </DocumentEditor>
       <AiAssistantPanel
         open={aiOpen}
