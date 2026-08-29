@@ -303,6 +303,30 @@ describe("EditorProvider", () => {
     })
   })
 
+  it("exposes sharedYDoc as null for the non-collaboration provider", async () => {
+    function SharedYDocProbe() {
+      const context = use(EditorContext)
+      if (!context?.blockEditor) {
+        return <span>loading</span>
+      }
+      return (
+        <span data-testid="shared-ydoc">
+          {context.sharedYDoc === null ? "null" : "set"}
+        </span>
+      )
+    }
+
+    render(
+      <EditorProvider>
+        <SharedYDocProbe />
+      </EditorProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("shared-ydoc")).toHaveTextContent("null")
+    })
+  })
+
   it("throws when collaboration hooks are used outside collaboration provider", () => {
     expect(() => render(<CollaborationStatusLabel />)).toThrow(
       /useCollaborationStatus must be used inside .*CollaborationEditorProvider/
@@ -637,5 +661,42 @@ describe("CollaborationEditorProvider", () => {
     })
 
     expect(screen.getByTestId("editable")).toHaveTextContent("yes")
+  })
+
+  it("exposes the collaboration Y.Doc as sharedYDoc", async () => {
+    const provider = createMockProvider()
+    let sharedDoc: Y.Doc | undefined
+
+    function SharedYDocProbe() {
+      const context = use(EditorContext)
+      if (!context?.blockEditor) {
+        return <span>loading</span>
+      }
+      return (
+        <span data-testid="shared-ydoc">
+          {context.sharedYDoc === sharedDoc ? "same" : "different"}
+        </span>
+      )
+    }
+
+    render(
+      <CollaborationEditorProvider
+        collaboration={baseConfig}
+        createProvider={(options: CreateProviderOptions) => {
+          sharedDoc = options.document
+          return provider as unknown as HocuspocusProvider
+        }}
+      >
+        <SharedYDocProbe />
+      </CollaborationEditorProvider>
+    )
+
+    await act(async () => {
+      provider.emit("synced", { state: true })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("shared-ydoc")).toHaveTextContent("same")
+    })
   })
 })

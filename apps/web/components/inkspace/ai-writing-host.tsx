@@ -2,29 +2,32 @@
 
 import { readAiWriteSse } from "@/lib/ai-writing/client"
 import { createAiWritingSession } from "@/lib/ai-writing/session"
-import { blocksToAiBlockViews } from "@xtai-notion/editor-core"
+import {
+  AI_WRITE_MERGE_ORIGIN,
+  blocksToAiBlockViews,
+  forkYDoc,
+} from "@xtai-notion/editor-core"
 import { EditorContext } from "@xtai-notion/editor-react"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
-import { useCollaborationStatus } from "@xtai-notion/editor-react/hooks/use-collaboration-status"
 import {
-  AiWriteDraft,
   AiWriteHostContext,
+  AiWritePromptAnchor,
   AiWritePromptBar,
   SELECTION_AI_WRITE_PRESETS,
   SLASH_AI_WRITE_PRESETS,
   type AiWritingStatus,
 } from "@xtai-notion/editor-shadcn"
 import {
-  use,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  use,
   type ReactNode,
 } from "react"
-import { createPortal } from "react-dom"
 import { toast } from "sonner"
+import type { Doc as YDoc } from "yjs"
 
 export type AiWritingHostProps = {
   apiUrl: string
@@ -36,6 +39,7 @@ export type AiWritingHostProps = {
 }
 
 type SessionContext = {
+  mode: "slash" | "selection"
   cursorBlockId: string
   selectedIds: string[]
 }
@@ -57,7 +61,12 @@ function AiWritingHostReady({
   children,
 }: AiWritingHostProps) {
   const blockEditor = useBlockEditor()
-  const collaborationStatus = useCollaborationStatus()
+  // 直接读 context，避免 useCollaborationStatus 在非协作 provider 下抛错；
+  // 同时取出改绑与 shared Y.Doc，缺一则禁用 AI 写作
+  const context = use(EditorContext)
+  const collaborationStatus = context?.collaborationStatus ?? null
+  const rebindVisibleEditor = context?.rebindVisibleEditor
+  const sharedYDoc = context?.sharedYDoc ?? null
   // 仅 owner/editor 且协作已同步时开放斜杠与气泡入口
   const aiEnabled = canWrite && collaborationStatus === "synced"
 
@@ -66,9 +75,14 @@ function AiWritingHostReady({
   )
   const sessionContextRef = useRef<SessionContext | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // fork Y.Doc 由 Host 负责销毁；fork BlockEditor 由 provider 改绑时自动 destroy
+  const forkRef = useRef<YDoc | null>(null)
+  // shared update 监听器，clearSession 时反注册
+  const sharedUnsubscribeRef = useRef<(() => void) | null>(null)
+  // user-input 阶段也算进行中，避免在提交前再开一个会话
+  const activeRef = useRef(false)
   const [uiStatus, setUiStatus] = useState<AiWritingStatus>("closed")
   const [errorMessage, setErrorMessage] = useState<string>()
-  const [draftRevision, setDraftRevision] = useState(0)
 
   const syncUiFromSession = useCallback(() => {
     const session = sessionRef.current
@@ -79,20 +93,36 @@ function AiWritingHostReady({
       setUiStatus(session.status)
       setErrorMessage(session.errorMessage)
     }
-    setDraftRevision((value) => value + 1)
   }, [])
 
   const clearSession = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
+    // 解除 shared 远端监听
+    sharedUnsubscribeRef.current?.()
+    sharedUnsubscribeRef.current = null
+    if (sessionRef.current && sessionRef.current.status !== "closed") {
+      sessionRef.current.reject()
+    }
     sessionRef.current = null
     sessionContextRef.current = null
-    syncUiFromSession()
-  }, [syncUiFromSession])
+    forkRef.current = null
+    activeRef.current = false
+    setUiStatus("closed")
+    setErrorMessage(undefined)
+  }, [])
+
+  // 把可见编辑器改绑回 shared 并销毁 fork Y.Doc（fork BlockEditor 由 provider 自动 destroy）
+  const restoreSharedEditor = useCallback(() => {
+    if (rebindVisibleEditor) {
+      rebindVisibleEditor({ target: "shared", editable: true })
+    }
+    forkRef.current?.destroy()
+    forkRef.current = null
+  }, [rebindVisibleEditor])
 
   const guardSingleSession = useCallback(() => {
-    const active = sessionRef.current
-    if (active && active.status !== "closed") {
+    if (activeRef.current) {
       toast.error("请先接受或拒绝当前 AI 草稿")
       return false
     }
@@ -108,21 +138,23 @@ function AiWritingHostReady({
       if (!guardSingleSession()) {
         return
       }
-
-      sessionRef.current = createAiWritingSession({
-        live: blockEditor,
-        mode,
-        cursorBlockId,
-        selectedIds,
-      })
-      sessionContextRef.current = { cursorBlockId, selectedIds }
-      syncUiFromSession()
+      // 仅记录入口上下文；真正 fork 推迟到提交，避免未提交就改绑
+      sessionContextRef.current = { mode, cursorBlockId, selectedIds }
+      activeRef.current = true
+      setUiStatus("user-input")
+      setErrorMessage(undefined)
     },
-    [blockEditor, guardSingleSession, syncUiFromSession]
+    [guardSingleSession]
   )
 
   const openSlash = useCallback(() => {
+    // 缺改绑或 shared Y.Doc 的编辑器无法承载 fork 流程
+    if (!rebindVisibleEditor || !sharedYDoc) {
+      toast.error("当前编辑器不支持 AI 写作")
+      return
+    }
     if (!aiEnabled) {
+      toast.error("文档同步中，请稍后再试")
       return
     }
     const cursorBlockId =
@@ -131,10 +163,15 @@ function AiWritingHostReady({
       return
     }
     startSession("slash", cursorBlockId, [])
-  }, [aiEnabled, blockEditor, startSession])
+  }, [aiEnabled, blockEditor, rebindVisibleEditor, sharedYDoc, startSession])
 
   const openSelection = useCallback(() => {
+    if (!rebindVisibleEditor || !sharedYDoc) {
+      toast.error("当前编辑器不支持 AI 写作")
+      return
+    }
     if (!aiEnabled) {
+      toast.error("文档同步中，请稍后再试")
       return
     }
     const selectedIds = blockEditor.getSelectedBlocks().map((block) => block.id)
@@ -142,19 +179,60 @@ function AiWritingHostReady({
       return
     }
     startSession("selection", selectedIds[0]!, selectedIds)
-  }, [aiEnabled, blockEditor, startSession])
+  }, [aiEnabled, blockEditor, rebindVisibleEditor, sharedYDoc, startSession])
 
+  // 有写权限即暴露入口；未 synced 时由 openSlash/openSelection 提示用户
   const handlers = useMemo(
-    () => (aiEnabled ? { openSlash, openSelection } : null),
-    [aiEnabled, openSlash, openSelection]
+    () => (canWrite ? { openSlash, openSelection } : null),
+    [canWrite, openSlash, openSelection]
   )
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
-      const session = sessionRef.current
       const requestContext = sessionContextRef.current
-      if (!session || !requestContext || session.status === "closed") {
+      if (!requestContext || !rebindVisibleEditor || !sharedYDoc) {
         return
+      }
+
+      // 提交瞬间可见编辑器仍绑 shared，先序列化母本快照再 fork
+      const blocksPayload = blocksToAiBlockViews(blockEditor.document)
+      const fork = forkYDoc(sharedYDoc)
+      const forkEditor = rebindVisibleEditor({
+        target: "fork",
+        document: fork,
+        editable: false,
+      })
+      forkRef.current = fork
+
+      const session = createAiWritingSession({
+        shared: sharedYDoc,
+        fork,
+        forkEditor,
+        mode: requestContext.mode,
+        cursorBlockId: requestContext.cursorBlockId,
+        selectedIds: requestContext.selectedIds,
+      })
+      sessionRef.current = session
+
+      // 监听 shared 远端更新：merge 自身写入用 AI_WRITE_MERGE_ORIGIN 标记，需忽略
+      const onSharedUpdate = (update: unknown, origin: unknown) => {
+        if (origin === AI_WRITE_MERGE_ORIGIN) {
+          return
+        }
+        // 会话存活期间 shared 收到任何非 merge 写入都视为远端并发，作废草稿
+        const current = sessionRef.current
+        if (!current || current.status === "closed") {
+          return
+        }
+        current.markSharedStale()
+        toast.error("文档已变化，AI 草稿已失效")
+        abortRef.current?.abort()
+        restoreSharedEditor()
+        clearSession()
+      }
+      sharedYDoc.on("update", onSharedUpdate)
+      sharedUnsubscribeRef.current = () => {
+        sharedYDoc.off("update", onSharedUpdate)
       }
 
       session.status = "thinking"
@@ -176,7 +254,7 @@ function AiWritingHostReady({
             prompt,
             cursorBlockId: requestContext.cursorBlockId,
             selectedIds: requestContext.selectedIds,
-            blocks: blocksToAiBlockViews(blockEditor.document),
+            blocks: blocksPayload,
           }),
           signal: controller.signal,
         })
@@ -188,6 +266,8 @@ function AiWritingHostReady({
         for await (const event of readAiWriteSse(response)) {
           if (event.type === "tool_call") {
             session.applyRemoteOp(event.op)
+            // fork 编辑器无 provider，focus 仅滚动到草稿块，不广播 awareness
+            forkEditor.tiptap.commands.focus()
             syncUiFromSession()
             continue
           }
@@ -225,7 +305,17 @@ function AiWritingHostReady({
         abortRef.current = null
       }
     },
-    [apiUrl, blockEditor, documentId, syncUiFromSession, userId]
+    [
+      apiUrl,
+      blockEditor,
+      clearSession,
+      documentId,
+      rebindVisibleEditor,
+      restoreSharedEditor,
+      sharedYDoc,
+      syncUiFromSession,
+      userId,
+    ]
   )
 
   const handleAccept = useCallback(() => {
@@ -234,19 +324,32 @@ function AiWritingHostReady({
       return
     }
     const result = session.accept()
-    if (!result.ok) {
-      if (result.reason === "stale") {
-        toast.error("文档已变化，无法应用 AI 草稿")
-      }
-      session.reject()
+    if (result.ok) {
+      // merge 已把 fork 增量写进 shared（origin=AI_WRITE_MERGE_ORIGIN），改绑回 shared
+      restoreSharedEditor()
+      clearSession()
+      return
     }
+    if (result.reason === "merge") {
+      // 合并失败：保留 fork 与审阅态，允许用户再拒绝
+      toast.error("合并失败，请重试或拒绝")
+      return
+    }
+    if (result.reason === "stale") {
+      toast.error("文档已变化，无法应用 AI 草稿")
+    } else if (result.reason === "empty") {
+      toast.error("没有可应用的改动")
+    }
+    session.reject()
+    restoreSharedEditor()
     clearSession()
-  }, [clearSession])
+  }, [clearSession, restoreSharedEditor])
 
   const handleReject = useCallback(() => {
     sessionRef.current?.reject()
+    restoreSharedEditor()
     clearSession()
-  }, [clearSession])
+  }, [clearSession, restoreSharedEditor])
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort()
@@ -260,6 +363,10 @@ function AiWritingHostReady({
       if (sessionRef.current && sessionRef.current.status !== "closed") {
         sessionRef.current.reject()
       }
+      forkRef.current?.destroy()
+      forkRef.current = null
+      sharedUnsubscribeRef.current?.()
+      sharedUnsubscribeRef.current = null
     }
   }, [])
 
@@ -269,32 +376,27 @@ function AiWritingHostReady({
       ? SELECTION_AI_WRITE_PRESETS
       : SLASH_AI_WRITE_PRESETS
 
+  // 提示条锚在最后触及的草稿块下方；未触及任何块时回退到光标块
+  const anchorBlockId =
+    (session && session.lastTouchedBlockId()) ??
+    sessionContextRef.current?.cursorBlockId
+
   const overlay =
-    typeof document !== "undefined" && uiStatus !== "closed"
-      ? createPortal(
-          <div
-            data-testid="ai-writing-overlay"
-            className="pointer-events-auto fixed inset-x-0 bottom-8 z-50 mx-auto flex w-full max-w-2xl flex-col gap-3 px-4"
-          >
-            {session && session.ops.length > 0 ? (
-              <AiWriteDraft
-                blocks={session.draftBlocks()}
-                key={draftRevision}
-              />
-            ) : null}
-            <AiWritePromptBar
-              status={uiStatus}
-              errorMessage={errorMessage}
-              onSubmit={(value) => void handleSubmit(value)}
-              onAccept={handleAccept}
-              onReject={handleReject}
-              onStop={handleStop}
-              presets={presets}
-            />
-          </div>,
-          document.body
-        )
-      : null
+    typeof document !== "undefined" &&
+    uiStatus !== "closed" &&
+    anchorBlockId ? (
+      <AiWritePromptAnchor anchorBlockId={anchorBlockId}>
+        <AiWritePromptBar
+          status={uiStatus}
+          errorMessage={errorMessage}
+          onSubmit={(value) => void handleSubmit(value)}
+          onAccept={handleAccept}
+          onReject={handleReject}
+          onStop={handleStop}
+          presets={presets}
+        />
+      </AiWritePromptAnchor>
+    ) : null
 
   return (
     <AiWriteHostContext value={handlers}>

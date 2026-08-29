@@ -3,8 +3,10 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { createEditorSchema } from "@xtai-notion/editor-core/schema"
+import { documentFromYjs } from "@xtai-notion/editor-core"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { CollaborationEditorProvider } from "@xtai-notion/editor-react/providers/collaboration-editor-provider"
+import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
 import {
   AiWriteHostContext,
   EditorSurface,
@@ -12,6 +14,7 @@ import {
   ShadcnEditorProvider,
 } from "@xtai-notion/editor-shadcn"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import * as Y from "yjs"
 import { use, useEffect } from "react"
 import { toast } from "sonner"
 import { AiWritingHost } from "@/components/inkspace/ai-writing-host"
@@ -130,6 +133,7 @@ function streamResponse(events: string[]) {
   return { ok: true, body }
 }
 
+// 可见编辑器（fork 期间为 fork 编辑器）当前块数；用于断言 fork/shared 改绑
 let latestBlockCount = 0
 
 function BlockCountProbe() {
@@ -166,9 +170,16 @@ function OpenSlashButton() {
   )
 }
 
-function renderHost(canWrite = true) {
+type RenderHostResult = ReturnType<typeof render> & {
+  provider: MockProvider
+  getSharedDoc: () => Y.Doc | undefined
+}
+
+function renderHost(canWrite = true): RenderHostResult {
   const provider = createMockProvider()
   const editorSchema = createEditorSchema()
+  // 缓存 createProvider 收到的 shared Y.Doc，用于断言接受前 shared 无 AI 增量
+  let sharedDoc: Y.Doc | undefined
 
   const view = render(
     <ShadcnEditorProvider>
@@ -181,7 +192,10 @@ function renderHost(canWrite = true) {
         }}
         initialContent={initialContent}
         editorSchema={editorSchema}
-        createProvider={() => provider as unknown as HocuspocusProvider}
+        createProvider={(options) => {
+          sharedDoc = options.document
+          return provider as unknown as HocuspocusProvider
+        }}
       >
         <ImageUpload>
           <AiWritingHost
@@ -200,7 +214,7 @@ function renderHost(canWrite = true) {
     </ShadcnEditorProvider>
   )
 
-  return { provider, ...view }
+  return { provider, getSharedDoc: () => sharedDoc, ...view }
 }
 
 async function syncEditor(provider: MockProvider) {
@@ -274,7 +288,7 @@ describe("AiWritingHost", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const { provider } = renderHost(true)
+    const { provider, getSharedDoc } = renderHost(true)
     await syncEditor(provider)
 
     fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
@@ -288,13 +302,21 @@ describe("AiWritingHost", () => {
     await waitFor(() => {
       expect(screen.getByTestId("ai-write-accept")).toBeInTheDocument()
     })
-    expect(latestBlockCount).toBe(1)
+
+    // 接受前：可见编辑器已改绑到 fork（2 块），shared Y.Doc 仍是 1 块
+    expect(latestBlockCount).toBe(2)
+    const sharedDoc = getSharedDoc()!
+    expect(documentFromYjs(sharedDoc)).toHaveLength(1)
+    // 不再渲染底部独立草稿卡片
+    expect(screen.queryByTestId("ai-write-draft")).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId("ai-write-accept"))
 
     await waitFor(() => {
-      expect(latestBlockCount).toBe(2)
+      // 接受后：merge 把 fork 增量写进 shared，可见编辑器绑回 shared
+      expect(documentFromYjs(sharedDoc)).toHaveLength(2)
     })
+    expect(latestBlockCount).toBe(2)
     expect(fetchMock).toHaveBeenCalledWith(
       "http://127.0.0.1:3100/ai/write",
       expect.objectContaining({
@@ -335,5 +357,34 @@ describe("AiWritingHost", () => {
     fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
 
     expect(toast.error).toHaveBeenCalledWith("请先接受或拒绝当前 AI 草稿")
+  })
+
+  it("toasts when the editor lacks rebindVisibleEditor / sharedYDoc", async () => {
+    // 非协作 EditorProvider：rebindVisibleEditor 为 undefined、sharedYDoc 为 null
+    render(
+      <ShadcnEditorProvider>
+        <EditorProvider>
+          <AiWritingHost
+            apiUrl="http://127.0.0.1:3100"
+            documentId={DOCUMENT_ID}
+            userId="demo-owner"
+            canWrite
+          >
+            <ContextProbe />
+            <OpenSlashButton />
+          </AiWritingHost>
+        </EditorProvider>
+      </ShadcnEditorProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ai-write-context")).toHaveTextContent(
+        "enabled"
+      )
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
+
+    expect(toast.error).toHaveBeenCalledWith("当前编辑器不支持 AI 写作")
   })
 })

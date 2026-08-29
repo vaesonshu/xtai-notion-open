@@ -345,6 +345,8 @@ export function CollaborationEditorProvider({
         collaborationStatus: status,
         collaborators,
         collaborationUser: collaboration.user,
+        // 协作会话的 Y.Doc 即 shared，AI 写作 fork 由此克隆
+        sharedYDoc: session.document,
         setCanvasEditing,
         getCanvasEditor,
         rebindVisibleEditor,

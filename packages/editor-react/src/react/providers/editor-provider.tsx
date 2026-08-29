@@ -101,6 +101,7 @@ export function EditorProvider({
         collaborators: [],
         collaborationUser: null,
         // 非协作没有共享 Y.Doc，可见编辑器始终绑本地实例
+        sharedYDoc: null,
         rebindVisibleEditor: undefined,
       }}
     >
