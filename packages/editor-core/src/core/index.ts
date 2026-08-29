@@ -1,7 +1,4 @@
-export type {
-  CollaborationUser,
-  EditorExtensionOptions,
-} from "./types"
+export type { CollaborationUser, EditorExtensionOptions } from "./types"
 export type {
   Block,
   BlockType,
@@ -52,6 +49,10 @@ export {
   defineBlockSpec,
   propsToAttributes,
 } from "./schema"
+export {
+  aiWriteDraftPluginKey,
+  setAiWriteDraftIds,
+} from "./extensions/ai-write-draft-extension"
 export { ImageUploadNode } from "./extensions/image-upload-node"
 export type { BlockCommandMode, SlashCommand } from "./slash-commands"
 export {
@@ -116,6 +117,7 @@ export {
   blocksToAiBlockViews,
   canReplayAiWriteOps,
   collectAiBlockIds,
+  collectAiWriteDraftIds,
   collectAiWriteOpTargetIds,
   extractDraftBlocks,
   isAiWritableBlockType,

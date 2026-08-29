@@ -17,6 +17,7 @@ export { validateAiWriteOp } from "./validate"
 export {
   applyAiWriteOp,
   canReplayAiWriteOps,
+  collectAiWriteDraftIds,
   collectAiWriteOpTargetIds,
   extractDraftBlocks,
   textToInlineContent,

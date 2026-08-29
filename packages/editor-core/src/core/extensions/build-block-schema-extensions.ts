@@ -1,6 +1,7 @@
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import { BlockDropcursor } from "./block-dropcursor"
+import { createAiWriteDraftExtension } from "./ai-write-draft-extension"
 import { createBlockPlaceholderExtension } from "./block-placeholder-extension"
 import TableCell from "@tiptap/extension-table-cell"
 import TableHeader from "@tiptap/extension-table-header"
@@ -25,9 +26,13 @@ function resolveBlockContentExtensions(
       })
     : null
 
-  return registry.getBlockContentExtensions().map((extension: Node) =>
-    extension.name === "canvas" && configuredCanvas ? configuredCanvas : extension
-  )
+  return registry
+    .getBlockContentExtensions()
+    .map((extension: Node) =>
+      extension.name === "canvas" && configuredCanvas
+        ? configuredCanvas
+        : extension
+    )
 }
 
 /** 根据 registry 组装完整 Tiptap 扩展列表 */
@@ -70,6 +75,8 @@ export function buildBlockSchemaExtensions(
       class: "ProseMirror-dropcursor",
     }),
     createBlockPlaceholderExtension(options),
+    // AI 草稿高亮只走 PM 装饰，避免把 class 写入协作文档
+    createAiWriteDraftExtension(),
     MentionNode,
   ]
 

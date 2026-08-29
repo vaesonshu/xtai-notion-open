@@ -3,6 +3,7 @@ import { BlockEditor } from "@core/block-editor"
 import {
   applyAiWriteOp,
   canReplayAiWriteOps,
+  collectAiWriteDraftIds,
   extractDraftBlocks,
 } from "@core/ai-write"
 
@@ -57,5 +58,32 @@ describe("applyAiWriteOp", () => {
       },
     ]
     expect(canReplayAiWriteOps(live, ops)).toBe(false)
+  })
+})
+
+describe("collectAiWriteDraftIds", () => {
+  it("includes generated insert ids and omits refId", () => {
+    const editor = create()
+    const refId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    const result = applyAiWriteOp(editor, {
+      type: "insert_blocks",
+      refId,
+      placement: "after",
+      blocks: [{ type: "paragraph", text: "two" }],
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const ids = collectAiWriteDraftIds([result.op])
+    expect(ids).not.toContain(refId)
+    expect(ids).toEqual([editor.document[1]?.id])
+  })
+
+  it("includes update_block ids", () => {
+    const updateId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    expect(
+      collectAiWriteDraftIds([
+        { type: "update_block", id: updateId, text: "changed" },
+      ])
+    ).toEqual([updateId])
   })
 })

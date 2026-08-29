@@ -3,9 +3,7 @@ import { generateBlockId } from "../block-schema/ids"
 import type { Block, InlineContent, PartialBlock } from "../block-schema/types"
 import type { AiInsertBlockInput, AiWriteOp } from "./types"
 
-type ApplyResult =
-  | { ok: true; op: AiWriteOp }
-  | { ok: false; reason: string }
+type ApplyResult = { ok: true; op: AiWriteOp } | { ok: false; reason: string }
 
 /** 将 AI 输出的纯文本转为单段 unstyled 行内内容 */
 export function textToInlineContent(text: string): InlineContent[] {
@@ -96,6 +94,26 @@ export function applyAiWriteOp(
       return { ok: false, reason: "未知 op 类型" }
     }
   }
+}
+
+/**
+ * 收集应高亮为草稿的块 id：insert 用已生成的 block.id，update 用 op.id。
+ * 不含 refId（锚点不是 AI 新内容，除非该块也被 update）。
+ */
+export function collectAiWriteDraftIds(ops: AiWriteOp[]): string[] {
+  const ids: string[] = []
+  for (const op of ops) {
+    if (op.type === "insert_blocks") {
+      for (const block of op.blocks) {
+        if (block.id) {
+          ids.push(block.id)
+        }
+      }
+    } else {
+      ids.push(op.id)
+    }
+  }
+  return ids
 }
 
 /** 收集重放前必须在 live 文档中仍存在的锚点 id（insert refId + update id） */

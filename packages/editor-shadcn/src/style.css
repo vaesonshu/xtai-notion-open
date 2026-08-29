@@ -34,6 +34,13 @@
   position: relative;
 }
 
+/* AI 草稿：仅本机 fork 装饰，不进 Yjs */
+.ProseMirror [data-node-type="blockContainer"].ai-write-draft {
+  border-left: 2px solid #8bc6ff;
+  background: rgba(139, 198, 255, 0.12);
+  padding-left: 0.5rem;
+}
+
 /* 嵌套子块左侧缩进 */
 .ProseMirror [data-node-type="blockContainer"] > [data-node-type="blockGroup"] {
   border-left: 2px solid #e8e6e1;
