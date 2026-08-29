@@ -27,7 +27,9 @@ import type { Block, TableContent } from "@xtai-notion/editor-core/block-schema/
 import { generateBlockId } from "@xtai-notion/editor-core/block-schema/ids"
 import type { BlockEditor } from "@xtai-notion/editor-core"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
+import { use } from "react"
 import { useImageUpload } from "../nodes/image-upload"
+import { AiWriteHostContext } from "../ai/ai-write-context"
 import { TableGridPicker } from "./table-grid-picker"
 
 const slashMenuPluginKey = new PluginKey("slashMenu")
@@ -83,15 +85,25 @@ function insertTableBlock(blockEditor: BlockEditor, rows: number, cols: number) 
 function applySlashCommand(
   blockEditor: BlockEditor,
   range: Range,
-  item: SlashCommand
+  item: SlashCommand,
+  aiWriteHandlers: { openSlash: () => void } | null
 ) {
   blockEditor.tiptap.chain().focus().deleteRange(range).run()
+
+  // AI 写作由宿主接管会话，不走块类型转换
+  if (item.id === "ai-write") {
+    exitSuggestion(blockEditor.tiptap.view, slashMenuPluginKey)
+    aiWriteHandlers?.openSlash()
+    return
+  }
+
   executeSlashCommand(blockEditor, item.id)
 }
 
 export function SlashMenu() {
   const blockEditor = useBlockEditor()
   const editor = blockEditor.tiptap
+  const aiWriteHandlers = use(AiWriteHostContext)
   const { canUpload } = useImageUpload()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
@@ -131,7 +143,7 @@ export function SlashMenu() {
         )
       },
       command: ({ range, props }) => {
-        applySlashCommand(blockEditor, range, props)
+        applySlashCommand(blockEditor, range, props, aiWriteHandlers)
       },
       render: () => {
         const sync = (props: SuggestionProps<SlashCommand, SlashCommand>) => {
@@ -245,7 +257,7 @@ export function SlashMenu() {
     return () => {
       editor.unregisterPlugin(slashMenuPluginKey)
     }
-  }, [canUpload, editor])
+  }, [aiWriteHandlers, canUpload, editor, blockEditor])
 
   if (!editor.isEditable) {
     return null

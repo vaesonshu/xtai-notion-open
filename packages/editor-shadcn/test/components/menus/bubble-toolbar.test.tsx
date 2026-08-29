@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { Editor } from "@tiptap/core"
-import { afterEach, beforeAll, describe, expect, it } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { use, useEffect } from "react"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
+import { AiWriteHostContext } from "@shadcn-src/components/ai/ai-write-context"
 import { EditorSurface } from "@shadcn-src/components/editor/editor-surface"
 import { shouldShowBubbleToolbar } from "@shadcn-src/components/menus/bubble-toolbar"
 
@@ -77,12 +78,23 @@ async function waitForEditor() {
 
 function renderEditableSurface(
   content: Block[] = paragraphDoc,
-  editable = true
+  editable = true,
+  aiWriteHandlers?: { openSlash: () => void; openSelection: () => void }
 ) {
-  return render(
-    <EditorProvider initialContent={content} editable={editable}>
+  const surface = (
+    <>
       <EditorSurface />
       <EditorProbe />
+    </>
+  )
+
+  return render(
+    <EditorProvider initialContent={content} editable={editable}>
+      {aiWriteHandlers ? (
+        <AiWriteHostContext value={aiWriteHandlers}>{surface}</AiWriteHostContext>
+      ) : (
+        surface
+      )}
     </EditorProvider>
   )
 }
@@ -294,5 +306,41 @@ describe("BubbleToolbar", () => {
     })
 
     expect(screen.queryByTestId("bubble-toolbar")).not.toBeInTheDocument()
+  })
+
+  it("shows AI button when provider is present", async () => {
+    const openSelection = vi.fn()
+    renderEditableSurface(paragraphDoc, true, {
+      openSlash: vi.fn(),
+      openSelection,
+    })
+    await waitForEditor()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await selectFormattableRange(editor!)
+
+    const aiButton = await screen.findByTestId("ai-write-toolbar-button")
+    expect(aiButton).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(aiButton)
+    })
+
+    expect(openSelection).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not show AI button without provider", async () => {
+    renderEditableSurface()
+    await waitForEditor()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await selectFormattableRange(editor!)
+
+    await screen.findByTestId("bubble-toolbar")
+    expect(
+      screen.queryByTestId("ai-write-toolbar-button")
+    ).not.toBeInTheDocument()
   })
 })

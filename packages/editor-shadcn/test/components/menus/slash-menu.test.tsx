@@ -13,6 +13,7 @@ import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { use } from "react"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { TestEditorProvider } from "../../editor-test-utils"
+import { AiWriteHostContext } from "@shadcn-src/components/ai/ai-write-context"
 import { EditorSurface } from "@shadcn-src/components/editor/editor-surface"
 import { ImageUpload } from "@shadcn-src/components/nodes/image-upload"
 
@@ -358,6 +359,10 @@ describe("SlashMenu", () => {
     })
 
     await act(async () => {
+      dispatchEditorKey(editor!, "ArrowDown")
+    })
+
+    await act(async () => {
       dispatchEditorKey(editor!, "Enter")
     })
 
@@ -426,5 +431,68 @@ describe("SlashMenu", () => {
       expect(table?.type).toBe("table")
       expect((table?.content as { rows: unknown[] })?.rows).toHaveLength(2)
     })
+  })
+
+  it("shows AI writing command when typing slash", async () => {
+    renderEditableSurface()
+    await waitForEditor()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/").run()
+    })
+
+    expect(
+      await screen.findByRole("option", { name: "AI 写作" })
+    ).toBeInTheDocument()
+  })
+
+  it("calls openSlash when provider is present", async () => {
+    const openSlash = vi.fn()
+    render(
+      <TestEditorProvider initialContent={emptyParagraph}>
+        <AiWriteHostContext
+          value={{ openSlash, openSelection: vi.fn() }}
+        >
+          <ImageUpload>
+            <EditorSurface />
+            <EditorProbe />
+          </ImageUpload>
+        </AiWriteHostContext>
+      </TestEditorProvider>
+    )
+    await waitForEditor()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/ai").run()
+    })
+
+    const option = await screen.findByRole("option", { name: "AI 写作" })
+    await act(async () => {
+      fireEvent.click(option)
+    })
+
+    expect(openSlash).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not throw when provider is missing", async () => {
+    renderEditableSurface()
+    await waitForEditor()
+    const editor = latestEditor
+    expect(editor).not.toBeNull()
+
+    await act(async () => {
+      editor!.chain().focus("start").insertContent("/ai").run()
+    })
+
+    const option = await screen.findByRole("option", { name: "AI 写作" })
+    await expect(
+      act(async () => {
+        fireEvent.click(option)
+      })
+    ).resolves.not.toThrow()
   })
 })

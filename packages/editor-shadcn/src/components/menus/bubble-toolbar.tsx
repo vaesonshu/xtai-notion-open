@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, use } from "react"
 import type { Editor } from "@tiptap/core"
 import { isTextSelection } from "@tiptap/core"
 import type { EditorState } from "@tiptap/pm/state"
@@ -14,6 +14,7 @@ import {
   StrikethroughIcon,
   UnderlineIcon,
   UnlinkIcon,
+  SparklesIcon,
 } from "../../icons"
 import { Button } from "../../ui/button"
 import { Input } from "../../ui/input"
@@ -29,6 +30,7 @@ import {
   type InlineMark,
 } from "@xtai-notion/editor-core/commands"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
+import { AiWriteHostContext } from "../ai/ai-write-context"
 
 export type ShouldShowBubbleToolbarProps = {
   editor: Editor
@@ -154,6 +156,7 @@ function LinkControl({ editor }: { editor: Editor }) {
 }
 
 function BubbleToolbarControls({ editor }: { editor: Editor }) {
+  const aiWriteHandlers = use(AiWriteHostContext)
   const activeMarks = useEditorState({
     editor,
     selector: ({ editor: active }) => ({
@@ -185,6 +188,18 @@ function BubbleToolbarControls({ editor }: { editor: Editor }) {
         </Toggle>
       ))}
       <LinkControl editor={editor} />
+      {aiWriteHandlers ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="AI 写作"
+          data-testid="ai-write-toolbar-button"
+          onClick={() => aiWriteHandlers.openSelection()}
+        >
+          <SparklesIcon />
+        </Button>
+      ) : null}
     </div>
   )
 }

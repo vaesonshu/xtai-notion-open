@@ -23,6 +23,13 @@ export const UPLOAD_IMAGE_SLASH_COMMAND: SlashCommand = {
   keywords: ["upload-image", "image", "图片"],
 }
 
+/** 斜杠 AI 写作入口；由 UI 层接管，不走 executeSlashCommand */
+export const AI_WRITE_SLASH_COMMAND: SlashCommand = {
+  id: "ai-write",
+  label: "AI 写作",
+  keywords: ["ai", "写作", "续写"],
+}
+
 /** 内置斜杠项对应的 block type；heading-* 共用 heading */
 const SLASH_COMMAND_BLOCK_TYPE: Record<string, string> = {
   "heading-1": "heading",
@@ -56,9 +63,12 @@ function collectCustomSlashCommands(
 /** 按 registry 过滤内置斜杠项，并追加 spec 上声明的自定义项 */
 export function getSlashCommands({
   includeImageUpload = false,
+  includeAiWrite = true,
   registry = createDefaultBlockSchemaRegistry(),
 }: {
   includeImageUpload?: boolean
+  /** 是否在斜杠菜单展示 AI 写作；默认开启，由宿主通过 context 决定是否可点 */
+  includeAiWrite?: boolean
   registry?: BlockSchemaRegistry
 } = {}): SlashCommand[] {
   const types = registry.getBlockContentTypes()
@@ -67,9 +77,11 @@ export function getSlashCommands({
     return !blockType || types.has(blockType)
   })
   const commands = [...builtins, ...collectCustomSlashCommands(registry)]
-  return includeImageUpload && types.has("image")
-    ? [...commands, UPLOAD_IMAGE_SLASH_COMMAND]
-    : commands
+  const withImage =
+    includeImageUpload && types.has("image")
+      ? [...commands, UPLOAD_IMAGE_SLASH_COMMAND]
+      : commands
+  return includeAiWrite ? [AI_WRITE_SLASH_COMMAND, ...withImage] : withImage
 }
 
 /** 行内是否有实质内容（mention 算有内容，纯空白 text 不算） */

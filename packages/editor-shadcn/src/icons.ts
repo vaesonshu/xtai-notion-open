@@ -14,6 +14,7 @@ export {
   Pencil as PencilIcon,
   Plus as PlusIcon,
   RotateCcw as RotateCcwIcon,
+  Sparkles as SparklesIcon,
   Rows2 as Rows2Icon,
   Strikethrough as StrikethroughIcon,
   Table as TableIcon,
