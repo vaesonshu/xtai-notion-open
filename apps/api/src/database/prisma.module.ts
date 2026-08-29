@@ -5,10 +5,15 @@ import {
   Module,
   OnModuleDestroy,
 } from "@nestjs/common"
-import { PrismaClient } from "../generated/prisma/client"
+import { neonConfig } from "@neondatabase/serverless"
 import { PrismaNeon } from "@prisma/adapter-neon"
+import ws from "ws"
+import { PrismaClient } from "../generated/prisma/client"
 
 export const PRISMA = Symbol("PRISMA")
+
+// Node 20 无全局 WebSocket；Neon Pool 必须注入 ws 否则 flush 时会抛 ErrorEvent
+neonConfig.webSocketConstructor = ws
 
 // 业务层通过注入 PrismaService 获得类型化的 PrismaClient 单例。
 @Injectable()
