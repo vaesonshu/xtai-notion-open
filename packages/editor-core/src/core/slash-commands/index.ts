@@ -1,5 +1,6 @@
 import { createCanvasBlockId } from "../canvas/canvas-snapshot"
 import type { BlockEditor } from "../block-editor"
+import { generateBlockId } from "../block-schema/ids"
 import type {
   Block,
   BlockType,
@@ -182,6 +183,27 @@ function focusBlockContent(editor: BlockEditor, blockId: string) {
   }
 }
 
+/** 斜杠把空块就地改成非文本块后，末尾需补一段落以便继续输入 */
+const TRAILING_PARAGRAPH_AFTER_TYPES = new Set<BlockType>([
+  "divider",
+  "image",
+  "canvas",
+  "table",
+])
+
+function ensureTrailingParagraphAfter(editor: BlockEditor, refId: string) {
+  const topLevel = editor.document
+  if (topLevel[topLevel.length - 1]?.id !== refId) {
+    return
+  }
+
+  editor.insertBlocks(
+    [{ id: generateBlockId(), type: "paragraph", content: [] }],
+    refId,
+    "after"
+  )
+}
+
 function applyTypeChange(
   editor: BlockEditor,
   refId: string,
@@ -206,6 +228,10 @@ function applyTypeChange(
       props: options.props,
       ...(empty ? { content: options.content } : {}),
     })
+
+    if (empty && TRAILING_PARAGRAPH_AFTER_TYPES.has(type)) {
+      ensureTrailingParagraphAfter(editor, refId)
+    }
 
     if (inPlace) {
       focusBlockContent(editor, refId)

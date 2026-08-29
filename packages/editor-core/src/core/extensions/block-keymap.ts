@@ -25,10 +25,11 @@ function requireNodeType(schema: EditorState["schema"], name: string) {
   return nodeType
 }
 
-/** 从选区向上找到所在的 blockContainer */
+/** 从选区向上找到所在的 blockContainer（含 NodeSelection 选中原子块） */
 function findContainerAtSelection(state: EditorState): ContainerRef | null {
-  const { from } = state.selection
-  const $pos = state.doc.resolve(from)
+  const { selection } = state
+  const anchor = selection.from
+  const $pos = state.doc.resolve(anchor)
 
   for (let depth = $pos.depth; depth > 0; depth -= 1) {
     const node = $pos.node(depth)
@@ -280,7 +281,7 @@ function splitBlockAtCursor(
 }
 
 export function handleEnter(state: EditorState, dispatch?: (tr: Transaction) => void) {
-  if (!dispatch || !state.selection.empty) {
+  if (!dispatch) {
     return false
   }
 
@@ -292,13 +293,18 @@ export function handleEnter(state: EditorState, dispatch?: (tr: Transaction) => 
   const contentNode = current.node.child(0)
   const typeName = contentNode.type.name
 
-  // 表格与代码块沿用 PM 默认行为（单元格导航 / 代码内换行）
-  if (typeName === "table" || typeName === "codeBlock") {
+  // 原子块选中时为 NodeSelection（非 empty），Enter 仍应在下方插入可编辑段落
+  if (ATOM_BLOCK_TYPES.has(typeName)) {
+    return insertBlockAfter(state, dispatch, current)
+  }
+
+  if (!state.selection.empty) {
     return false
   }
 
-  if (ATOM_BLOCK_TYPES.has(typeName)) {
-    return insertBlockAfter(state, dispatch, current)
+  // 表格与代码块沿用 PM 默认行为（单元格导航 / 代码内换行）
+  if (typeName === "table" || typeName === "codeBlock") {
+    return false
   }
 
   const offset = getInlineOffset(state, current)

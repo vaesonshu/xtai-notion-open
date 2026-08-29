@@ -194,4 +194,13 @@ describe("executeSlashCommand", () => {
       props: { level: 1 },
     })
   })
+
+  it("appends a trailing paragraph after converting the only block to a non-text type", () => {
+    const editor = createEmptyBlockEditor()
+
+    expect(executeSlashCommand(editor, "horizontal-rule")).toBe(true)
+    expect(editor.document).toHaveLength(2)
+    expect(editor.document[0]?.type).toBe("divider")
+    expect(editor.document[1]?.type).toBe("paragraph")
+  })
 })

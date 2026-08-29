@@ -334,4 +334,50 @@ describe("BlockKeymap", () => {
       expect(editor.document[1]?.type).toBe("paragraph")
     }
   )
+
+  it.each([
+    ["divider", { type: "divider" as const, props: {} }],
+    [
+      "image",
+      {
+        type: "image" as const,
+        props: { src: null, uploadStatus: "idle" },
+      },
+    ],
+    [
+      "canvas",
+      {
+        type: "canvas" as const,
+        props: { canvasId: "canvas-1", snapshot: "" },
+      },
+    ],
+  ])(
+    "inserts a paragraph below atom %s when Enter is pressed with NodeSelection",
+    (_label, block) => {
+      const editor = new BlockEditor({
+        initialContent: [
+          {
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            ...block,
+            children: [],
+          },
+        ],
+      })
+      editors.push(editor)
+
+      let atomPos = 0
+      editor.tiptap.state.doc.descendants((node, pos) => {
+        if (node.type.name === block.type) {
+          atomPos = pos
+          return false
+        }
+      })
+      editor.tiptap.commands.setNodeSelection(atomPos)
+
+      expect(pressEnter(editor)).toBe(true)
+      expect(editor.document).toHaveLength(2)
+      expect(editor.document[0]?.type).toBe(block.type)
+      expect(editor.document[1]?.type).toBe("paragraph")
+    }
+  )
 })
