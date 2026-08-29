@@ -31,7 +31,8 @@
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
-    "sonner": "^2.0.8"
+    "sonner": "^2.0.8",
+    "yjs": "13.6.32"
   },
   "devDependencies": {
     "@hocuspocus/provider": "4.5.0",
