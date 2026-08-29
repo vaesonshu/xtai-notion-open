@@ -19,7 +19,10 @@ import type { Node } from "@tiptap/core"
 import type { EditorSchema } from "@xtai-notion/editor-core/schema"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
 import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
-import { EditorContext } from "../context/editor-context"
+import {
+  EditorContext,
+  type RebindVisibleEditorInput,
+} from "../context/editor-context"
 import type { EditorProviderProps } from "./editor-provider"
 
 export type CollaborationEditorProviderProps = EditorProviderProps & {
@@ -166,6 +169,8 @@ export function CollaborationEditorProvider({
     editorSchema,
   })
   const mountGenerationRef = useRef(0)
+  // fork 期间锁定 editable，避免父组件 props 把只读草稿冲掉
+  const visibleEditableLockRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     createOptionsRef.current = {
@@ -257,8 +262,48 @@ export function CollaborationEditorProvider({
     [canvasEditors]
   )
 
+  const rebindVisibleEditor = useCallback(
+    (input: RebindVisibleEditorInput) => {
+      const options = createOptionsRef.current
+      visibleEditableLockRef.current =
+        input.target === "fork" ? input.editable : null
+      const nextEditor =
+        input.target === "fork"
+          ? new BlockEditor({
+              applyInitialContent: false,
+              editable: input.editable,
+              editorSchema: options.editorSchema,
+              extensions: {
+                document: input.document,
+                imageUpload: options.imageUpload,
+                canvasImageFetch: options.canvasImageFetch,
+                imageUploadNode: options.imageUploadNode,
+                canvasBlockNode: options.canvasBlockNode,
+              },
+            })
+          : new BlockEditor({
+              applyInitialContent: false,
+              editable: input.editable,
+              editorSchema: options.editorSchema,
+              extensions: {
+                document: session.document,
+                provider: session.provider,
+                user: collaboration.user,
+                imageUpload: options.imageUpload,
+                canvasImageFetch: options.canvasImageFetch,
+                imageUploadNode: options.imageUploadNode,
+                canvasBlockNode: options.canvasBlockNode,
+              },
+            })
+      blockEditorRef.current = nextEditor
+      setBlockEditor(nextEditor)
+      return nextEditor
+    },
+    [collaboration.user, session]
+  )
+
   useEffect(() => {
-    blockEditor?.setEditable(editable)
+    blockEditor?.setEditable(visibleEditableLockRef.current ?? editable)
   }, [editable, blockEditor])
 
   useEffect(() => {
@@ -302,6 +347,7 @@ export function CollaborationEditorProvider({
         collaborationUser: collaboration.user,
         setCanvasEditing,
         getCanvasEditor,
+        rebindVisibleEditor,
       }}
     >
       {children}

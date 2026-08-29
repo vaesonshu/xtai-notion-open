@@ -1,10 +1,14 @@
 ﻿import { act, render, screen, waitFor } from "@testing-library/react"
-import { StrictMode, use } from "react"
+import { StrictMode, use, useState } from "react"
 import { Editor } from "@tiptap/core"
 import { describe, expect, it, vi } from "vitest"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import * as Y from "yjs"
-import { BlockEditor } from "@xtai-notion/editor-core"
+import {
+  BlockEditor,
+  documentFromYjs,
+  forkYDoc,
+} from "@xtai-notion/editor-core"
 import { blocksToPmDoc } from "@xtai-notion/editor-core/block-schema/convert"
 import { createStarterBlocks } from "@xtai-notion/editor-core/block-schema/documents"
 import type {
@@ -253,7 +257,10 @@ describe("EditorProvider", () => {
 
     expect(onChange).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ type: expect.any(String), id: expect.any(String) }),
+        expect.objectContaining({
+          type: expect.any(String),
+          id: expect.any(String),
+        }),
       ])
     )
   })
@@ -269,6 +276,30 @@ describe("EditorProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByText("editable")).toBeInTheDocument()
+    })
+  })
+
+  it("does not expose rebindVisibleEditor", async () => {
+    function RebindAvailability() {
+      const context = use(EditorContext)
+      if (!context?.blockEditor) {
+        return <span>loading</span>
+      }
+      return (
+        <span data-testid="rebind">
+          {context.rebindVisibleEditor ? "yes" : "no"}
+        </span>
+      )
+    }
+
+    render(
+      <EditorProvider>
+        <RebindAvailability />
+      </EditorProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("rebind")).toHaveTextContent("no")
     })
   })
 
@@ -329,9 +360,7 @@ describe("CollaborationEditorProvider", () => {
     const starterText = starter
       .flatMap((block) =>
         Array.isArray(block.content)
-          ? block.content.map((item) =>
-              item.type === "text" ? item.text : ""
-            )
+          ? block.content.map((item) => (item.type === "text" ? item.text : ""))
           : []
       )
       .join("")
@@ -496,5 +525,117 @@ describe("CollaborationEditorProvider", () => {
     ).toBe(1)
 
     editorDestroy.mockRestore()
+  })
+
+  it("rebinds the visible editor onto a Yjs fork without destroying the session", async () => {
+    const provider = createMockProvider()
+    let sharedDoc: Y.Doc | undefined
+
+    function RebindProbe() {
+      const context = use(EditorContext)
+      const [mode, setMode] = useState("shared")
+      if (!context?.blockEditor) {
+        return <span>loading</span>
+      }
+      return (
+        <>
+          <span data-testid="editable">
+            {context.blockEditor.tiptap.isEditable ? "yes" : "no"}
+          </span>
+          <span data-testid="mode">{mode}</span>
+          <button
+            type="button"
+            onClick={() => {
+              const fork = forkYDoc(sharedDoc!)
+              context.rebindVisibleEditor?.({
+                target: "fork",
+                document: fork,
+                editable: false,
+              })
+              setMode("fork")
+            }}
+          >
+            fork
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const editor = context.blockEditor
+              const firstId = editor.document[0]?.id
+              if (!firstId) {
+                return
+              }
+              // 只往 fork 可见编辑器写，shared Y.Doc 长度必须不变
+              editor.insertBlocks(
+                [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "fork-only", styles: {} }],
+                  },
+                ],
+                firstId,
+                "after"
+              )
+            }}
+          >
+            insert-fork
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              context.rebindVisibleEditor?.({
+                target: "shared",
+                editable: true,
+              })
+              setMode("shared")
+            }}
+          >
+            shared
+          </button>
+        </>
+      )
+    }
+
+    render(
+      <CollaborationEditorProvider
+        collaboration={baseConfig}
+        createProvider={(options: CreateProviderOptions) => {
+          sharedDoc = options.document
+          return provider as unknown as HocuspocusProvider
+        }}
+      >
+        <RebindProbe />
+      </CollaborationEditorProvider>
+    )
+
+    await act(async () => {
+      provider.emit("synced", { state: true })
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("editable")).toBeInTheDocument()
+    })
+
+    const sharedLengthBefore = documentFromYjs(sharedDoc!).length
+
+    await act(async () => {
+      screen.getByRole("button", { name: "fork" }).click()
+    })
+
+    expect(screen.getByTestId("editable")).toHaveTextContent("no")
+    expect(screen.getByTestId("mode")).toHaveTextContent("fork")
+
+    await act(async () => {
+      screen.getByRole("button", { name: "insert-fork" }).click()
+    })
+
+    expect(documentFromYjs(sharedDoc!).length).toBe(sharedLengthBefore)
+    expect(provider.destroy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      screen.getByRole("button", { name: "shared" }).click()
+    })
+
+    expect(screen.getByTestId("editable")).toHaveTextContent("yes")
   })
 })

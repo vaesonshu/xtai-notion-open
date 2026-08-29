@@ -2,10 +2,7 @@
 
 import type { Node } from "@tiptap/core"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import {
-  BlockEditor,
-  createStarterBlocks,
-} from "@xtai-notion/editor-core"
+import { BlockEditor, createStarterBlocks } from "@xtai-notion/editor-core"
 import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import type { EditorSchema } from "@xtai-notion/editor-core/schema"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
@@ -103,6 +100,8 @@ export function EditorProvider({
         collaborationStatus: null,
         collaborators: [],
         collaborationUser: null,
+        // 非协作没有共享 Y.Doc，可见编辑器始终绑本地实例
+        rebindVisibleEditor: undefined,
       }}
     >
       {children}
