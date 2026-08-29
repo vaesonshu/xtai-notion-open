@@ -196,113 +196,128 @@ function AiWritingHostReady({
 
       // 提交瞬间可见编辑器仍绑 shared，先序列化母本快照再 fork
       const blocksPayload = blocksToAiBlockViews(blockEditor.document)
-      const fork = forkYDoc(sharedYDoc)
-      const forkEditor = rebindVisibleEditor({
-        target: "fork",
-        document: fork,
-        editable: false,
-      })
-      forkRef.current = fork
+      // fork 与改绑可能抛错（Y.Doc 内存不足、TipSchema 重建失败等）；
+      // 失败必须回滚到 shared 并清理，否则 activeRef 卡住、fork Y.Doc 泄漏
+      try {
+        const fork = forkYDoc(sharedYDoc)
+        const forkEditor = rebindVisibleEditor({
+          target: "fork",
+          document: fork,
+          editable: false,
+        })
+        forkRef.current = fork
 
-      const session = createAiWritingSession({
-        shared: sharedYDoc,
-        fork,
-        forkEditor,
-        mode: requestContext.mode,
-        cursorBlockId: requestContext.cursorBlockId,
-        selectedIds: requestContext.selectedIds,
-      })
-      sessionRef.current = session
+        const session = createAiWritingSession({
+          shared: sharedYDoc,
+          fork,
+          forkEditor,
+          mode: requestContext.mode,
+          cursorBlockId: requestContext.cursorBlockId,
+          selectedIds: requestContext.selectedIds,
+        })
+        sessionRef.current = session
 
-      // 监听 shared 远端更新：merge 自身写入用 AI_WRITE_MERGE_ORIGIN 标记，需忽略
-      const onSharedUpdate = (update: unknown, origin: unknown) => {
-        if (origin === AI_WRITE_MERGE_ORIGIN) {
-          return
+        // 监听 shared 远端更新：merge 自身写入用 AI_WRITE_MERGE_ORIGIN 标记，需忽略
+        const onSharedUpdate = (update: unknown, origin: unknown) => {
+          if (origin === AI_WRITE_MERGE_ORIGIN) {
+            return
+          }
+          // 会话存活期间 shared 收到任何非 merge 写入都视为远端并发，作废草稿
+          const current = sessionRef.current
+          if (!current || current.status === "closed") {
+            return
+          }
+          current.markSharedStale()
+          toast.error("文档已变化，AI 草稿已失效")
+          abortRef.current?.abort()
+          restoreSharedEditor()
+          clearSession()
         }
-        // 会话存活期间 shared 收到任何非 merge 写入都视为远端并发，作废草稿
-        const current = sessionRef.current
-        if (!current || current.status === "closed") {
-          return
+        sharedYDoc.on("update", onSharedUpdate)
+        sharedUnsubscribeRef.current = () => {
+          sharedYDoc.off("update", onSharedUpdate)
         }
-        current.markSharedStale()
-        toast.error("文档已变化，AI 草稿已失效")
-        abortRef.current?.abort()
+
+        session.status = "thinking"
+        setUiStatus("thinking")
+
+        const controller = new AbortController()
+        abortRef.current = controller
+
+        // fetch / SSE 流程独立 try/catch：abort 与服务端错误走原有错误态，不再触发清理回滚
+        try {
+          const response = await fetch(
+            `${apiUrl.replace(/\/$/, "")}/ai/write`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-dev-user-id": userId,
+              },
+              body: JSON.stringify({
+                documentId,
+                mode: session.mode,
+                prompt,
+                cursorBlockId: requestContext.cursorBlockId,
+                selectedIds: requestContext.selectedIds,
+                blocks: blocksPayload,
+              }),
+              signal: controller.signal,
+            }
+          )
+
+          if (!response.ok) {
+            throw new Error("AI 写作服务暂不可用")
+          }
+
+          for await (const event of readAiWriteSse(response)) {
+            if (event.type === "tool_call") {
+              session.applyRemoteOp(event.op)
+              // fork 编辑器无 provider，focus 仅滚动到草稿块，不广播 awareness
+              forkEditor.tiptap.commands.focus()
+              syncUiFromSession()
+              continue
+            }
+            if (event.type === "done") {
+              session.status = "user-reviewing"
+              syncUiFromSession()
+              return
+            }
+            if (event.type === "error") {
+              session.status = "error"
+              session.errorMessage = event.message
+              syncUiFromSession()
+              return
+            }
+          }
+
+          if (session.ops.length > 0) {
+            session.status = "user-reviewing"
+          } else {
+            session.status = "error"
+            session.errorMessage = "没有可应用的改动"
+          }
+          syncUiFromSession()
+        } catch (caught) {
+          if (controller.signal.aborted) {
+            // 用户主动停止或远端并发触发 abort：清理由 handleStop / shared 监听器负责
+            session.stop()
+            syncUiFromSession()
+            return
+          }
+          session.status = "error"
+          session.errorMessage =
+            caught instanceof Error ? caught.message : "AI 写作服务暂不可用"
+          syncUiFromSession()
+        } finally {
+          abortRef.current = null
+        }
+      } catch (caught) {
+        toast.error(
+          caught instanceof Error ? caught.message : "AI 写作初始化失败"
+        )
         restoreSharedEditor()
         clearSession()
-      }
-      sharedYDoc.on("update", onSharedUpdate)
-      sharedUnsubscribeRef.current = () => {
-        sharedYDoc.off("update", onSharedUpdate)
-      }
-
-      session.status = "thinking"
-      setUiStatus("thinking")
-
-      const controller = new AbortController()
-      abortRef.current = controller
-
-      try {
-        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/ai/write`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-dev-user-id": userId,
-          },
-          body: JSON.stringify({
-            documentId,
-            mode: session.mode,
-            prompt,
-            cursorBlockId: requestContext.cursorBlockId,
-            selectedIds: requestContext.selectedIds,
-            blocks: blocksPayload,
-          }),
-          signal: controller.signal,
-        })
-
-        if (!response.ok) {
-          throw new Error("AI 写作服务暂不可用")
-        }
-
-        for await (const event of readAiWriteSse(response)) {
-          if (event.type === "tool_call") {
-            session.applyRemoteOp(event.op)
-            // fork 编辑器无 provider，focus 仅滚动到草稿块，不广播 awareness
-            forkEditor.tiptap.commands.focus()
-            syncUiFromSession()
-            continue
-          }
-          if (event.type === "done") {
-            session.status = "user-reviewing"
-            syncUiFromSession()
-            return
-          }
-          if (event.type === "error") {
-            session.status = "error"
-            session.errorMessage = event.message
-            syncUiFromSession()
-            return
-          }
-        }
-
-        if (session.ops.length > 0) {
-          session.status = "user-reviewing"
-        } else {
-          session.status = "error"
-          session.errorMessage = "没有可应用的改动"
-        }
-        syncUiFromSession()
-      } catch (caught) {
-        if (controller.signal.aborted) {
-          session.stop()
-          syncUiFromSession()
-          return
-        }
-        session.status = "error"
-        session.errorMessage =
-          caught instanceof Error ? caught.message : "AI 写作服务暂不可用"
-        syncUiFromSession()
-      } finally {
-        abortRef.current = null
       }
     },
     [
@@ -353,9 +368,16 @@ function AiWritingHostReady({
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort()
-    sessionRef.current?.stop()
+    const session = sessionRef.current
+    session?.stop()
+    // 停止后若没有任何 op，session 进入 closed：必须清理，否则 activeRef 卡住、用户被锁死
+    if (session && session.status === "closed") {
+      restoreSharedEditor()
+      clearSession()
+      return
+    }
     syncUiFromSession()
-  }, [syncUiFromSession])
+  }, [clearSession, restoreSharedEditor, syncUiFromSession])
 
   useEffect(() => {
     return () => {
@@ -371,8 +393,11 @@ function AiWritingHostReady({
   }, [])
 
   const session = sessionRef.current
+  // 提交前 session 尚未创建（sessionRef 为 null），此时 user-input 阶段需回退到入口上下文中的 mode，
+  // 否则 selection 模式会错误地展示 SLASH 预设
+  const effectiveMode = session?.mode ?? sessionContextRef.current?.mode
   const presets =
-    session?.mode === "selection"
+    effectiveMode === "selection"
       ? SELECTION_AI_WRITE_PRESETS
       : SLASH_AI_WRITE_PRESETS
 

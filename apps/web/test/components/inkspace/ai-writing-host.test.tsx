@@ -170,6 +170,36 @@ function OpenSlashButton() {
   )
 }
 
+function OpenSelectionButton() {
+  const handlers = use(AiWriteHostContext)
+  return (
+    <button type="button" onClick={() => handlers?.openSelection()}>
+      打开选区写作
+    </button>
+  )
+}
+
+// 测试用：在首块内选一段文本，使 getSelectedBlocks 返回非空以触发 selection 入口
+function SelectFirstBlockButton() {
+  const context = use(EditorContext)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const tiptap = context?.blockEditor?.tiptap
+        if (!tiptap) {
+          return
+        }
+        tiptap.commands.focus()
+        // 首块文本 "hello" 占据 pos 1..6，选中其中一段触发 blockContainer 命中
+        tiptap.commands.setTextSelection({ from: 2, to: 4 })
+      }}
+    >
+      选中首块
+    </button>
+  )
+}
+
 type RenderHostResult = ReturnType<typeof render> & {
   provider: MockProvider
   getSharedDoc: () => Y.Doc | undefined
@@ -208,6 +238,8 @@ function renderHost(canWrite = true): RenderHostResult {
             <BlockCountProbe />
             <ContextProbe />
             <OpenSlashButton />
+            <OpenSelectionButton />
+            <SelectFirstBlockButton />
           </AiWritingHost>
         </ImageUpload>
       </CollaborationEditorProvider>
@@ -265,6 +297,9 @@ describe("AiWritingHost", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+    // setup.ts 中 sonner toast 为共享 vi.fn()，restoreAllMocks 不会清其调用记录，
+    // 需显式 clear，避免 not.toHaveBeenCalledWith 跨用例误判
+    vi.clearAllMocks()
     latestBlockCount = 0
   })
 
@@ -386,5 +421,58 @@ describe("AiWritingHost", () => {
     fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
 
     expect(toast.error).toHaveBeenCalledWith("当前编辑器不支持 AI 写作")
+  })
+
+  it("shows selection presets during user-input before session is created", async () => {
+    // 回归：提交前 sessionRef 为 null，presets 必须回退到入口上下文 mode，
+    // 否则 selection 模式会错误展示 SLASH 预设
+    const { provider } = renderHost(true)
+    await syncEditor(provider)
+
+    fireEvent.click(screen.getByRole("button", { name: "选中首块" }))
+    fireEvent.click(screen.getByRole("button", { name: "打开选区写作" }))
+
+    expect(screen.getByTestId("ai-write-prompt-bar")).toBeInTheDocument()
+    // SELECTION 预设含「润色」；SLASH 预设含「续写」
+    expect(screen.getByRole("button", { name: "润色" })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "续写" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("clears session after stop with no ops so user is not locked out", async () => {
+    // 回归：thinking 阶段点停止且无任何 tool_call 时，session.stop() 进入 closed，
+    // 必须清理 activeRef，否则用户无法再开新会话
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {}))
+    )
+
+    const { provider } = renderHost(true)
+    await syncEditor(provider)
+
+    fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
+    fireEvent.change(screen.getByTestId("ai-write-prompt-input"), {
+      target: { value: "续写一段" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "生成" }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId("ai-write-stop")).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId("ai-write-stop"))
+
+    // 停止后提示条关闭，activeRef 已清理
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("ai-write-prompt-bar")
+      ).not.toBeInTheDocument()
+    })
+
+    // 再次打开斜杠不应触发「请先接受或拒绝当前 AI 草稿」
+    fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
+    expect(screen.getByTestId("ai-write-prompt-bar")).toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalledWith("请先接受或拒绝当前 AI 草稿")
   })
 })
