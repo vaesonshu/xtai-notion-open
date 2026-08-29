@@ -69,13 +69,14 @@ export function AiWritePromptBar({
     setPrompt("")
   }
 
+  // 卡片样式只负责外观；fixed / 贴底定位由 AiWritePromptAnchor 承担
   return (
     <div
       data-testid="ai-write-prompt-bar"
       className="flex flex-col gap-2 rounded-lg border border-[#E8E4DC] bg-white p-3 text-sm text-[#242321] shadow-[0_8px_24px_rgba(36,35,33,0.12)]"
     >
       {status === "error" ? (
-        <p className="text-destructive text-sm" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {errorMessage ?? "生成失败，请重试"}
         </p>
       ) : null}
