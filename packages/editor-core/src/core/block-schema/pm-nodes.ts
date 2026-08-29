@@ -34,6 +34,8 @@ export const BlockContainer = Node.create({
   name: "blockContainer",
   content: "blockContent blockGroup?",
   defining: true,
+  // 侧栏拖拽钮点击时用 NodeSelection 整块选中
+  selectable: true,
 
   addAttributes() {
     return {

@@ -116,4 +116,15 @@ describe("BlockEditor", () => {
     }
     expect(editor.nestBlock()).toBe(false)
   })
+
+  it("replaces the last remaining block with an empty paragraph when deleted", () => {
+    const editor = create()
+    editor.removeBlocks([
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    ])
+    expect(editor.document).toHaveLength(1)
+    expect(editor.document[0]?.type).toBe("paragraph")
+    expect(editor.document[0]?.content).toEqual([])
+  })
 })

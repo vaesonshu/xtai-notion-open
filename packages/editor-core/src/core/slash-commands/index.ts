@@ -189,6 +189,7 @@ const TRAILING_PARAGRAPH_AFTER_TYPES = new Set<BlockType>([
   "image",
   "canvas",
   "table",
+  "codeBlock",
 ])
 
 function ensureTrailingParagraphAfter(editor: BlockEditor, refId: string) {

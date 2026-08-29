@@ -15,7 +15,7 @@ import {
   createBlockSchemaExtensions,
   createBlockSchemaExtensionsFromRegistry,
 } from "./extensions"
-import { handleBackspace, handleEnter } from "./extensions/block-keymap"
+import { handleBackspace } from "./extensions/block-keymap"
 import type { EditorSchema } from "./schema/create-editor-schema"
 import type { EditorExtensionOptions } from "./types"
 
@@ -310,22 +310,6 @@ export class BlockEditor {
       editable: options.editable ?? true,
       editorProps: {
         handleKeyDown: (view, event) => {
-          // 块级 Enter/Backspace 需在 baseKeymap 之前处理（见 block-keymap.ts）
-          if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.altKey &&
-            !event.metaKey &&
-            !event.ctrlKey
-          ) {
-            const handled = handleEnter(view.state, view.dispatch)
-            if (handled) {
-              event.preventDefault()
-              this.editor.commands.focus()
-              return true
-            }
-          }
-
           if (
             event.key === "Backspace" &&
             !event.altKey &&
@@ -532,6 +516,13 @@ export class BlockEditor {
 
     if (toRemove.length > 0) {
       this.editor.view.dispatch(tr)
+    }
+
+    // 删光后补一块空段落，避免 blockGroup 变成空文档
+    if (this.document.length === 0) {
+      const empty = createEmptyBlocks()
+      const doc = blocksToPmDoc(empty, this.editor.schema)
+      this.editor.commands.setContent(doc.toJSON())
     }
   }
 

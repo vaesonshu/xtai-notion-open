@@ -1,7 +1,7 @@
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import { BlockDropcursor } from "./block-dropcursor"
-import Placeholder from "@tiptap/extension-placeholder"
+import { createBlockPlaceholderExtension } from "./block-placeholder-extension"
 import TableCell from "@tiptap/extension-table-cell"
 import TableHeader from "@tiptap/extension-table-header"
 import TableRow from "@tiptap/extension-table-row"
@@ -69,9 +69,7 @@ export function buildBlockSchemaExtensions(
       width: 2,
       class: "ProseMirror-dropcursor",
     }),
-    Placeholder.configure({
-      placeholder: options.placeholder ?? "输入 / 查看块类型",
-    }),
+    createBlockPlaceholderExtension(options),
     MentionNode,
   ]
 

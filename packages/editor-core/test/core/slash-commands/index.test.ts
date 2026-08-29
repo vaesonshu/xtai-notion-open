@@ -203,4 +203,19 @@ describe("executeSlashCommand", () => {
     expect(editor.document[0]?.type).toBe("divider")
     expect(editor.document[1]?.type).toBe("paragraph")
   })
+
+  it.each([
+    ["table", "table"],
+    ["code-block", "codeBlock"],
+  ])(
+    "appends a trailing paragraph after slash creates %s as the only block",
+    (commandId, blockType) => {
+      const editor = createEmptyBlockEditor()
+
+      expect(executeSlashCommand(editor, commandId)).toBe(true)
+      expect(editor.document).toHaveLength(2)
+      expect(editor.document[0]?.type).toBe(blockType)
+      expect(editor.document[1]?.type).toBe("paragraph")
+    }
+  )
 })

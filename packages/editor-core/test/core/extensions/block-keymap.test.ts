@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
+import { NodeSelection } from "@tiptap/pm/state"
 import { BlockEditor } from "@core/block-editor"
-import { handleBackspace } from "@core/extensions/block-keymap"
+import { handleBackspace, handleEnter } from "@core/extensions/block-keymap"
 
 const editors: BlockEditor[] = []
 
@@ -20,7 +21,7 @@ function createWithText(text: string, id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa
   return editor
 }
 
-/** 模拟按键：走 BlockEditor.editorProps.handleKeyDown，与浏览器一致 */
+/** 模拟按键：先走 editorProps，再走插件 handleKeyDown（斜杠菜单优先于块级 Enter） */
 function dispatchKey(editor: BlockEditor, key: string, code: string) {
   const event = new KeyboardEvent("keydown", {
     key,
@@ -380,4 +381,85 @@ describe("BlockKeymap", () => {
       expect(editor.document[1]?.type).toBe("paragraph")
     }
   )
+
+  it.each([
+    [
+      "table",
+      {
+        type: "table" as const,
+        props: {},
+        content: {
+          headerRows: 1,
+          rows: [
+            {
+              cells: [{ content: [] }, { content: [] }, { content: [] }],
+            },
+          ],
+        },
+      },
+    ],
+    [
+      "codeBlock",
+      {
+        type: "codeBlock" as const,
+        props: { language: null },
+        content: [],
+      },
+    ],
+  ])(
+    "inserts a paragraph below %s when Enter is pressed with NodeSelection",
+    (_label, block) => {
+      const editor = new BlockEditor({
+        initialContent: [
+          {
+            id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            ...block,
+            children: [],
+          },
+        ],
+      })
+      editors.push(editor)
+
+      let containerPos = 0
+      editor.tiptap.state.doc.descendants((node, pos) => {
+        if (node.type.name === "blockContainer") {
+          containerPos = pos
+          return false
+        }
+      })
+      editor.tiptap.view.dispatch(
+        editor.tiptap.state.tr.setSelection(
+          NodeSelection.create(editor.tiptap.state.doc, containerPos)
+        )
+      )
+      expect(editor.tiptap.state.selection).toBeInstanceOf(NodeSelection)
+
+      expect(
+        handleEnter(editor.tiptap.state, editor.tiptap.view.dispatch)
+      ).toBe(true)
+      expect(editor.document).toHaveLength(2)
+      expect(editor.document[0]?.type).toBe(block.type)
+      expect(editor.document[1]?.type).toBe("paragraph")
+    }
+  )
+
+  it("does not insert a top-level paragraph when Enter is pressed inside a code block", () => {
+    const editor = new BlockEditor({
+      initialContent: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          type: "codeBlock",
+          props: { language: null },
+          content: [{ type: "text", text: "line one", styles: {} }],
+          children: [],
+        },
+      ],
+    })
+    editors.push(editor)
+    selectEnd(editor)
+
+    pressEnter(editor)
+    expect(editor.document).toHaveLength(1)
+    expect(editor.document[0]?.type).toBe("codeBlock")
+  })
 })

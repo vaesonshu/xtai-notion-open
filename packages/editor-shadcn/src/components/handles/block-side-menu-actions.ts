@@ -1,36 +1,6 @@
+import { NodeSelection } from "@tiptap/pm/state"
 import type { BlockEditor } from "@xtai-notion/editor-core"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { generateBlockId } from "@xtai-notion/editor-core/block-schema/ids"
-
-function findBlockById(blocks: Block[], id: string): Block | null {
-  for (const block of blocks) {
-    if (block.id === id) {
-      return block
-    }
-
-    const nested = findBlockById(block.children, id)
-
-    if (nested) {
-      return nested
-    }
-  }
-
-  return null
-}
-
-function blockHasVisibleContent(block: Block | null): boolean {
-  if (!block?.content) {
-    return false
-  }
-
-  if (Array.isArray(block.content)) {
-    return block.content.some((item) =>
-      item.type === "text" ? item.text.length > 0 : true
-    )
-  }
-
-  return true
-}
 
 /** 计算 blockContainer 内 textblock 的可编辑光标位置 */
 function getInlineCursorPos(
@@ -57,7 +27,7 @@ function setTextCursorInBlock(blockEditor: BlockEditor, blockId: string) {
       const content = node.firstChild
 
       if (content?.isTextblock) {
-        cursorPos = getInlineCursorPos(pos, content, true)
+        cursorPos = getInlineCursorPos(pos, content, false)
       }
 
       return false
@@ -75,21 +45,34 @@ function setTextCursorInBlock(blockEditor: BlockEditor, blockId: string) {
   }
 }
 
-/** 在当前块后插入段落并打开斜杠命令菜单 */
-export function insertBlockAndOpenSlashMenu(
+/** 侧栏拖拽钮点击：整块选中，供下拉菜单操作 */
+export function selectBlockContainer(
+  blockEditor: BlockEditor,
+  blockPos: number
+) {
+  const { view } = blockEditor.tiptap
+  const node = view.state.doc.nodeAt(blockPos)
+  if (!node || node.type.name !== "blockContainer") {
+    return
+  }
+
+  view.focus()
+  view.dispatch(
+    view.state.tr.setSelection(NodeSelection.create(view.state.doc, blockPos))
+  )
+}
+
+/** 删除侧栏当前块；文档不能为空，删光后由 BlockEditor 补空段落 */
+export function deleteSelectedBlock(blockEditor: BlockEditor, blockId: string) {
+  blockEditor.removeBlocks([blockId])
+}
+
+/** 侧栏 +：始终在当前块下方插入空段落并聚焦 */
+export function insertParagraphBelowBlock(
   blockEditor: BlockEditor,
   blockId: string
 ) {
-  const block = findBlockById(blockEditor.document, blockId)
-  const isEmpty = !blockHasVisibleContent(block)
-
-  if (isEmpty) {
-    setTextCursorInBlock(blockEditor, blockId)
-  } else {
-    const newId = generateBlockId()
-    blockEditor.insertBlocks([{ type: "paragraph", id: newId }], blockId, "after")
-    setTextCursorInBlock(blockEditor, newId)
-  }
-
-  blockEditor.tiptap.chain().focus().insertContent("/").run()
+  const newId = generateBlockId()
+  blockEditor.insertBlocks([{ type: "paragraph", id: newId }], blockId, "after")
+  setTextCursorInBlock(blockEditor, newId)
 }

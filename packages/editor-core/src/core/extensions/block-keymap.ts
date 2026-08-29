@@ -1,7 +1,7 @@
 import { Extension } from "@tiptap/core"
 import { Fragment, type Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState, Transaction } from "@tiptap/pm/state"
-import { TextSelection } from "@tiptap/pm/state"
+import { NodeSelection, TextSelection } from "@tiptap/pm/state"
 import { generateBlockId } from "../block-schema/ids"
 import { createDefaultBlockSchemaRegistry } from "../schema/default-specs"
 import type { BlockType } from "../block-schema/types"
@@ -9,8 +9,15 @@ import type { BlockType } from "../block-schema/types"
 const DEFAULT_BLOCK_CONTENT_TYPES =
   createDefaultBlockSchemaRegistry().getBlockContentTypes()
 
-/** 不可拆分的原子块：Enter 时在下方插入新段落 */
+/** 不可拆分的原子块 */
 const ATOM_BLOCK_TYPES = new Set(["divider", "image", "canvas"])
+
+/** 整块选中（NodeSelection）时 Enter 在下方插入段落 */
+const INSERT_BELOW_ON_NODE_SELECTION = new Set([
+  ...ATOM_BLOCK_TYPES,
+  "table",
+  "codeBlock",
+])
 
 type ContainerRef = {
   pos: number
@@ -25,9 +32,27 @@ function requireNodeType(schema: EditorState["schema"], name: string) {
   return nodeType
 }
 
-/** 从选区向上找到所在的 blockContainer（含 NodeSelection 选中原子块） */
+/** 从选区向上找到所在的 blockContainer（含 NodeSelection 选中整块或块内容） */
 function findContainerAtSelection(state: EditorState): ContainerRef | null {
   const { selection } = state
+
+  if (selection instanceof NodeSelection) {
+    const selected = selection.node
+    if (selected.type.name === "blockContainer") {
+      return { pos: selection.from, node: selected }
+    }
+
+    const $pos = state.doc.resolve(selection.from)
+    for (let depth = $pos.depth; depth > 0; depth -= 1) {
+      const node = $pos.node(depth)
+      if (node.type.name === "blockContainer") {
+        return { pos: $pos.before(depth), node }
+      }
+    }
+
+    return null
+  }
+
   const anchor = selection.from
   const $pos = state.doc.resolve(anchor)
 
@@ -293,6 +318,14 @@ export function handleEnter(state: EditorState, dispatch?: (tr: Transaction) => 
   const contentNode = current.node.child(0)
   const typeName = contentNode.type.name
 
+  // 整块选中（NodeSelection）时 Enter 在下方插入可编辑段落
+  if (
+    state.selection instanceof NodeSelection &&
+    INSERT_BELOW_ON_NODE_SELECTION.has(typeName)
+  ) {
+    return insertBlockAfter(state, dispatch, current)
+  }
+
   // 原子块选中时为 NodeSelection（非 empty），Enter 仍应在下方插入可编辑段落
   if (ATOM_BLOCK_TYPES.has(typeName)) {
     return insertBlockAfter(state, dispatch, current)
@@ -443,8 +476,14 @@ export function handleBackspace(
 
 /**
  * 块文档键盘映射：Enter 拆块/新建块，Backspace 合并或删除空块。
- * 实际按键处理在 BlockEditor.editorProps.handleKeyDown，需先于 baseKeymap 执行。
+ * Enter 放在插件层，排在斜杠/提及 Suggestion 之后，避免菜单打开时抢 Enter。
  */
 export const BlockKeymap = Extension.create({
   name: "blockKeymap",
+  addKeyboardShortcuts() {
+    return {
+      Enter: () =>
+        handleEnter(this.editor.state, this.editor.view.dispatch),
+    }
+  },
 })

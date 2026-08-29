@@ -146,7 +146,14 @@ function resolveBlockContainerAtElement(
 }
 
 function isSideMenuElement(target: EventTarget | null) {
-  return target instanceof Element && target.closest(".editor-block-side-menu")
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        ".editor-block-side-menu, [data-slot='popover-content'], [data-slot='popover-trigger']"
+      )
+    )
+  )
 }
 
 class BlockSideMenuView {
@@ -340,6 +347,11 @@ class BlockSideMenuView {
     }
 
     this.mousePos = { x: event.clientX, y: event.clientY }
+
+    // 鼠标移到下拉菜单时保持侧栏，避免 Popover portal 被当成离开块
+    if (isSideMenuElement(event.target)) {
+      return
+    }
 
     const editorRect = this.pmView.dom.getBoundingClientRect()
     const cursorWithinEditor =
