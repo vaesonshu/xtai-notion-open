@@ -109,10 +109,15 @@ export {
 } from "./canvas/canvas-snapshot"
 export {
   AI_WRITABLE_BLOCK_TYPES,
+  applyAiWriteOp,
   blocksToAiBlockViews,
+  canReplayAiWriteOps,
   collectAiBlockIds,
+  collectAiWriteOpTargetIds,
+  extractDraftBlocks,
   isAiWritableBlockType,
   isEmptyTextBlock,
+  textToInlineContent,
   validateAiWriteOp,
   type AiBlockView,
   type AiInsertBlockInput,

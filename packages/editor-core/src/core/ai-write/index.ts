@@ -14,3 +14,10 @@ export {
   isEmptyTextBlock,
 } from "./serialize"
 export { validateAiWriteOp } from "./validate"
+export {
+  applyAiWriteOp,
+  canReplayAiWriteOps,
+  collectAiWriteOpTargetIds,
+  extractDraftBlocks,
+  textToInlineContent,
+} from "./apply"
