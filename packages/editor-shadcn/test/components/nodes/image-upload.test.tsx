@@ -1,30 +1,33 @@
 import "@testing-library/jest-dom/vitest"
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import type { Editor } from "@tiptap/core"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { use, useEffect } from "react"
-import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
-import { TestEditorProvider } from "../../editor-test-utils"
+import { executeSlashCommand } from "@xtai-notion/editor-core/slash-commands"
 import { createEmptyBlocks } from "@xtai-notion/editor-core/block-schema/documents"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { EditorSurface } from "@shadcn-src/components/editor/editor-surface"
 import { ImageUpload } from "@shadcn-src/components/nodes/image-upload"
+import {
+  TestEditorProvider,
+} from "../../editor-test-utils"
 
 const image = new File(["image"], "image.png", { type: "image/png" })
 const text = new File(["text"], "text.txt", { type: "text/plain" })
 const dropzoneName = "选择或拖拽上传图片"
 
-let latestEditor: Editor | null = null
+let latestBlockEditor: import("@xtai-notion/editor-core").BlockEditor | null =
+  null
 
-function EditorProbe() {
+function EditorProbeWithBlockEditor() {
   const context = use(EditorContext)
   useEffect(() => {
     const blockEditor = context?.blockEditor
     if (!blockEditor) {
       return
     }
-    latestEditor = blockEditor.tiptap
+    latestBlockEditor = blockEditor
     return blockEditor.onChange(() => {
-      latestEditor = blockEditor.tiptap
+      latestBlockEditor = blockEditor
     })
   }, [context?.blockEditor])
   return null
@@ -32,7 +35,7 @@ function EditorProbe() {
 
 async function waitForEditor() {
   await waitFor(() => {
-    expect(latestEditor).not.toBeNull()
+    expect(latestBlockEditor).not.toBeNull()
   })
 }
 
@@ -46,7 +49,7 @@ function renderUpload(
     <TestEditorProvider initialContent={createEmptyBlocks()} imageUpload={upload}>
       <ImageUpload>
         <EditorSurface />
-        <EditorProbe />
+        <EditorProbeWithBlockEditor />
       </ImageUpload>
     </TestEditorProvider>
   )
@@ -54,7 +57,9 @@ function renderUpload(
 
 function insertUploadNode() {
   act(() => {
-    latestEditor?.chain().focus().insertImageUpload().run()
+    if (latestBlockEditor) {
+      executeSlashCommand(latestBlockEditor, "upload-image")
+    }
   })
 }
 
@@ -84,7 +89,7 @@ beforeAll(() => {
 })
 
 afterEach(() => {
-  latestEditor = null
+  latestBlockEditor = null
 })
 
 describe("ImageUpload", () => {
@@ -109,7 +114,7 @@ describe("ImageUpload", () => {
     await waitFor(() => expect(upload).toHaveBeenCalledWith(image, undefined))
     await waitFor(() => {
       expect(
-        latestEditor?.getJSON().content?.some((node) =>
+        latestBlockEditor?.tiptap.getJSON().content?.some((node) =>
           JSON.stringify(node).includes("https://cdn.example/image.png")
         )
       ).toBe(true)
@@ -155,7 +160,9 @@ describe("ImageUpload", () => {
     })
     await waitFor(() => {
       expect(
-        JSON.stringify(latestEditor?.getJSON()).includes("imageUpload")
+        JSON.stringify(latestBlockEditor?.tiptap.getJSON()).includes(
+          '"type":"image"'
+        )
       ).toBe(false)
     })
 

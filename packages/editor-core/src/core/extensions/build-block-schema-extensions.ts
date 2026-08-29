@@ -1,6 +1,6 @@
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
-import Dropcursor from "@tiptap/extension-dropcursor"
+import { BlockDropcursor } from "./block-dropcursor"
 import Placeholder from "@tiptap/extension-placeholder"
 import TableCell from "@tiptap/extension-table-cell"
 import TableHeader from "@tiptap/extension-table-header"
@@ -64,7 +64,7 @@ export function buildBlockSchemaExtensions(
     TableRow,
     TableHeader,
     TableCell,
-    Dropcursor.configure({
+    BlockDropcursor.configure({
       color: "#24866B",
       width: 2,
       class: "ProseMirror-dropcursor",

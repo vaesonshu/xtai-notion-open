@@ -175,15 +175,7 @@ describe("SlashMenu", () => {
     })
 
     await waitFor(() => {
-      expect(
-        latestBlocks.some(
-          (block) =>
-            block.type === "image" ||
-            editor!.getJSON().content?.some((node) =>
-              JSON.stringify(node).includes("imageUpload")
-            )
-        )
-      ).toBe(true)
+      expect(latestBlocks.some((block) => block.type === "image")).toBe(true)
     })
   })
 

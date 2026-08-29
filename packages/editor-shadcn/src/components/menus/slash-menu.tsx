@@ -83,21 +83,16 @@ function insertTableBlock(blockEditor: BlockEditor, rows: number, cols: number) 
 function applySlashCommand(
   blockEditor: BlockEditor,
   range: Range,
-  item: SlashCommand,
-  insertImageUpload: () => void
+  item: SlashCommand
 ) {
   blockEditor.tiptap.chain().focus().deleteRange(range).run()
-  if (item.id === "upload-image") {
-    insertImageUpload()
-    return
-  }
   executeSlashCommand(blockEditor, item.id)
 }
 
 export function SlashMenu() {
   const blockEditor = useBlockEditor()
   const editor = blockEditor.tiptap
-  const { canUpload, openFilePicker: insertImageUpload } = useImageUpload()
+  const { canUpload } = useImageUpload()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [items, setItems] = useState<SlashCommand[]>([])
@@ -109,16 +104,14 @@ export function SlashMenu() {
   const tablePinnedRef = useRef(false)
   const keyboardNavigationRef = useRef(false)
   const suggestionRef = useRef<SlashSuggestionState | null>(null)
-  const insertImageUploadRef = useRef(insertImageUpload)
   const selectedIdRef = useRef(selectedId)
   const itemsRef = useRef(items)
   const menuScrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    insertImageUploadRef.current = insertImageUpload
     selectedIdRef.current = selectedId
     itemsRef.current = items
-  }, [insertImageUpload, items, selectedId])
+  }, [items, selectedId])
 
   useEffect(() => {
     if (!editor.isEditable) {
@@ -137,13 +130,8 @@ export function SlashMenu() {
           nextQuery
         )
       },
-      command: ({ editor: activeEditor, range, props }) => {
-        applySlashCommand(
-          blockEditor,
-          range,
-          props,
-          insertImageUploadRef.current
-        )
+      command: ({ range, props }) => {
+        applySlashCommand(blockEditor, range, props)
       },
       render: () => {
         const sync = (props: SuggestionProps<SlashCommand, SlashCommand>) => {

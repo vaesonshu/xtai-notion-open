@@ -7,7 +7,7 @@ import {
   XIcon,
 } from "../../icons"
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react"
-import { useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "../../ui/button"
 import { uploadImage } from "@xtai-notion/editor-core/image-upload"
 
@@ -20,13 +20,43 @@ function formatFileSize(bytes: number): string {
   return `${Math.round((bytes / 1024 / 1024) * 10) / 10}MB`
 }
 
-export function ImageUploadNode({ editor, extension, getPos }: NodeViewProps) {
+/** Dropcursor 节点挂在编辑器 offsetParent 上，需直接隐藏 */
+function suppressDropcursor() {
+  for (const node of document.querySelectorAll(".ProseMirror-dropcursor")) {
+    if (node instanceof HTMLElement) {
+      node.style.visibility = "hidden"
+    }
+  }
+}
+
+function restoreDropcursor() {
+  for (const node of document.querySelectorAll(".ProseMirror-dropcursor")) {
+    if (node instanceof HTMLElement) {
+      node.style.visibility = ""
+    }
+  }
+}
+
+/** image blockContent 的 NodeView：无 src 时显示上传区，有 src 时渲染图片 */
+export function ImageBlockNode({
+  editor,
+  node,
+  extension,
+  getPos,
+  updateAttributes,
+}: NodeViewProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const [state, setState] = useState<UploadState>({ status: "idle" })
   const [isDragging, setIsDragging] = useState(false)
 
-  const upload = extension.options.upload
+  const src =
+    typeof node.attrs.src === "string" ? node.attrs.src.trim() : ""
+  const upload = extension.options.upload as
+    | ((file: File) => Promise<{ publicUrl: string; contentType: string }>)
+    | undefined
   const canUpload = Boolean(upload && editor.isEditable)
+  const showUploadUi = !src || state.status !== "idle"
 
   const remove = () => {
     const pos = getPos()
@@ -39,32 +69,28 @@ export function ImageUploadNode({ editor, extension, getPos }: NodeViewProps) {
     }
   }
 
-  const uploadFile = async (file: File) => {
-    if (!upload || !editor.isEditable) return
+  const uploadFile = useCallback(
+    async (file: File) => {
+      if (!upload || !editor.isEditable) return
 
-    setState({ status: "uploading", file })
-    try {
-      const result = await uploadImage(file, { upload })
-      const pos = getPos()
-      if (typeof pos !== "number") return
-
-      editor
-        .chain()
-        .focus()
-        .deleteRange({ from: pos, to: pos + 1 })
-        .insertContentAt(pos, {
-          type: "image",
-          attrs: { src: result.publicUrl, alt: file.name },
+      setState({ status: "uploading", file })
+      try {
+        const result = await uploadImage(file, { upload })
+        updateAttributes({
+          src: result.publicUrl,
+          uploadStatus: "uploaded",
         })
-        .run()
-    } catch (error) {
-      setState({
-        status: "error",
-        file,
-        message: error instanceof Error ? error.message : "图片上传失败",
-      })
-    }
-  }
+        setState({ status: "idle" })
+      } catch (error) {
+        setState({
+          status: "error",
+          file,
+          message: error instanceof Error ? error.message : "图片上传失败",
+        })
+      }
+    },
+    [editor.isEditable, updateAttributes, upload]
+  )
 
   const selectFile = () => {
     if (canUpload && state.status === "idle") {
@@ -72,9 +98,91 @@ export function ImageUploadNode({ editor, extension, getPos }: NodeViewProps) {
     }
   }
 
+  // ProseMirror Dropcursor 在 editorView.dom 上用原生监听器注册，
+  // React 合成事件的 stopPropagation 拦不住，必须用原生冒泡阶段截断。
+  useEffect(() => {
+    if (!showUploadUi) {
+      return
+    }
+
+    const el = wrapperRef.current
+    if (!el) {
+      return
+    }
+
+    const onDragEnter = (event: DragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      suppressDropcursor()
+      if (canUpload) {
+        setIsDragging(true)
+      }
+    }
+
+    const onDragOver = (event: DragEvent) => {
+      event.preventDefault()
+      // 捕获阶段截断，避免冒泡到 ProseMirror 根节点触发 Dropcursor
+      event.stopPropagation()
+      suppressDropcursor()
+    }
+
+    const onDragLeave = (event: DragEvent) => {
+      event.stopPropagation()
+      const related = event.relatedTarget
+      if (!related || !el.contains(related as Node)) {
+        setIsDragging(false)
+        restoreDropcursor()
+      }
+    }
+
+    const onDrop = (event: DragEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      setIsDragging(false)
+      restoreDropcursor()
+      const file = Array.from(event.dataTransfer?.files ?? [])[0]
+      if (file) {
+        void uploadFile(file)
+      }
+    }
+
+    el.addEventListener("dragenter", onDragEnter, true)
+    el.addEventListener("dragover", onDragOver, true)
+    el.addEventListener("dragleave", onDragLeave, true)
+    el.addEventListener("drop", onDrop, true)
+
+    return () => {
+      el.removeEventListener("dragenter", onDragEnter, true)
+      el.removeEventListener("dragover", onDragOver, true)
+      el.removeEventListener("dragleave", onDragLeave, true)
+      el.removeEventListener("drop", onDrop, true)
+      restoreDropcursor()
+    }
+  }, [canUpload, showUploadUi, uploadFile])
+
+  if (!showUploadUi) {
+    return (
+      <NodeViewWrapper
+        as="figure"
+        className="editor-image-block"
+        contentEditable={false}
+      >
+        <img
+          src={src}
+          alt=""
+          className="editor-image-block__img"
+          data-type="image"
+          draggable={false}
+        />
+      </NodeViewWrapper>
+    )
+  }
+
   return (
     <NodeViewWrapper
+      ref={wrapperRef}
       className="editor-image-upload-node"
+      contentEditable={false}
       data-dragging={isDragging}
     >
       {state.status === "idle" ? (
@@ -83,18 +191,6 @@ export function ImageUploadNode({ editor, extension, getPos }: NodeViewProps) {
           className="editor-image-upload-node__dropzone"
           aria-label="选择或拖拽上传图片"
           onClick={selectFile}
-          onDragEnter={(event) => {
-            event.preventDefault()
-            if (canUpload) setIsDragging(true)
-          }}
-          onDragOver={(event) => event.preventDefault()}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={(event) => {
-            event.preventDefault()
-            setIsDragging(false)
-            const file = Array.from(event.dataTransfer.files)[0]
-            if (file) void uploadFile(file)
-          }}
         >
           <span className="editor-image-upload-node__icon" aria-hidden="true">
             <ImageIcon />
@@ -155,3 +251,6 @@ export function ImageUploadNode({ editor, extension, getPos }: NodeViewProps) {
     </NodeViewWrapper>
   )
 }
+
+/** @deprecated 请改用 ImageBlockNode */
+export const ImageUploadNode = ImageBlockNode

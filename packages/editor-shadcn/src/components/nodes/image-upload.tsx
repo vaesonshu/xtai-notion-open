@@ -8,6 +8,7 @@ import {
   use,
   type ReactNode,
 } from "react"
+import { executeSlashCommand } from "@xtai-notion/editor-core/slash-commands"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 
 export type ImageUploadControls = {
@@ -30,17 +31,17 @@ export function ImageUpload({ children }: { children?: ReactNode }) {
   const blockEditor = use(EditorContext)?.blockEditor
   const editor = blockEditor?.tiptap
   const uploadExtension = editor?.extensionManager?.extensions?.find(
-    (extension) => extension.name === "imageUpload"
+    (extension) => extension.name === "image"
   )
   const canUpload = Boolean(
     uploadExtension?.options.upload && editor?.isEditable
   )
 
   const openFilePicker = useCallback(() => {
-    if (canUpload && editor) {
-      editor.chain().focus().insertImageUpload().run()
+    if (canUpload && blockEditor) {
+      executeSlashCommand(blockEditor, "upload-image")
     }
-  }, [canUpload, editor])
+  }, [blockEditor, canUpload])
 
   const controls = useMemo(
     () => ({ canUpload, openFilePicker }),

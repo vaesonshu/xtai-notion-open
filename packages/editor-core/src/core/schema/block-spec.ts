@@ -1,6 +1,11 @@
 import { Node } from "@tiptap/core"
-import type { DOMOutputSpec, RawCommands } from "@tiptap/core"
-import type { Node as PMNode, Schema, TagParseRule } from "@tiptap/pm/model"
+import type { CommandSpec } from "@tiptap/core"
+import type {
+  DOMOutputSpec,
+  Node as PMNode,
+  Schema,
+  TagParseRule,
+} from "@tiptap/pm/model"
 import type { PartialBlock } from "../block-schema/types"
 import { propsToAttributes, type PropSchema } from "./prop-types"
 
@@ -26,6 +31,8 @@ export type BlockConfig = {
   code?: boolean
   /** 可选：该块类型对应的斜杠菜单项（自定义块用） */
   slashCommands?: SlashCommandMeta[]
+  /** 文件拖入该块时不显示 ProseMirror Dropcursor */
+  disableDropCursor?: boolean
 }
 
 export type ConvertContext = {
@@ -46,7 +53,8 @@ export type DeclarativeBlockImplementation = {
     node: PMNode
     HTMLAttributes: Record<string, unknown>
   }) => DOMOutputSpec
-  addCommands?: Partial<RawCommands>
+  /** 扩展自定义命令；CommandSpec 与 Tiptap addCommands 返回形状一致 */
+  addCommands?: Record<string, CommandSpec>
 }
 
 function resolveNodeContent(config: BlockConfig): string {
@@ -77,6 +85,17 @@ export function defineBlockSpec(
     atom: config.isAtom,
     code: config.code,
     selectable: config.isSelectable ?? true,
+    // TipTap 只会把白名单字段写入 PM NodeSpec，disableDropCursor 需走 extendNodeSchema
+    ...(config.disableDropCursor
+      ? {
+          extendNodeSchema(thisExtension) {
+            if (thisExtension.name === config.type) {
+              return { disableDropCursor: true }
+            }
+            return {}
+          },
+        }
+      : {}),
     addAttributes() {
       return propsToAttributes(config.propSchema)
     },

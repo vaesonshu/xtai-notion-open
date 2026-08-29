@@ -13,7 +13,7 @@ import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { MentionContext } from "@xtai-notion/editor-react/providers/mention-provider"
 import { EditorSurface } from "./editor-surface"
 import { createCanvasBlockSpec } from "../nodes/canvas-block-node-extension"
-import { ImageUploadNode } from "../nodes/image-upload-node-extension"
+import { createImageBlockSpec } from "../nodes/image-block-node-extension"
 import { ImageUpload } from "../nodes/image-upload"
 import type { MentionProvider } from "@xtai-notion/editor-core/mention"
 import type { MentionNavigate } from "@xtai-notion/editor-react/providers/mention-provider"
@@ -57,7 +57,7 @@ function assertExclusiveMode(props: {
   }
 }
 
-/** 画板 NodeView 通过 schema override 注入，替代旧的 canvasBlockNode 替换逻辑 */
+/** 画板 / 图片 NodeView 通过 schema override 注入 */
 function useDocumentEditorSchema(props: DocumentEditorSharedProps) {
   return useMemo(
     () =>
@@ -66,6 +66,9 @@ function useDocumentEditorSchema(props: DocumentEditorSharedProps) {
           canvas: createCanvasBlockSpec({
             upload: props.imageUpload,
             fetchImage: props.canvasImageFetch,
+          }),
+          image: createImageBlockSpec({
+            upload: props.imageUpload,
           }),
         },
       }),
@@ -113,7 +116,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
         editable={editable}
         imageUpload={props.imageUpload}
         canvasImageFetch={props.canvasImageFetch}
-        imageUploadNode={ImageUploadNode}
         editorSchema={editorSchema}
         onChange={onChange}
         createProvider={props.createProvider}
@@ -129,7 +131,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
       editable={editable}
       imageUpload={props.imageUpload}
       canvasImageFetch={props.canvasImageFetch}
-      imageUploadNode={ImageUploadNode}
       editorSchema={editorSchema}
       onChange={onChange}
     >

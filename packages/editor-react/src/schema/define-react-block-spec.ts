@@ -1,5 +1,9 @@
 import type { ComponentType } from "react"
-import { ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react"
+import {
+  ReactNodeViewRenderer,
+  type NodeViewProps,
+  type ReactNodeViewProps,
+} from "@tiptap/react"
 import {
   defineBlockSpec,
   type BlockConfig,
@@ -8,8 +12,11 @@ import {
 } from "@xtai-notion/editor-core/schema"
 
 export type DefineReactBlockSpecOptions = DeclarativeBlockImplementation & {
-  /** React NodeView 组件 */
-  component: ComponentType<NodeViewProps>
+  /**
+   * React NodeView 组件。
+   * 运行时 Tiptap 会注入 ref（ReactNodeViewProps），仅使用 NodeViewProps 的组件也可正常工作。
+   */
+  component: ComponentType<NodeViewProps> | ComponentType<ReactNodeViewProps>
   /** 运行时注入 Tiptap 扩展 options（如 canvas 的 upload handler） */
   addOptions?: () => Record<string, unknown>
 }
@@ -35,7 +42,10 @@ export function withReactNodeView(
   const node = spec.node.extend({
     ...(options.addOptions ? { addOptions: options.addOptions } : {}),
     addNodeView() {
-      return ReactNodeViewRenderer(options.component)
+      // NodeViewProps 组件在运行时兼容 ReactNodeViewProps（ref 由 Tiptap 注入）
+      return ReactNodeViewRenderer(
+        options.component as ComponentType<ReactNodeViewProps>
+      )
     },
   })
 

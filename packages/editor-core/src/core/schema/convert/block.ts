@@ -1,6 +1,7 @@
 import type { Node as PMNode, Schema } from "@tiptap/pm/model"
 import type {
   Block,
+  BlockType,
   InlineContent,
   TableContent,
 } from "../../block-schema/types"
@@ -122,28 +123,30 @@ export function contentNodeToBlock(
 
   const { config } = spec
   const props = nodeAttrsToBlockProps(node, spec)
+  // registry 中 type 为 string，对外 Block 模型仍使用 BlockType
+  const blockType = config.type as BlockType
 
   switch (config.content) {
     case "inline":
       return {
-        type: config.type,
+        type: blockType,
         props,
         content: inlinePmToBlock(node.content),
       }
     case "text":
       return {
-        type: config.type,
+        type: blockType,
         props,
         content: codeTextPmToBlock(node.content),
       }
     case "table":
       return {
-        type: config.type,
+        type: blockType,
         props,
         content: tablePmToBlock(node),
       }
     case "none":
-      return { type: config.type, props }
+      return { type: blockType, props }
     default:
       return fallbackContentNodeToBlock(node)
   }

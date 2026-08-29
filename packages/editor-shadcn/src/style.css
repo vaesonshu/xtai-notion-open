@@ -60,8 +60,29 @@
   margin: 1.5rem 0;
 }
 
+.editor-image-block {
+  margin: 1.5rem 0;
+}
+
+.editor-image-block__img {
+  border-radius: 0.5rem;
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+/* NodeView 外层占满块宽，避免选中高亮与 dropzone 错位 */
+.ProseMirror .react-renderer:has(.editor-image-upload-node),
+.ProseMirror .react-renderer:has(.editor-image-block) {
+  border: none;
+  display: block;
+  outline: none;
+  width: 100%;
+}
+
 .editor-image-upload-node__dropzone {
   align-items: center;
+  appearance: none;
   background: transparent;
   border: 1.5px dashed #c9c5bb;
   border-radius: 0.5rem;
@@ -72,6 +93,8 @@
   gap: 0.35rem;
   justify-content: center;
   min-height: 10rem;
+  /* 点击后浏览器默认 focus 实线轮廓会出现在虚线框外一圈 */
+  outline: none;
   padding: 1.5rem;
   text-align: center;
   transition:
@@ -82,8 +105,7 @@
 
 .editor-image-upload-node__dropzone:hover,
 .editor-image-upload-node[data-dragging="true"]
-  .editor-image-upload-node__dropzone,
-.ProseMirror-selectednode .editor-image-upload-node__dropzone {
+  .editor-image-upload-node__dropzone {
   background: rgba(36, 134, 107, 0.05);
   border-color: #24866b;
 }
@@ -445,6 +467,12 @@
   right: -0.25rem;
   top: -0.25rem;
   z-index: -1;
+}
+
+/* 上传占位已有 dropzone 虚线框，不需要 ProseMirror 节点选中时的外层底色 */
+.ProseMirror-selectednode:has(.editor-image-upload-node)::before,
+.ProseMirror-selectednode:has(.editor-image-block)::before {
+  content: none;
 }
 
 .editor-block-side-menu {

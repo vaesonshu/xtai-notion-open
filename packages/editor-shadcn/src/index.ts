@@ -15,4 +15,6 @@ export { TableGridPicker } from "./components/menus/table-grid-picker"
 export type { TableGridPickerProps } from "./components/menus/table-grid-picker"
 export { TableMenu } from "./components/menus/table-menu"
 export { CanvasBlockNode } from "./components/nodes/canvas-block-node-extension"
+export { createImageBlockSpec } from "./components/nodes/image-block-node-extension"
+/** @deprecated 请改用 createImageBlockSpec */
 export { ImageUploadNode } from "./components/nodes/image-upload-node-extension"

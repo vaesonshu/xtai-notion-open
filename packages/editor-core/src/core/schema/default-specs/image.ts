@@ -14,6 +14,7 @@ export const imageSpec = defineBlockSpec(
     },
     content: "none",
     isAtom: true,
+    disableDropCursor: true,
   },
   {
     parseHTML: [

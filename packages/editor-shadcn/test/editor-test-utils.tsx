@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useMemo, type ReactNode } from "react"
 import { use } from "react"
 import { createEditorSchema } from "@xtai-notion/editor-core/schema"
 import type { EditorProviderProps } from "@xtai-notion/editor-react/providers/editor-provider"
@@ -6,7 +6,7 @@ import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
 import { ShadcnEditorProvider } from "@shadcn-src/shadcn-editor-provider"
 import { createCanvasBlockSpec } from "@shadcn-src/components/nodes/canvas-block-node-extension"
-import { ImageUploadNode } from "@shadcn-src/components/nodes/image-upload-node-extension"
+import { createImageBlockSpec } from "@shadcn-src/components/nodes/image-block-node-extension"
 
 /** 测试用 editor 实例缓存，供断言链式命令。 */
 export let latestEditor: import("@tiptap/core").Editor | null = null
@@ -26,22 +26,28 @@ export function EditorProbe() {
   return null
 }
 
-const testEditorSchema = createEditorSchema({
-  override: {
-    canvas: createCanvasBlockSpec(),
-  },
-})
-
 /** 集成测试默认 Provider：注入 shadcn NodeView 扩展。 */
 export function TestEditorProvider({
   children,
+  imageUpload,
   ...props
 }: EditorProviderProps) {
+  const editorSchema = useMemo(
+    () =>
+      createEditorSchema({
+        override: {
+          canvas: createCanvasBlockSpec({ upload: imageUpload }),
+          image: createImageBlockSpec({ upload: imageUpload }),
+        },
+      }),
+    [imageUpload]
+  )
+
   return (
     <ShadcnEditorProvider>
       <EditorProvider
-        imageUploadNode={ImageUploadNode}
-        editorSchema={testEditorSchema}
+        editorSchema={editorSchema}
+        imageUpload={imageUpload}
         {...props}
       >
         {children}

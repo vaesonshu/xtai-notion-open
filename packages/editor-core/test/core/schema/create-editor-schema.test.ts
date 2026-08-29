@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { Editor } from "@tiptap/core"
 import { defineBlockSpec } from "@core/schema/block-spec"
 import {
   createEditorSchema,
@@ -50,5 +51,34 @@ describe("createEditorSchema", () => {
     expect(names).toContain("doc")
     expect(names).toContain("blockGroup")
     expect(names).toContain("paragraph")
+  })
+
+  it("writes disableDropCursor into the ProseMirror image node spec", () => {
+    const editorSchema = createEditorSchema()
+    const editor = new Editor({
+      extensions: editorSchema.getExtensions(),
+    })
+
+    expect(editor.schema.nodes.image.spec.disableDropCursor).toBe(true)
+
+    editor.destroy()
+  })
+
+  it("writes disableDropCursor for custom blocks that opt in", () => {
+    const dropZone = defineBlockSpec({
+      type: "dropZone",
+      propSchema: {},
+      content: "none",
+      isAtom: true,
+      disableDropCursor: true,
+    })
+    const editorSchema = createEditorSchema({ blocks: [dropZone] })
+    const editor = new Editor({
+      extensions: editorSchema.getExtensions(),
+    })
+
+    expect(editor.schema.nodes.dropZone.spec.disableDropCursor).toBe(true)
+
+    editor.destroy()
   })
 })
