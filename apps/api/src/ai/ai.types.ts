@@ -1,3 +1,5 @@
+import type { AiBlockView, AiWriteOp } from "@xtai-notion/editor-core/server"
+
 export type AiChatMessage = {
   role: "user" | "assistant"
   content: string
@@ -20,5 +22,48 @@ export function isAiChatMessage(value: unknown): value is AiChatMessage {
   return (
     (message.role === "user" || message.role === "assistant") &&
     typeof message.content === "string"
+  )
+}
+
+export type AiWriteRequest = {
+  documentId: string
+  mode: "slash" | "selection"
+  prompt: string
+  cursorBlockId: string
+  selectedIds: string[]
+  blocks: AiBlockView[]
+}
+
+export type AiWriteStreamEvent =
+  | { type: "tool_call"; op: AiWriteOp }
+  | { type: "done" }
+  | { type: "error"; message: string }
+
+function isAiBlockView(value: unknown): value is AiBlockView {
+  if (!value || typeof value !== "object") return false
+  const block = value as Record<string, unknown>
+  return (
+    typeof block.id === "string" &&
+    typeof block.type === "string" &&
+    typeof block.text === "string" &&
+    typeof block.writable === "boolean" &&
+    Array.isArray(block.children) &&
+    block.children.every(isAiBlockView)
+  )
+}
+
+/** 校验 POST /ai/write 请求体结构 */
+export function isAiWriteRequest(value: unknown): value is AiWriteRequest {
+  if (!value || typeof value !== "object") return false
+  const request = value as Record<string, unknown>
+  return (
+    typeof request.documentId === "string" &&
+    (request.mode === "slash" || request.mode === "selection") &&
+    typeof request.prompt === "string" &&
+    typeof request.cursorBlockId === "string" &&
+    Array.isArray(request.selectedIds) &&
+    request.selectedIds.every((id) => typeof id === "string") &&
+    Array.isArray(request.blocks) &&
+    request.blocks.every(isAiBlockView)
   )
 }

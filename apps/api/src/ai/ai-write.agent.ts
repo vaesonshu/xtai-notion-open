@@ -1,0 +1,226 @@
+import { ServiceUnavailableException } from "@nestjs/common"
+import { HumanMessage, SystemMessage } from "@langchain/core/messages"
+import type { AIMessageChunk } from "@langchain/core/messages"
+import { ChatOpenAI } from "@langchain/openai"
+import {
+  AI_WRITABLE_BLOCK_TYPES,
+  collectAiBlockIds,
+  validateAiWriteOp,
+  type AiWriteOp,
+} from "@xtai-notion/editor-core/server"
+import type { Environment } from "../config/environment"
+import type { AiWriteRequest } from "./ai.types"
+
+export type AiWriteToolRunner = (input: {
+  request: AiWriteRequest
+  signal?: AbortSignal
+}) => AsyncIterable<unknown>
+
+const WRITABLE_TYPES_TEXT = AI_WRITABLE_BLOCK_TYPES.join("、")
+
+const SYSTEM_PROMPT = `你是文档块级写作助手。只能通过工具 insert_blocks 与 update_block 修改文档，不得输出散文代替工具。
+
+可写块类型：${WRITABLE_TYPES_TEXT}。不得插入或更新表格、图片、画板、分割线等非文本块。
+
+insert_blocks 规则：
+- placement 仅允许 before 或 after，禁止 nested
+- blocks 每项须含 type（可写类型）与 text（纯文本字符串）
+
+update_block 规则：
+- 用 blockType 字段指定新块类型（不要用 type 表示块类型）
+- 至少提供 text、blockType 或 props 之一
+
+slash 模式：可 insert_blocks；update_block 仅允许更新光标块（cursorBlockId）。
+selection 模式：update_block 仅允许更新选中的块；insert_blocks 的 refId 须在选区内。
+
+根据用户指令与文档快照调用工具完成写作。`
+
+const AI_WRITE_TOOLS = [
+  {
+    type: "function" as const,
+    function: {
+      name: "insert_blocks",
+      description:
+        "在 refId 所指块的前方或后方插入一个或多个文本块",
+      parameters: {
+        type: "object",
+        properties: {
+          refId: {
+            type: "string",
+            description: "锚点块 id，须存在于当前文档快照",
+          },
+          placement: {
+            type: "string",
+            enum: ["before", "after"],
+            description: "插入位置，禁止 nested",
+          },
+          blocks: {
+            type: "array",
+            description: "待插入的块列表",
+            items: {
+              type: "object",
+              properties: {
+                type: {
+                  type: "string",
+                  description: `块类型，须为：${WRITABLE_TYPES_TEXT}`,
+                },
+                text: { type: "string", description: "块纯文本内容" },
+                props: {
+                  type: "object",
+                  description: "可选块属性，如 heading 的 level",
+                },
+              },
+              required: ["type", "text"],
+            },
+          },
+        },
+        required: ["refId", "placement", "blocks"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "update_block",
+      description: "更新已有文本块的内容或类型",
+      parameters: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description: "目标块 id，须存在于当前文档快照",
+          },
+          blockType: {
+            type: "string",
+            description: `新块类型（勿用 type 字段），须为：${WRITABLE_TYPES_TEXT}`,
+          },
+          text: { type: "string", description: "新的纯文本内容" },
+          props: { type: "object", description: "可选块属性" },
+        },
+        required: ["id"],
+      },
+    },
+  },
+]
+
+function buildValidationContext(request: AiWriteRequest) {
+  return {
+    mode: request.mode,
+    cursorBlockId: request.cursorBlockId,
+    selectedIds: request.selectedIds,
+    snapshotIds: collectAiBlockIds(request.blocks),
+  }
+}
+
+function buildUserMessage(request: AiWriteRequest): string {
+  const modeHint =
+    request.mode === "slash"
+      ? `模式：slash\n光标块 id：${request.cursorBlockId}`
+      : `模式：selection\n选中块 id：${request.selectedIds.join(", ") || "（无）"}`
+
+  return [
+    modeHint,
+    `文档快照（精简块树）：\n${JSON.stringify(request.blocks, null, 2)}`,
+    `用户指令：${request.prompt}`,
+  ].join("\n\n")
+}
+
+/** 将 runner 产出的原始对象规范为 validateAiWriteOp 可识别的 op */
+function normalizeToolCall(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") {
+    return raw
+  }
+
+  const record = raw as Record<string, unknown>
+  if (typeof record.type === "string") {
+    return raw
+  }
+
+  if (typeof record.name === "string" && record.args !== undefined) {
+    const args =
+      typeof record.args === "string" ? JSON.parse(record.args) : record.args
+    if (!args || typeof args !== "object" || Array.isArray(args)) {
+      return raw
+    }
+    return { type: record.name, ...(args as Record<string, unknown>) }
+  }
+
+  return raw
+}
+
+function createDefaultRunner(environment: Environment): AiWriteToolRunner {
+  return async function* defaultRunner({ request, signal }) {
+    const { OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL } = environment
+    if (!OPENAI_API_KEY || !OPENAI_BASE_URL || !OPENAI_MODEL) {
+      throw new ServiceUnavailableException("AI 服务未配置")
+    }
+
+    const model = new ChatOpenAI({
+      apiKey: OPENAI_API_KEY,
+      model: OPENAI_MODEL,
+      configuration: { baseURL: OPENAI_BASE_URL },
+      streaming: true,
+    }).bindTools(AI_WRITE_TOOLS)
+
+    const messages = [
+      new SystemMessage(SYSTEM_PROMPT),
+      new HumanMessage(buildUserMessage(request)),
+    ]
+
+    try {
+      const stream = await model.stream(messages, { signal })
+      let gathered: AIMessageChunk | undefined
+
+      for await (const chunk of stream) {
+        if (signal?.aborted) {
+          return
+        }
+        gathered = gathered ? gathered.concat(chunk) : chunk
+      }
+
+      for (const toolCall of gathered?.tool_calls ?? []) {
+        if (!toolCall.name || toolCall.args === undefined) {
+          continue
+        }
+        yield {
+          type: toolCall.name,
+          ...(typeof toolCall.args === "object" && toolCall.args !== null
+            ? toolCall.args
+            : {}),
+        }
+      }
+    } catch {
+      throw new ServiceUnavailableException("AI 服务暂不可用")
+    }
+  }
+}
+
+export class AiWriteAgent {
+  private readonly runner: AiWriteToolRunner
+
+  constructor(
+    private readonly environment: Environment,
+    runner?: AiWriteToolRunner
+  ) {
+    this.runner = runner ?? createDefaultRunner(environment)
+  }
+
+  async *stream(
+    request: AiWriteRequest,
+    signal?: AbortSignal
+  ): AsyncIterable<AiWriteOp> {
+    const context = buildValidationContext(request)
+
+    for await (const raw of this.runner({ request, signal })) {
+      if (signal?.aborted) {
+        return
+      }
+
+      const candidate = normalizeToolCall(raw)
+      const result = validateAiWriteOp(candidate, context)
+      if (result.ok) {
+        yield result.op
+      }
+    }
+  }
+}
