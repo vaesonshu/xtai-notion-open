@@ -1,35 +1,51 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@xtai-notion/editor-core"
+import type { Doc as YDoc } from "yjs"
+import {
+  BlockEditor,
+  createBlockSchemaYDoc,
+  documentFromYjs,
+  forkYDoc,
+} from "@xtai-notion/editor-core"
 import { createAiWritingSession } from "@/lib/ai-writing/session"
 import { readAiWriteSse } from "@/lib/ai-writing/client"
 
 const PARA_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
 const editors: BlockEditor[] = []
+const ydocs: YDoc[] = []
 const sessions: ReturnType<typeof createAiWritingSession>[] = []
 
-function createLive(content = "one") {
-  const editor = new BlockEditor({
-    initialContent: [
-      {
-        id: PARA_ID,
-        type: "paragraph",
-        props: {},
-        content: [{ type: "text", text: content, styles: {} }],
-        children: [],
-      },
-    ],
+function para(text: string) {
+  return {
+    id: PARA_ID,
+    type: "paragraph" as const,
+    props: {},
+    content: [{ type: "text" as const, text, styles: {} }],
+    children: [],
+  }
+}
+
+/** 共享文档 + fork 文档 + 绑在 fork 上的可见编辑器 */
+function createHarness(content = "one") {
+  const shared = createBlockSchemaYDoc([para(content)])
+  const fork = forkYDoc(shared)
+  const forkEditor = new BlockEditor({
+    applyInitialContent: false,
+    extensions: { document: fork },
   })
-  editors.push(editor)
-  return editor
+  ydocs.push(shared, fork)
+  editors.push(forkEditor)
+  return { shared, fork, forkEditor }
 }
 
 function createSession(
-  live: BlockEditor,
+  harness: ReturnType<typeof createHarness>,
   mode: "slash" | "selection" = "slash"
 ) {
   const session = createAiWritingSession({
-    live,
+    shared: harness.shared,
+    fork: harness.fork,
+    forkEditor: harness.forkEditor,
     mode,
     cursorBlockId: PARA_ID,
     selectedIds: mode === "selection" ? [PARA_ID] : [],
@@ -56,70 +72,75 @@ afterEach(() => {
     editor.destroy()
   }
   editors.length = 0
+  for (const doc of ydocs) {
+    doc.destroy()
+  }
+  ydocs.length = 0
 })
 
 describe("createAiWritingSession", () => {
-  it("keeps live unchanged after applyRemoteOp on shadow", () => {
-    const live = createLive()
-    const session = createSession(live)
+  it("keeps shared unchanged after applyRemoteOp on the fork editor", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
     session.applyRemoteOp(insertOp)
-    expect(live.document).toHaveLength(1)
-    expect(session.shadow.document).toHaveLength(2)
+    expect(documentFromYjs(harness.shared)).toHaveLength(1)
+    expect(harness.forkEditor.document).toHaveLength(2)
     expect(session.ops).toHaveLength(1)
     expect(session.status).toBe("ai-writing")
   })
 
-  it("replays ops onto live on accept", () => {
-    const live = createLive()
-    const session = createSession(live)
+  it("merges fork into shared on accept", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
     session.applyRemoteOp(insertOp)
     const result = session.accept()
     expect(result).toEqual({ ok: true })
-    expect(live.document).toHaveLength(2)
-    expect(live.document[1]?.content).toEqual([
+    expect(documentFromYjs(harness.shared)).toHaveLength(2)
+    expect(documentFromYjs(harness.shared)[1]?.content).toEqual([
       { type: "text", text: "two", styles: {} },
     ])
     expect(session.status).toBe("closed")
   })
 
-  it("leaves live unchanged on reject", () => {
-    const live = createLive()
-    const session = createSession(live)
+  it("leaves shared unchanged on reject", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
     session.applyRemoteOp(insertOp)
     session.reject()
-    expect(live.document).toHaveLength(1)
+    expect(documentFromYjs(harness.shared)).toHaveLength(1)
     expect(session.status).toBe("closed")
   })
 
-  it("returns stale when ref block was removed before accept", () => {
-    const live = createLive()
-    const session = createSession(live)
+  it("returns empty when accepting with no ops", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
+    expect(session.accept()).toEqual({ ok: false, reason: "empty" })
+  })
+
+  it("returns stale after markSharedStale and does not merge", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
     session.applyRemoteOp(insertOp)
-    live.removeBlocks([PARA_ID])
-    const before = live.document.length
+    session.markSharedStale()
+    const before = documentFromYjs(harness.shared).length
     const result = session.accept()
     expect(result).toEqual({ ok: false, reason: "stale" })
-    expect(live.document).toHaveLength(before)
+    expect(documentFromYjs(harness.shared)).toHaveLength(before)
     expect(session.status).not.toBe("closed")
   })
 
-  it("marks empty slash cursor block for deletion and removes it on accept", () => {
-    const live = createLive("")
-    const session = createSession(live)
+  it("removes empty slash cursor block from fork before merge", () => {
+    const harness = createHarness("")
+    const session = createSession(harness)
     expect(session.emptyCursorBlockToDelete).toBe(PARA_ID)
     session.applyRemoteOp(insertOp)
     const result = session.accept()
     expect(result).toEqual({ ok: true })
-    expect(live.document).toHaveLength(1)
-    expect(live.document[0]?.content).toEqual([
+    const sharedBlocks = documentFromYjs(harness.shared)
+    expect(sharedBlocks).toHaveLength(1)
+    expect(sharedBlocks[0]?.content).toEqual([
       { type: "text", text: "two", styles: {} },
     ])
-  })
-
-  it("returns empty when accepting with no ops", () => {
-    const live = createLive()
-    const session = createSession(live)
-    expect(session.accept()).toEqual({ ok: false, reason: "empty" })
   })
 })
 

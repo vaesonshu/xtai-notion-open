@@ -1,12 +1,14 @@
+import type { Doc as YDoc } from "yjs"
 import {
   applyAiWriteOp,
-  canReplayAiWriteOps,
-  extractDraftBlocks,
+  collectAiWriteDraftIds,
   isEmptyTextBlock,
+  mergeForkInto,
+  setAiWriteDraftIds,
   type AiWriteMode,
   type AiWriteOp,
-  BlockEditor,
   type Block,
+  type BlockEditor,
 } from "@xtai-notion/editor-core"
 
 export type AiWritingStatus =
@@ -23,15 +25,17 @@ export type AiWritingSession = {
   status: AiWritingStatus
   errorMessage?: string
   ops: AiWriteOp[]
-  shadow: BlockEditor
+  sharedStale: boolean
   applyRemoteOp(op: AiWriteOp): void
-  draftBlocks(): Block[]
-  accept(): { ok: true } | { ok: false; reason: "stale" | "empty" }
+  draftIds(): string[]
+  lastTouchedBlockId(): string | undefined
+  markSharedStale(): void
+  accept(): { ok: true } | { ok: false; reason: "stale" | "empty" | "merge" }
   reject(): void
   stop(): void
 }
 
-/** 在 live 文档树中按 id 查找块 */
+/** 在 fork 文档树中按 id 查找块 */
 function findBlockById(blocks: Block[], id: string): Block | undefined {
   for (const block of blocks) {
     if (block.id === id) {
@@ -46,21 +50,16 @@ function findBlockById(blocks: Block[], id: string): Block | undefined {
 }
 
 export function createAiWritingSession(input: {
-  live: BlockEditor
+  shared: YDoc
+  fork: YDoc
+  forkEditor: BlockEditor
   mode: AiWriteMode
   cursorBlockId: string
   selectedIds: string[]
 }): AiWritingSession {
-  const { live, mode, cursorBlockId } = input
-  const initialContent = structuredClone(live.document)
+  const { shared, fork, forkEditor, mode, cursorBlockId } = input
 
-  // 影子编辑器：深拷贝 live 内容，只读预览 AI 改动
-  const shadow = new BlockEditor({
-    initialContent,
-    editable: false,
-  })
-
-  const cursorBlock = findBlockById(live.document, cursorBlockId)
+  const cursorBlock = findBlockById(forkEditor.document, cursorBlockId)
   const emptyCursorBlockToDelete =
     mode === "slash" && cursorBlock && isEmptyTextBlock(cursorBlock)
       ? cursorBlockId
@@ -71,51 +70,61 @@ export function createAiWritingSession(input: {
     emptyCursorBlockToDelete,
     status: "user-input",
     ops: [],
-    shadow,
+    sharedStale: false,
     applyRemoteOp(op) {
-      const result = applyAiWriteOp(shadow, op)
+      // 只写 fork，接受前不得污染 shared Y.Doc
+      const result = applyAiWriteOp(forkEditor, op)
       if (!result.ok) {
         return
       }
       session.ops.push(result.op)
       session.status = "ai-writing"
+      setAiWriteDraftIds(forkEditor, session.draftIds())
     },
-    draftBlocks() {
-      return extractDraftBlocks(shadow, session.ops)
+    draftIds() {
+      return collectAiWriteDraftIds(session.ops)
+    },
+    lastTouchedBlockId() {
+      const ids = session.draftIds()
+      return ids.length > 0 ? ids[ids.length - 1] : cursorBlockId
+    },
+    markSharedStale() {
+      session.sharedStale = true
     },
     accept() {
       if (session.ops.length === 0) {
         return { ok: false, reason: "empty" }
       }
-      if (!canReplayAiWriteOps(live, session.ops)) {
+      if (session.sharedStale) {
         return { ok: false, reason: "stale" }
       }
 
-      for (const op of session.ops) {
-        const result = applyAiWriteOp(live, op)
-        if (!result.ok) {
-          return { ok: false, reason: "stale" }
-        }
-      }
-
-      // slash 空段落：插入成功后再删占位块
+      // slash 空段落：merge 前从 fork 删掉仍为空的占位块
       if (emptyCursorBlockToDelete) {
-        const block = findBlockById(live.document, emptyCursorBlockToDelete)
+        const block = findBlockById(
+          forkEditor.document,
+          emptyCursorBlockToDelete
+        )
         if (block && isEmptyTextBlock(block)) {
-          live.removeBlocks([emptyCursorBlockToDelete])
+          forkEditor.removeBlocks([emptyCursorBlockToDelete])
         }
       }
 
-      shadow.destroy()
+      try {
+        mergeForkInto(shared, fork)
+      } catch {
+        return { ok: false, reason: "merge" }
+      }
+
+      // 不销毁 fork Y.Doc：Host 改绑后再 destroy
       session.status = "closed"
       return { ok: true }
     },
     reject() {
-      shadow.destroy()
       session.status = "closed"
     },
     stop() {
-      // 中止流式生成后保留已预览的 ops，供用户审阅
+      // 中止流式生成后保留已写入 fork 的 ops，供用户审阅
       session.status = session.ops.length > 0 ? "user-reviewing" : "closed"
     },
   }
