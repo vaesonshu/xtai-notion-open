@@ -107,3 +107,17 @@ export {
   stringifyCanvasSnapshot,
   type CanvasSnapshot,
 } from "./canvas/canvas-snapshot"
+export {
+  AI_WRITABLE_BLOCK_TYPES,
+  blocksToAiBlockViews,
+  collectAiBlockIds,
+  isAiWritableBlockType,
+  isEmptyTextBlock,
+  validateAiWriteOp,
+  type AiBlockView,
+  type AiInsertBlockInput,
+  type AiWriteMode,
+  type AiWriteOp,
+  type AiWriteValidationContext,
+  type AiWritableBlockType,
+} from "./ai-write"

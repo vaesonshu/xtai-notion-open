@@ -17,3 +17,17 @@ export {
   documentToPlainText,
 } from "./core/yjs-document"
 export { collectMentionIds } from "./core/mention-collect"
+export {
+  AI_WRITABLE_BLOCK_TYPES,
+  blocksToAiBlockViews,
+  collectAiBlockIds,
+  isAiWritableBlockType,
+  isEmptyTextBlock,
+  validateAiWriteOp,
+  type AiBlockView,
+  type AiInsertBlockInput,
+  type AiWriteMode,
+  type AiWriteOp,
+  type AiWriteValidationContext,
+  type AiWritableBlockType,
+} from "./core/ai-write"
