@@ -115,6 +115,22 @@ describe("AiAssistantPanel", () => {
     )
   })
 
+  it("requests /ai/chat rather than /ai/write", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        streamResponse([
+          'event: token\ndata: {"type":"token","content":"ok"}\n\n',
+        ])
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    render(<AiAssistantPanel {...props} />)
+    fireEvent.click(screen.getByRole("button", { name: "总结文档" }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(fetchMock.mock.calls[0]![0]).toContain("/ai/chat")
+    expect(fetchMock.mock.calls[0]![0]).not.toContain("/ai/write")
+  })
+
   it("highlights fenced code blocks and preserves their language label", async () => {
     vi.stubGlobal(
       "fetch",

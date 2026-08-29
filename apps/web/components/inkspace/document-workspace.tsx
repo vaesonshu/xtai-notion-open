@@ -16,8 +16,12 @@ import { toast } from "sonner"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
-import { createDocumentCanvasImageFetcher, createDocumentImageUploader } from "./image-upload"
+import {
+  createDocumentCanvasImageFetcher,
+  createDocumentImageUploader,
+} from "./image-upload"
 import { AiAssistantPanel } from "./ai-assistant-panel"
+import { AiWritingHost } from "./ai-writing-host"
 import { BlockStructureDebugger } from "./block-structure-debugger"
 
 const showBlockStructureDebugger = process.env.NODE_ENV === "development"
@@ -187,7 +191,9 @@ export function DocumentWorkspace({
         toast.success("发布成功")
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "发布失败，请稍后重试")
+      toast.error(
+        error instanceof Error ? error.message : "发布失败，请稍后重试"
+      )
     }
   }, [apiUrl, documentId, user.id])
 
@@ -305,18 +311,25 @@ export function DocumentWorkspace({
         className="flex min-h-0 flex-1 flex-col"
         renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
       >
-        <EditorToolbar
-          title={title}
-          parentTitle={parentTitle}
+        <AiWritingHost
           apiUrl={apiUrl}
           documentId={documentId}
-          canShare={editable}
-          publicationStatus={publicationStatus}
-          onPublish={editable ? () => void submitPublication() : undefined}
-          aiOpen={aiOpen}
-          onAiToggle={() => setAiOpen((open) => !open)}
-        />
-        {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
+          userId={user.id}
+          canWrite={editable}
+        >
+          <EditorToolbar
+            title={title}
+            parentTitle={parentTitle}
+            apiUrl={apiUrl}
+            documentId={documentId}
+            canShare={editable}
+            publicationStatus={publicationStatus}
+            onPublish={editable ? () => void submitPublication() : undefined}
+            aiOpen={aiOpen}
+            onAiToggle={() => setAiOpen((open) => !open)}
+          />
+          {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
+        </AiWritingHost>
       </DocumentEditor>
       <AiAssistantPanel
         open={aiOpen}
