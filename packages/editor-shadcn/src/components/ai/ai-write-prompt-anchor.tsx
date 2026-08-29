@@ -56,14 +56,32 @@ export function AiWritePromptAnchor({
 
   useEffect(() => {
     measure()
-    const listenerOptions = { passive: true } as const
-    window.addEventListener("scroll", measure, listenerOptions)
-    window.addEventListener("resize", measure, listenerOptions)
-    return () => {
-      window.removeEventListener("scroll", measure)
-      window.removeEventListener("resize", measure)
+    // capture：编辑区 overflow 容器的 scroll 不冒泡到 window
+    const scrollOptions = { passive: true, capture: true } as const
+    const resizeOptions = { passive: true } as const
+    window.addEventListener("scroll", measure, scrollOptions)
+    window.addEventListener("resize", measure, resizeOptions)
+
+    // 流式增高改 rect.bottom 时跟随，避免提示条盖住草稿
+    const anchorEl = document.querySelector(
+      `[data-node-type="blockContainer"][data-id="${anchorBlockId}"]`
+    )
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" && anchorEl
+        ? new ResizeObserver(() => {
+            measure()
+          })
+        : null
+    if (anchorEl && resizeObserver) {
+      resizeObserver.observe(anchorEl)
     }
-  }, [measure])
+
+    return () => {
+      window.removeEventListener("scroll", measure, scrollOptions)
+      window.removeEventListener("resize", measure, resizeOptions)
+      resizeObserver?.disconnect()
+    }
+  }, [measure, anchorBlockId])
 
   if (typeof document === "undefined") {
     return null
