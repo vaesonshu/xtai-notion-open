@@ -80,11 +80,14 @@ export {
   validateImageFile,
 } from "./image-upload"
 export {
+  AI_WRITE_MERGE_ORIGIN,
   appendTextToBlockSchemaYDoc,
   blockSchemaYDocHasContent,
   createBlockSchemaYDoc,
   documentFromYjs,
   documentToPlainText,
+  forkYDoc,
+  mergeForkInto,
 } from "./yjs-document"
 export { collectMentionIds } from "./mention-collect"
 export type {

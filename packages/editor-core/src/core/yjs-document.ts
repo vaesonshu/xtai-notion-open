@@ -185,3 +185,19 @@ export function blockSchemaYDocHasContent(yDoc: Y.Doc): boolean {
     return block.children.length > 0
   })
 }
+
+/** merge 时作为 Y.applyUpdate origin，供 Host 忽略自身写入、避免误标 stale */
+export const AI_WRITE_MERGE_ORIGIN = { type: "ai-write-merge" } as const
+
+/** 克隆 shared Y.Doc 为独立 fork，AI 写入仅作用于 fork，不污染协作文档 */
+export function forkYDoc(shared: Y.Doc): Y.Doc {
+  const fork = new Y.Doc()
+  Y.applyUpdate(fork, Y.encodeStateAsUpdate(shared))
+  return fork
+}
+
+/** 将 fork 相对 shared 的增量更新合并回 shared（Accept 时调用） */
+export function mergeForkInto(shared: Y.Doc, fork: Y.Doc): void {
+  const update = Y.encodeStateAsUpdate(fork, Y.encodeStateVector(shared))
+  Y.applyUpdate(shared, update, AI_WRITE_MERGE_ORIGIN)
+}
