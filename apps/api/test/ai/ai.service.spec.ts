@@ -2,12 +2,39 @@ import { BadRequestException } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import { AiService } from "@api/ai/ai.service"
 
-function request() {
+function chatRequest() {
   return {
     documentId: "doc-1",
     documentText: "正文",
     messages: [{ role: "user" as const, content: "总结" }],
   }
+}
+
+function writeRequest() {
+  return {
+    documentId: "doc-1",
+    mode: "slash" as const,
+    prompt: "续写一段",
+    cursorBlockId: "block-1",
+    selectedIds: [] as string[],
+    blocks: [
+      {
+        id: "block-1",
+        type: "paragraph",
+        text: "hello",
+        writable: true,
+        children: [],
+      },
+    ],
+  }
+}
+
+function createService(
+  documents: { assertCanRead: ReturnType<typeof vi.fn> },
+  agent: { stream: ReturnType<typeof vi.fn> },
+  writeAgent: { stream: ReturnType<typeof vi.fn> } = { stream: vi.fn() }
+) {
+  return new AiService(documents as any, agent as any, writeAgent as any)
 }
 
 describe("AiService", () => {
@@ -19,23 +46,89 @@ describe("AiService", () => {
       }),
     }
     const events = []
-    for await (const event of new AiService(
-      documents as any,
-      agent as any
-    ).chat(request(), "user-1"))
+    for await (const event of createService(documents, agent).chat(
+      chatRequest(),
+      "user-1"
+    ))
       events.push(event)
     expect(documents.assertCanRead).toHaveBeenCalledWith("doc-1", "user-1")
     expect(events).toEqual([{ type: "token", content: "答" }, { type: "done" }])
   })
 
   it("rejects oversized input", async () => {
-    const service = new AiService({ assertCanRead: vi.fn() } as any, {} as any)
+    const service = createService(
+      { assertCanRead: vi.fn() },
+      { stream: vi.fn() }
+    )
     await expect(async () => {
       for await (const _event of service.chat(
-        { ...request(), documentText: "x".repeat(100_001) },
+        { ...chatRequest(), documentText: "x".repeat(100_001) },
         "user-1"
       )) {
       }
     }).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it("checks document read access before streaming write tool calls", async () => {
+    const documents = { assertCanRead: vi.fn().mockResolvedValue("viewer") }
+    const writeAgent = {
+      stream: vi.fn(async function* () {
+        yield {
+          type: "insert_blocks",
+          refId: "block-1",
+          placement: "after",
+          blocks: [{ type: "paragraph", text: "new" }],
+        }
+      }),
+    }
+    const events = []
+    for await (const event of createService(
+      documents,
+      { stream: vi.fn() },
+      writeAgent
+    ).write(writeRequest(), "user-1"))
+      events.push(event)
+    expect(documents.assertCanRead).toHaveBeenCalledWith("doc-1", "user-1")
+    expect(events).toEqual([
+      {
+        type: "tool_call",
+        op: {
+          type: "insert_blocks",
+          refId: "block-1",
+          placement: "after",
+          blocks: [{ type: "paragraph", text: "new" }],
+        },
+      },
+      { type: "done" },
+    ])
+  })
+
+  it("rejects oversized write input", async () => {
+    const service = createService(
+      { assertCanRead: vi.fn() },
+      { stream: vi.fn() },
+      { stream: vi.fn() }
+    )
+    await expect(async () => {
+      for await (const _event of service.write(
+        { ...writeRequest(), prompt: "x".repeat(10_001) },
+        "user-1"
+      )) {
+      }
+    }).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it("yields error when write agent produces no tool calls", async () => {
+    const writeAgent = { stream: vi.fn(async function* () {}) }
+    const events = []
+    for await (const event of createService(
+      { assertCanRead: vi.fn().mockResolvedValue("viewer") },
+      { stream: vi.fn() },
+      writeAgent
+    ).write(writeRequest(), "user-1"))
+      events.push(event)
+    expect(events).toEqual([
+      { type: "error", message: "没有可应用的改动" },
+    ])
   })
 })

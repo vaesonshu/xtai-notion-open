@@ -4,6 +4,7 @@ import { AuthModule } from "../auth/auth.module"
 import { DocumentsModule } from "../documents/documents.module"
 import { loadEnvironment } from "../config/environment"
 import { AiAgent } from "./ai.agent"
+import { AiWriteAgent } from "./ai-write.agent"
 import { AiController } from "./ai.controller"
 import { AiService } from "./ai.service"
 
@@ -12,6 +13,12 @@ import { AiService } from "./ai.service"
   controllers: [AiController],
   providers: [
     AiAgent,
+    {
+      provide: AiWriteAgent,
+      useFactory: (environment: ReturnType<typeof loadEnvironment>) =>
+        new AiWriteAgent(environment),
+      inject: [ENVIRONMENT],
+    },
     AiService,
     { provide: ENVIRONMENT, useFactory: () => loadEnvironment() },
   ],

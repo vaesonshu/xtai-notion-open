@@ -1,5 +1,15 @@
 import type { AiBlockView, AiWriteOp } from "@xtai-notion/editor-core/server"
 
+/** 聊天与写作接口共用的请求体大小限制 */
+export const AI_LIMITS = {
+  documentText: 100_000,
+  messages: 40,
+  message: 10_000,
+  prompt: 10_000,
+  blocksJson: 100_000,
+  selectedIds: 200,
+}
+
 export type AiChatMessage = {
   role: "user" | "assistant"
   content: string
