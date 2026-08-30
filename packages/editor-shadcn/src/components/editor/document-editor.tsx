@@ -101,9 +101,16 @@ export function DocumentEditor(props: DocumentEditorProps) {
     >
       <div className={className}>
         <ImageUpload>
-          {children}
-          <EditorReadyToolbar renderToolbar={renderToolbar} />
-          {framedSurface}
+          {/* 顶栏固定、仅正文区滚动：整列占满父级高度并截断溢出 */}
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            {children ? (
+              <div className="shrink-0">{children}</div>
+            ) : null}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <EditorReadyToolbar renderToolbar={renderToolbar} />
+              {framedSurface}
+            </div>
+          </div>
         </ImageUpload>
       </div>
     </MentionContext>

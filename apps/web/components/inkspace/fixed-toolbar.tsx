@@ -37,6 +37,7 @@ import { TableGridPicker, useImageUpload } from "@xtai-notion/editor-shadcn"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
+import { cn } from "@workspace/ui/lib/utils"
 import {
   Tooltip,
   TooltipContent,
@@ -206,11 +207,16 @@ function EmojiPicker({
 }
 
 function FixedEditorToolbarReady() {
+  const editorContext = use(EditorContext)
   const blockEditor = useBlockEditor()
   const editor = blockEditor.tiptap
   const { canUpload, openFilePicker } = useImageUpload()
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [tablePickerOpen, setTablePickerOpen] = useState(false)
+  // 查看者隐藏；AI 写作 fork 会临时只读，但仍保留工具栏占位
+  const canEditDocument =
+    editorContext?.canEditDocument ?? editor.isEditable
+  const toolbarDisabled = !editor.isEditable
 
   const toolbarState = useEditorState({
     editor,
@@ -260,13 +266,17 @@ function FixedEditorToolbarReady() {
     }
   }
 
-  if (!editor.isEditable) return null
+  if (!canEditDocument) return null
 
   return (
     <div
-      className="sticky top-0 z-20 flex min-h-11 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[#E8E6E1] bg-[#FCFCFA]/95 px-4 py-1.5 backdrop-blur"
+      className={cn(
+        "z-20 flex min-h-11 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-[#E8E6E1] bg-[#FCFCFA] px-4 py-1.5",
+        toolbarDisabled && "pointer-events-none opacity-60"
+      )}
       role="toolbar"
       aria-label="Editor toolbar"
+      aria-disabled={toolbarDisabled}
     >
       {marks.map(({ label, icon: Icon, mark }) => (
         <ToolbarTooltip key={mark} label={label}>

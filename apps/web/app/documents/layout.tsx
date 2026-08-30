@@ -34,7 +34,7 @@ export default function DocumentsLayout({
   return (
     <div
       data-pencil-page
-      className="flex min-h-svh w-full overflow-hidden bg-[#F8F8F6] !text-[#242321]"
+      className="flex h-svh min-h-0 w-full overflow-hidden bg-[#F8F8F6] !text-[#242321]"
     >
       {children}
     </div>

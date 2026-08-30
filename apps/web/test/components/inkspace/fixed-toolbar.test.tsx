@@ -60,6 +60,18 @@ describe("FixedEditorToolbar", () => {
     expect(screen.queryByText("Loading emoji picker…")).not.toBeInTheDocument()
   })
 
+  it("hides the toolbar for viewers without edit permission", async () => {
+    render(
+      <EditorProvider editable={false}>
+        <FixedEditorToolbar />
+      </EditorProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole("toolbar")).not.toBeInTheDocument()
+    })
+  })
+
   it("closes the picker after selecting an emoji", async () => {
     selectEmoji = undefined
 

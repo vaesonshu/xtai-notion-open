@@ -243,7 +243,7 @@ export function WorkspaceShell({
   }
 
   return (
-    <>
+    <div className="flex h-full min-h-0 w-full flex-1 overflow-hidden">
       <WorkspaceSidebar
         documents={personalDocuments}
         collaborativeDocuments={collaborativeDocuments}
@@ -258,7 +258,7 @@ export function WorkspaceShell({
         onOpenSquare={() => router.push("/square")}
         onOpenGraph={() => router.push("/documents/graph")}
       />
-      <main className="flex min-w-0 flex-1 flex-col bg-[#FCFCFA] !text-[#242321]">
+      <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FCFCFA] !text-[#242321]">
         {children ??
           (documentId ? (
             <DocumentWorkspace
@@ -279,6 +279,6 @@ export function WorkspaceShell({
             />
           ) : null)}
       </main>
-    </>
+    </div>
   )
 }

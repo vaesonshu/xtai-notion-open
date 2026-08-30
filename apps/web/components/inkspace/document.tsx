@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 
 export function DocumentPane({ children }: { children?: ReactNode }) {
   return (
-    <section className="flex min-h-0 flex-1 justify-center overflow-auto px-[72px] pt-[58px] pb-[72px]">
+    <section className="flex min-h-0 min-w-0 flex-1 justify-center overflow-y-auto overscroll-y-contain px-[72px] pt-[58px] pb-[72px]">
       <article className="flex w-[720px] max-w-full flex-col gap-4">
         {children}
       </article>

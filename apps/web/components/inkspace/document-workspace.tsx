@@ -291,7 +291,7 @@ export function DocumentWorkspace({
   })
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <DocumentEditor
         collaboration={{
           documentId,
@@ -308,7 +308,7 @@ export function DocumentWorkspace({
         renderToolbar={() => (
           <WorkspaceToolbarBridge onTextReady={handleTextReady} />
         )}
-        className="flex min-h-0 flex-1 flex-col"
+        className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         // AiWritingHost 必须包住 EditorSurface，斜杠/气泡菜单才能读到 AiWriteHostContext
         renderSurface={(surface) => (
           <AiWritingHost

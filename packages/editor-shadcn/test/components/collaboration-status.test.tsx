@@ -12,6 +12,8 @@ function renderStatus(status: Status) {
         collaborationStatus: status,
         collaborators: [],
         collaborationUser: null,
+        canEditDocument: true,
+        sharedYDoc: null,
       }}
     >
       <CollaborationStatus />

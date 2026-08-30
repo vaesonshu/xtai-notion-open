@@ -116,7 +116,7 @@ export function WorkspaceSidebar({
   }
   return (
     <aside
-      className="hidden shrink-0 flex-col gap-[18px] border-r bg-white px-3 py-4 lg:flex"
+      className="hidden h-full shrink-0 flex-col gap-[18px] overflow-hidden border-r bg-white px-3 py-4 lg:flex"
       style={{ width: 280 }}
     >
       <div className="flex h-[246px] flex-col gap-[10px] rounded-xl bg-[#FCFCFB] px-2 pt-2 pb-3">
