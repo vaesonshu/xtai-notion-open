@@ -2,6 +2,13 @@
 
 面向团队与个人的 **Notion 式知识工作台**：以块（Block）为一等公民组织文档，内置实时协作、发布广场与文档关系图。编辑器内核拆分为可独立发布的 **MIT** SDK（`@xtai-notion/editor-*`），既可开箱即用，也可 Headless 嵌入自有产品。
 
+编辑器实现明确参考 **[Tiptap](https://tiptap.dev)** 与 **[BlockNote](https://www.blocknotejs.org)**：以 Tiptap / ProseMirror 为底层编辑引擎，以 BlockNote 为块模型与 Notion 式交互的产品范式。
+
+| 参考项目 | 在本仓库中的角色 |
+|----------|------------------|
+| **[Tiptap](https://tiptap.dev)** | 编辑内核：ProseMirror 封装、扩展体系、Yjs 协作集成 |
+| **[BlockNote](https://www.blocknotejs.org)** | 块模型与 UX：`Block[]` 对外 API、每块 UUID、斜杠菜单、块级 Enter / Backspace |
+
 ## 产品能力
 
 | 能力 | 说明 |
@@ -22,7 +29,7 @@
 
 ## 为什么选择 Block[]，而不是 Tiptap JSON？
 
-对外文档类型是 **`Block[]`**，Tiptap / ProseMirror JSON 仅作为**内部编辑引擎表示**，不暴露给 Web 与 API 业务层。
+与 [BlockNote](https://www.blocknotejs.org) 类似，对外文档类型是 **`Block[]`**；[Tiptap](https://tiptap.dev) / ProseMirror JSON 仅作为**内部编辑引擎表示**，不暴露给 Web 与 API 业务层。
 
 ```ts
 type Block = {
@@ -45,7 +52,7 @@ type Block = {
 | **协作存储** | 常直接把 PM 树塞进 Yjs | Yjs 仍存 fragment `default`，对外通过 `BlockEditor.document` 读写块 |
 | **迁移与版本** | 结构升级困难 | `schemaVersion` 标记协作文档版本，便于后续演进 |
 
-**设计原则：** 块模型描述「产品里的文档长什么样」；Tiptap 负责「怎么高效编辑」。二者通过 `blocksToPmDoc` / `pmDocToBlocks` 双向转换，业务代码只依赖 `Block[]`。
+**设计原则：** 块模型（参考 BlockNote）描述「产品里的文档长什么样」；Tiptap 负责「怎么高效编辑」。二者通过 `blocksToPmDoc` / `pmDocToBlocks` 双向转换，业务代码只依赖 `Block[]`。
 
 ## 架构概览
 
@@ -214,6 +221,7 @@ import { Button } from "@workspace/ui/components/button"
 
 ## 相关文档
 
+- 技术参考：[Tiptap](https://tiptap.dev) · [BlockNote](https://www.blocknotejs.org)
 - 块文档架构设计：[`docs/superpowers/specs/2026-08-28-block-document-architecture-design.md`](./docs/superpowers/specs/2026-08-28-block-document-architecture-design.md)
 - 编辑器 SDK 开源拆分：[`openspec/changes/open-source-editor-sdk/`](./openspec/changes/open-source-editor-sdk/)
 - 各包 README：[`packages/editor-core`](./packages/editor-core/README.md) · [`packages/editor-react`](./packages/editor-react/README.md) · [`packages/editor-shadcn`](./packages/editor-shadcn/README.md)
