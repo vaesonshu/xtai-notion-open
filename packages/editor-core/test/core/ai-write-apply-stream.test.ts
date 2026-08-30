@@ -95,6 +95,37 @@ describe("createAiWriteStreamApplier", () => {
       },
     })
     expect(editor.document).toHaveLength(1)
+    // 空 skip 不得留下 insert 状态，否则 synthesize 会吐空 op
+    expect(applier.synthesizeOps()).toEqual([])
+  })
+
+  it("applyComplete still uses applyAiWriteOp after empty skip", () => {
+    const editor = create()
+    const applier = createAiWriteStreamApplier({
+      editor,
+      mode: "slash",
+      cursorBlockId: REF,
+      selectedIds: [],
+    })
+    applier.applyPartial({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "insert_blocks",
+      args: {
+        refId: REF,
+        placement: "after",
+        blocks: [{ type: "paragraph", text: "" }],
+      },
+    })
+    // 无 insert 状态时 complete 应走 applyAiWriteOp，允许换成 update
+    const result = applier.applyComplete(0, {
+      type: "update_block",
+      id: REF,
+      text: "two",
+    })
+    expect(result.ok).toBe(true)
+    expect(editor.document).toHaveLength(1)
+    expect(textOf(editor, 0)).toBe("two")
   })
 
   it("replaces selection text on first update partial", () => {
@@ -112,6 +143,29 @@ describe("createAiWriteStreamApplier", () => {
       args: { id: REF, text: "n" },
     })
     expect(textOf(editor, 0)).toBe("n")
+  })
+
+  it("keeps streamed update text when later partial omits text", () => {
+    const editor = create()
+    const applier = createAiWriteStreamApplier({
+      editor,
+      mode: "selection",
+      cursorBlockId: REF,
+      selectedIds: [REF],
+    })
+    applier.applyPartial({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "update_block",
+      args: { id: REF, text: "hello" },
+    })
+    applier.applyPartial({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "update_block",
+      args: { id: REF },
+    })
+    expect(textOf(editor, 0)).toBe("hello")
   })
 
   it("applyComplete without partials uses applyAiWriteOp", () => {

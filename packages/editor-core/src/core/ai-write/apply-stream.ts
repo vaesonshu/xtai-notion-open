@@ -184,17 +184,22 @@ export function createAiWriteStreamApplier(input: {
     if (state && state.name !== "insert_blocks") {
       return { applied: false }
     }
-    if (!state) {
-      state = {
+    if (state?.completed) return { applied: false }
+
+    // 延迟创建 insert 状态：空尾块 skip 时不登记，避免 synthesize 吐出空 op
+    const ensureInsertState = (): InsertState => {
+      if (state?.name === "insert_blocks") return state
+      const next: InsertState = {
         name: "insert_blocks",
         refId,
         placement,
         blocks: [],
         completed: false,
       }
-      states.set(toolIndex, state)
+      state = next
+      states.set(toolIndex, next)
+      return next
     }
-    if (state.completed) return { applied: false }
 
     const rawBlocks = Array.isArray(args.blocks) ? args.blocks : []
     let applied = false
@@ -211,28 +216,35 @@ export function createAiWriteStreamApplier(input: {
 
       const text = typeof raw.text === "string" ? raw.text : null
       const props = asRecord(raw.props) ?? undefined
-      const existing = state.blocks[localIndex]
       const isLast = i === rawBlocks.length - 1
+      const pendingInsert =
+        state?.name === "insert_blocks" ? state : states.get(toolIndex)
+      const existing =
+        pendingInsert?.name === "insert_blocks"
+          ? pendingInsert.blocks[localIndex]
+          : undefined
 
       if (!existing) {
         // 最后一个空块多半还在流式截断，等有正文再 insert
         if (text === null || text.length === 0) {
           if (isLast) continue
         }
-        const prev = state.blocks[localIndex - 1]
+        const insertState = ensureInsertState()
+        const prev = insertState.blocks[localIndex - 1]
         const id = insertOne(
           editor,
           { type, text: text ?? "", props },
-          prev ? prev.id : state.refId,
-          prev ? "after" : state.placement
+          prev ? prev.id : insertState.refId,
+          prev ? "after" : insertState.placement
         )
-        state.blocks.push({ id, type, lastText: text ?? "" })
+        insertState.blocks.push({ id, type, lastText: text ?? "" })
         applied = true
         touchedId = id
         localIndex += 1
         continue
       }
 
+      const insertState = ensureInsertState()
       const docBlock = findBlockById(editor.document, existing.id)
       const nextText = text ?? existing.lastText
       const typeChanged = existing.type !== type
@@ -283,10 +295,13 @@ export function createAiWriteStreamApplier(input: {
     }
     if (state.completed || state.id !== id) return { applied: false }
 
-    const text = typeof args.text === "string" ? args.text : ""
     const blockType =
       typeof args.blockType === "string" ? args.blockType : undefined
     const props = asRecord(args.props) ?? undefined
+    const hasText = typeof args.text === "string"
+    // 仅首次缺 text 时用空串覆盖旧文；后续 partial 无 text 则保留已打出内容
+    const text =
+      hasText ? args.text : state.started ? undefined : ""
     updateLocalBlock(editor, id, { type: blockType, text, props })
     state.started = true
     return { applied: true, touchedId: id }
