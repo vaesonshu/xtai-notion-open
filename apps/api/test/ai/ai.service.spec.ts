@@ -74,10 +74,14 @@ describe("AiService", () => {
     const writeAgent = {
       stream: vi.fn(async function* () {
         yield {
-          type: "insert_blocks",
-          refId: "block-1",
-          placement: "after",
-          blocks: [{ type: "paragraph", text: "new" }],
+          type: "tool_call",
+          toolIndex: 0,
+          op: {
+            type: "insert_blocks",
+            refId: "block-1",
+            placement: "after",
+            blocks: [{ type: "paragraph", text: "new" }],
+          },
         }
       }),
     }
@@ -92,6 +96,7 @@ describe("AiService", () => {
     expect(events).toEqual([
       {
         type: "tool_call",
+        toolIndex: 0,
         op: {
           type: "insert_blocks",
           refId: "block-1",
@@ -127,8 +132,33 @@ describe("AiService", () => {
       writeAgent
     ).write(writeRequest(), "user-1"))
       events.push(event)
-    expect(events).toEqual([
-      { type: "error", message: "没有可应用的改动" },
-    ])
+    expect(events).toEqual([{ type: "error", message: "没有可应用的改动" }])
+  })
+
+  it("emits done when only non-empty tool_partial was streamed", async () => {
+    const writeAgent = {
+      stream: vi.fn(async function* () {
+        yield {
+          type: "tool_partial",
+          toolIndex: 0,
+          name: "update_block",
+          args: { id: "block-1", text: "x" },
+        }
+      }),
+    }
+    const events = []
+    for await (const event of createService(
+      { assertCanRead: vi.fn().mockResolvedValue("viewer") },
+      { stream: vi.fn() },
+      writeAgent
+    ).write(writeRequest(), "user-1")) {
+      events.push(event)
+    }
+    expect(events[0]).toMatchObject({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "update_block",
+    })
+    expect(events.at(-1)).toEqual({ type: "done" })
   })
 })

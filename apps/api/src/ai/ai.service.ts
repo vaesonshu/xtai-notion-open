@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable } from "@nestjs/common"
 import { DocumentsService } from "../documents/documents.service"
 import { AiAgent } from "./ai.agent"
 import { AiWriteAgent } from "./ai-write.agent"
+import { partialArgsHaveNonEmptyText } from "@xtai-notion/editor-core/server"
 import {
   AI_LIMITS,
   type AiChatRequest,
@@ -83,17 +84,22 @@ export class AiService {
 
     try {
       let hasToolCall = false
-      for await (const op of this.writeAgent.stream(request, signal)) {
+      let hasNonEmptyPartial = false
+      for await (const event of this.writeAgent.stream(request, signal)) {
+        if (event.type === "tool_partial") {
+          // 仅有可展示文本的 partial 也视为成功流，避免打字机预览后误报无改动
+          if (partialArgsHaveNonEmptyText(event.name, event.args)) {
+            hasNonEmptyPartial = true
+          }
+          yield event
+          continue
+        }
         hasToolCall = true
-        yield { type: "tool_call", op }
+        yield event
       }
       if (!signal?.aborted) {
-        // 模型未产出任何可校验的 tool_call 时告知客户端，不发送 done
-        if (!hasToolCall) {
-          yield { type: "error", message: "没有可应用的改动" }
-        } else {
-          yield { type: "done" }
-        }
+        if (hasToolCall || hasNonEmptyPartial) yield { type: "done" }
+        else yield { type: "error", message: "没有可应用的改动" }
       }
     } catch (error) {
       if (signal?.aborted) return

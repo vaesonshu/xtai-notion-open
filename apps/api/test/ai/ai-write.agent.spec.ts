@@ -32,11 +32,16 @@ describe("AiWriteAgent", () => {
       }
     })
 
-    const ops = []
-    for await (const op of agent.stream(slashRequest)) {
-      ops.push(op)
+    const events = []
+    for await (const event of agent.stream(slashRequest)) {
+      events.push(event)
     }
 
+    const ops = events
+      .filter((event) => event.type === "tool_call")
+      .map((event) => event.op)
+
+    expect(events[0]).toMatchObject({ type: "tool_call", toolIndex: 0 })
     expect(ops).toEqual([
       {
         type: "insert_blocks",
@@ -45,6 +50,41 @@ describe("AiWriteAgent", () => {
         blocks: [{ type: "paragraph", text: "续写内容" }],
       },
     ])
+  })
+
+  it("yields tool_partial then validated tool_call from injected runner", async () => {
+    const agent = new AiWriteAgent({} as any, async function* () {
+      yield {
+        type: "tool_partial",
+        toolIndex: 0,
+        name: "insert_blocks",
+        args: {
+          refId: paraId,
+          placement: "after",
+          blocks: [{ type: "paragraph", text: "续" }],
+        },
+      }
+      yield {
+        type: "insert_blocks",
+        refId: paraId,
+        placement: "after",
+        blocks: [{ type: "paragraph", text: "续写内容" }],
+      }
+    })
+    const events = []
+    for await (const event of agent.stream(slashRequest)) {
+      events.push(event)
+    }
+    expect(events[0]).toMatchObject({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "insert_blocks",
+    })
+    expect(events[1]).toMatchObject({
+      type: "tool_call",
+      toolIndex: 0,
+      op: { type: "insert_blocks" },
+    })
   })
 
   it("skips invalid tool calls such as nested placement", async () => {
@@ -58,8 +98,10 @@ describe("AiWriteAgent", () => {
     })
 
     const ops = []
-    for await (const op of agent.stream(slashRequest)) {
-      ops.push(op)
+    for await (const event of agent.stream(slashRequest)) {
+      if (event.type === "tool_call") {
+        ops.push(event.op)
+      }
     }
 
     expect(ops).toHaveLength(0)
@@ -68,12 +110,12 @@ describe("AiWriteAgent", () => {
   it("yields nothing when runner produces no tool calls", async () => {
     const agent = new AiWriteAgent({} as any, async function* () {})
 
-    const ops = []
-    for await (const op of agent.stream(slashRequest)) {
-      ops.push(op)
+    const events = []
+    for await (const event of agent.stream(slashRequest)) {
+      events.push(event)
     }
 
-    expect(ops).toHaveLength(0)
+    expect(events).toHaveLength(0)
   })
 
   it("throws when OpenAI settings are missing and no runner is injected", async () => {

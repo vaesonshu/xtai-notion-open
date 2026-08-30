@@ -5,11 +5,12 @@ import { ChatOpenAI } from "@langchain/openai"
 import {
   AI_WRITABLE_BLOCK_TYPES,
   collectAiBlockIds,
+  parsePartialToolArgs,
+  sanitizePartialToolArgs,
   validateAiWriteOp,
-  type AiWriteOp,
 } from "@xtai-notion/editor-core/server"
 import type { Environment } from "../config/environment"
-import type { AiWriteRequest } from "./ai.types"
+import type { AiWriteAgentEvent, AiWriteRequest } from "./ai.types"
 
 export type AiWriteToolRunner = (input: {
   request: AiWriteRequest
@@ -40,8 +41,7 @@ const AI_WRITE_TOOLS = [
     type: "function" as const,
     function: {
       name: "insert_blocks",
-      description:
-        "在 refId 所指块的前方或后方插入一个或多个文本块",
+      description: "在 refId 所指块的前方或后方插入一个或多个文本块",
       parameters: {
         type: "object",
         properties: {
@@ -148,6 +148,12 @@ function normalizeToolCall(raw: unknown): unknown {
   return raw
 }
 
+type PendingToolCall = { name?: string; args: string }
+
+function readChunkIndex(part: { index?: number }): number {
+  return typeof part.index === "number" ? part.index : 0
+}
+
 function createDefaultRunner(environment: Environment): AiWriteToolRunner {
   return async function* defaultRunner({ request, signal }) {
     const { OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL } = environment
@@ -169,25 +175,52 @@ function createDefaultRunner(environment: Environment): AiWriteToolRunner {
 
     try {
       const stream = await model.stream(messages, { signal })
-      let gathered: AIMessageChunk | undefined
+      // LangChain 按 index 给出增量 args 字符串，边拼边产出 partial
+      const pending = new Map<number, PendingToolCall>()
+      const lastPartialJson = new Map<number, string>()
 
       for await (const chunk of stream) {
         if (signal?.aborted) {
           return
         }
-        gathered = gathered ? gathered.concat(chunk) : chunk
+        const parts = (chunk as AIMessageChunk).tool_call_chunks ?? []
+        for (const part of parts) {
+          const index = readChunkIndex(part)
+          const current = pending.get(index) ?? { args: "" }
+          if (part.name) current.name = part.name
+          if (typeof part.args === "string") current.args += part.args
+          pending.set(index, current)
+
+          if (!current.name) continue
+          const parsed = parsePartialToolArgs(current.args)
+          if (!parsed) continue
+          const sanitized = sanitizePartialToolArgs(current.name, parsed)
+          if (!sanitized) continue
+          const serialized = JSON.stringify(sanitized.args)
+          if (lastPartialJson.get(index) === serialized) continue
+          lastPartialJson.set(index, serialized)
+          yield {
+            type: "tool_partial" as const,
+            toolIndex: index,
+            name: sanitized.name,
+            args: sanitized.args,
+          }
+        }
       }
 
-      for (const toolCall of gathered?.tool_calls ?? []) {
-        if (!toolCall.name || toolCall.args === undefined) {
+      for (const [index, current] of pending) {
+        if (!current.name) continue
+        let args: Record<string, unknown>
+        try {
+          const parsed: unknown = JSON.parse(current.args)
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            continue
+          }
+          args = parsed as Record<string, unknown>
+        } catch {
           continue
         }
-        yield {
-          type: toolCall.name,
-          ...(typeof toolCall.args === "object" && toolCall.args !== null
-            ? toolCall.args
-            : {}),
-        }
+        yield { type: current.name, toolIndex: index, ...args }
       }
     } catch {
       throw new ServiceUnavailableException("AI 服务暂不可用")
@@ -205,22 +238,58 @@ export class AiWriteAgent {
     this.runner = runner ?? createDefaultRunner(environment)
   }
 
+  /** 边流边校验：partial 浅过滤去重，完整调用走 validateAiWriteOp */
   async *stream(
     request: AiWriteRequest,
     signal?: AbortSignal
-  ): AsyncIterable<AiWriteOp> {
+  ): AsyncIterable<AiWriteAgentEvent> {
     const context = buildValidationContext(request)
+    const lastPartialJson = new Map<number, string>()
+    let completedToolCalls = 0
 
     for await (const raw of this.runner({ request, signal })) {
       if (signal?.aborted) {
         return
       }
+      if (!raw || typeof raw !== "object") {
+        continue
+      }
 
+      const record = raw as Record<string, unknown>
+      if (record.type === "tool_partial") {
+        const toolIndex =
+          typeof record.toolIndex === "number" ? record.toolIndex : 0
+        if (typeof record.name !== "string" || !isRecord(record.args)) {
+          continue
+        }
+        const sanitized = sanitizePartialToolArgs(record.name, record.args)
+        if (!sanitized) continue
+        const serialized = JSON.stringify(sanitized.args)
+        if (lastPartialJson.get(toolIndex) === serialized) continue
+        lastPartialJson.set(toolIndex, serialized)
+        yield {
+          type: "tool_partial",
+          toolIndex,
+          name: sanitized.name,
+          args: sanitized.args,
+        }
+        continue
+      }
+
+      const toolIndex =
+        typeof record.toolIndex === "number"
+          ? record.toolIndex
+          : completedToolCalls
       const candidate = normalizeToolCall(raw)
       const result = validateAiWriteOp(candidate, context)
       if (result.ok) {
-        yield result.op
+        yield { type: "tool_call", toolIndex, op: result.op }
+        completedToolCalls += 1
       }
     }
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
 }

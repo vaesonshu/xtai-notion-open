@@ -44,8 +44,18 @@ export type AiWriteRequest = {
   blocks: AiBlockView[]
 }
 
+/** Agent 流式事件：打字机 partial 与带 toolIndex 的完整 tool_call */
+export type AiWriteAgentEvent =
+  | {
+      type: "tool_partial"
+      toolIndex: number
+      name: "insert_blocks" | "update_block"
+      args: Record<string, unknown>
+    }
+  | { type: "tool_call"; toolIndex: number; op: AiWriteOp }
+
 export type AiWriteStreamEvent =
-  | { type: "tool_call"; op: AiWriteOp }
+  | AiWriteAgentEvent
   | { type: "done" }
   | { type: "error"; message: string }
 
