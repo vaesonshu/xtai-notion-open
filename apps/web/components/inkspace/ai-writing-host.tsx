@@ -81,6 +81,9 @@ function AiWritingHostReady({
   const sharedUnsubscribeRef = useRef<(() => void) | null>(null)
   // user-input 阶段也算进行中，避免在提交前再开一个会话
   const activeRef = useRef(false)
+  // 连续 tool_partial 用 rAF 合并 setState；insert 仍立即 flush
+  const rafIdRef = useRef<number | null>(null)
+  const rafPendingRef = useRef(false)
   const [uiStatus, setUiStatus] = useState<AiWritingStatus>("closed")
   const [errorMessage, setErrorMessage] = useState<string>()
 
@@ -95,7 +98,33 @@ function AiWritingHostReady({
     }
   }, [])
 
+  const cancelPendingUiSync = useCallback(() => {
+    rafPendingRef.current = false
+    if (rafIdRef.current != null) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = null
+    }
+  }, [])
+
+  const flushSyncUi = useCallback(() => {
+    cancelPendingUiSync()
+    syncUiFromSession()
+  }, [cancelPendingUiSync, syncUiFromSession])
+
+  const scheduleSyncUi = useCallback(() => {
+    if (rafPendingRef.current) {
+      return
+    }
+    rafPendingRef.current = true
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafPendingRef.current = false
+      rafIdRef.current = null
+      syncUiFromSession()
+    })
+  }, [syncUiFromSession])
+
   const clearSession = useCallback(() => {
+    cancelPendingUiSync()
     abortRef.current?.abort()
     abortRef.current = null
     // 解除 shared 远端监听
@@ -110,7 +139,7 @@ function AiWritingHostReady({
     activeRef.current = false
     setUiStatus("closed")
     setErrorMessage(undefined)
-  }, [])
+  }, [cancelPendingUiSync])
 
   // 把可见编辑器改绑回 shared 并销毁 fork Y.Doc（fork BlockEditor 由 provider 自动 destroy）
   const restoreSharedEditor = useCallback(() => {
@@ -271,22 +300,34 @@ function AiWritingHostReady({
           }
 
           for await (const event of readAiWriteSse(response)) {
+            if (event.type === "tool_partial") {
+              const prevLen = forkEditor.document.length
+              session.applyPartial(event)
+              forkEditor.tiptap.commands.focus()
+              // 新块出现时立刻刷新锚点；同块打字只 rAF 合并 UI
+              if (forkEditor.document.length !== prevLen) {
+                flushSyncUi()
+              } else {
+                scheduleSyncUi()
+              }
+              continue
+            }
             if (event.type === "tool_call") {
-              session.applyRemoteOp(event.op)
+              session.applyRemoteOp(event.op, event.toolIndex)
               // fork 编辑器无 provider，focus 仅滚动到草稿块，不广播 awareness
               forkEditor.tiptap.commands.focus()
-              syncUiFromSession()
+              flushSyncUi()
               continue
             }
             if (event.type === "done") {
               session.status = "user-reviewing"
-              syncUiFromSession()
+              flushSyncUi()
               return
             }
             if (event.type === "error") {
               session.status = "error"
               session.errorMessage = event.message
-              syncUiFromSession()
+              flushSyncUi()
               return
             }
           }
@@ -325,8 +366,10 @@ function AiWritingHostReady({
       blockEditor,
       clearSession,
       documentId,
+      flushSyncUi,
       rebindVisibleEditor,
       restoreSharedEditor,
+      scheduleSyncUi,
       sharedYDoc,
       syncUiFromSession,
       userId,
@@ -381,6 +424,9 @@ function AiWritingHostReady({
 
   useEffect(() => {
     return () => {
+      if (rafIdRef.current != null) {
+        cancelAnimationFrame(rafIdRef.current)
+      }
       abortRef.current?.abort()
       if (sessionRef.current && sessionRef.current.status !== "closed") {
         sessionRef.current.reject()

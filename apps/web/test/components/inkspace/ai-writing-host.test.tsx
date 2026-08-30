@@ -135,6 +135,20 @@ function streamResponse(events: string[]) {
 
 // 可见编辑器（fork 期间为 fork 编辑器）当前块数；用于断言 fork/shared 改绑
 let latestBlockCount = 0
+let latestDraftText = ""
+
+function plainTextFromBlock(block: Block | undefined): string {
+  if (!block || !Array.isArray(block.content)) {
+    return ""
+  }
+  let text = ""
+  for (const item of block.content) {
+    if (item.type === "text") {
+      text += item.text
+    }
+  }
+  return text
+}
 
 function BlockCountProbe() {
   const context = use(EditorContext)
@@ -145,6 +159,8 @@ function BlockCountProbe() {
     }
     const sync = () => {
       latestBlockCount = blockEditor.document.length
+      // 首块之后的块视为 AI 草稿，用于断言 tool_partial 已写入正文
+      latestDraftText = plainTextFromBlock(blockEditor.document[1])
     }
     sync()
     return blockEditor.onChange(sync)
@@ -301,6 +317,7 @@ describe("AiWritingHost", () => {
     // 需显式 clear，避免 not.toHaveBeenCalledWith 跨用例误判
     vi.clearAllMocks()
     latestBlockCount = 0
+    latestDraftText = ""
   })
 
   it("keeps live document unchanged until accept after SSE insert", async () => {
@@ -358,6 +375,82 @@ describe("AiWritingHost", () => {
         method: "POST",
       })
     )
+  })
+
+  it("shows streamed text in the editor before the tool_call event", async () => {
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0)
+      return 0
+    })
+
+    // 先只推 tool_partial，断言可见草稿后再补 tool_call，避免整段 SSE 一次消费
+    let releaseToolCall: (() => void) | undefined
+    const fetchMock = vi.fn(async (_url, init) => {
+      const body = JSON.parse(init!.body as string) as {
+        cursorBlockId: string
+      }
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream({
+        start(controller) {
+          const enqueue = (chunk: string) => {
+            controller.enqueue(encoder.encode(chunk))
+          }
+          enqueue(
+            `event: tool_partial\ndata: ${JSON.stringify({
+              type: "tool_partial",
+              toolIndex: 0,
+              name: "insert_blocks",
+              args: {
+                refId: body.cursorBlockId,
+                placement: "after",
+                blocks: [{ type: "paragraph", text: "hel" }],
+              },
+            })}\n\n`
+          )
+          releaseToolCall = () => {
+            enqueue(
+              `event: tool_call\ndata: ${JSON.stringify({
+                type: "tool_call",
+                toolIndex: 0,
+                op: {
+                  type: "insert_blocks",
+                  refId: body.cursorBlockId,
+                  placement: "after",
+                  blocks: [{ type: "paragraph", text: "hello" }],
+                },
+              })}\n\n`
+            )
+            enqueue('event: done\ndata: {"type":"done"}\n\n')
+            controller.close()
+          }
+        },
+      })
+      return { ok: true, body: stream }
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { provider, getSharedDoc } = renderHost(true)
+    await syncEditor(provider)
+    fireEvent.click(screen.getByRole("button", { name: "打开斜杠写作" }))
+    fireEvent.change(screen.getByTestId("ai-write-prompt-input"), {
+      target: { value: "续写一段" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "生成" }))
+
+    await waitFor(() => {
+      expect(latestBlockCount).toBe(2)
+    })
+    expect(latestDraftText).toBe("hel")
+    expect(documentFromYjs(getSharedDoc()!)).toHaveLength(1)
+    expect(screen.queryByTestId("ai-write-accept")).not.toBeInTheDocument()
+
+    await act(async () => {
+      releaseToolCall?.()
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId("ai-write-accept")).toBeInTheDocument()
+    })
+    expect(latestDraftText).toBe("hello")
   })
 
   it("does not expose AI write context for viewer role", async () => {
