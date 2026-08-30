@@ -119,6 +119,8 @@ export {
   collectAiBlockIds,
   collectAiWriteDraftIds,
   collectAiWriteOpTargetIds,
+  // 流式 applier：fork 编辑器消费 tool_partial，避免重复 insert
+  createAiWriteStreamApplier,
   extractDraftBlocks,
   isAiWritableBlockType,
   isEmptyTextBlock,
@@ -131,6 +133,8 @@ export {
   type AiInsertBlockInput,
   type AiWriteMode,
   type AiWriteOp,
+  type AiWritePartialEvent,
+  type AiWriteStreamApplier,
   type AiWriteValidationContext,
   type AiWritableBlockType,
 } from "./ai-write"
