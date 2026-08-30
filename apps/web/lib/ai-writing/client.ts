@@ -1,15 +1,18 @@
-import type { AiWriteOp } from "@xtai-notion/editor-core"
+import type { AiWriteOp, AiWritePartialEvent } from "@xtai-notion/editor-core"
 
 /** POST /ai/write 的 SSE 事件，与 apps/api 契约一致 */
 export type AiWriteStreamEvent =
-  | { type: "tool_call"; op: AiWriteOp }
+  | AiWritePartialEvent
+  | { type: "tool_call"; toolIndex?: number; op: AiWriteOp }
   | { type: "done" }
   | { type: "error"; message: string }
 
 function parseSsePayload(data: string): AiWriteStreamEvent | null {
   try {
     const payload = JSON.parse(data) as AiWriteStreamEvent
+    // tool_partial 是打字机快照；缺少 toolIndex 的 tool_call 仍按完整 op 处理
     if (
+      payload.type === "tool_partial" ||
       payload.type === "tool_call" ||
       payload.type === "done" ||
       payload.type === "error"

@@ -142,6 +142,43 @@ describe("createAiWritingSession", () => {
       { type: "text", text: "two", styles: {} },
     ])
   })
+
+  it("grows fork text on applyPartial before any tool_call", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
+    session.applyPartial({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "insert_blocks",
+      args: {
+        refId: PARA_ID,
+        placement: "after",
+        blocks: [{ type: "paragraph", text: "ai" }],
+      },
+    })
+    expect(harness.forkEditor.document).toHaveLength(2)
+    expect(documentFromYjs(harness.shared)).toHaveLength(1)
+    expect(session.status).toBe("ai-writing")
+  })
+
+  it("synthesizes ops on stop so accept can merge without tool_call", () => {
+    const harness = createHarness()
+    const session = createSession(harness)
+    session.applyPartial({
+      type: "tool_partial",
+      toolIndex: 0,
+      name: "insert_blocks",
+      args: {
+        refId: PARA_ID,
+        placement: "after",
+        blocks: [{ type: "paragraph", text: "draft" }],
+      },
+    })
+    session.stop()
+    expect(session.status).toBe("user-reviewing")
+    expect(session.accept()).toEqual({ ok: true })
+    expect(documentFromYjs(harness.shared)).toHaveLength(2)
+  })
 })
 
 describe("readAiWriteSse", () => {
@@ -151,6 +188,7 @@ describe("readAiWriteSse", () => {
         controller.enqueue(
           new TextEncoder().encode(
             [
+              'event: tool_partial\ndata: {"type":"tool_partial","toolIndex":0,"name":"insert_blocks","args":{"refId":"x","placement":"after","blocks":[{"type":"paragraph","text":"h"}]}}\n\n',
               'event: tool_call\ndata: {"type":"tool_call","op":{"type":"insert_blocks","refId":"x","placement":"after","blocks":[{"type":"paragraph","text":"hi"}]}}\n\n',
               'event: done\ndata: {"type":"done"}\n\n',
               'event: error\ndata: {"type":"error","message":"失败"}\n\n',
@@ -166,6 +204,16 @@ describe("readAiWriteSse", () => {
       events.push(event)
     }
     expect(events).toEqual([
+      {
+        type: "tool_partial",
+        toolIndex: 0,
+        name: "insert_blocks",
+        args: {
+          refId: "x",
+          placement: "after",
+          blocks: [{ type: "paragraph", text: "h" }],
+        },
+      },
       {
         type: "tool_call",
         op: {
