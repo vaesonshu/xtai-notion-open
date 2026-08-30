@@ -268,6 +268,7 @@ function AiWritingHostReady({
         }
 
         session.status = "thinking"
+        session.syncForkDecorations()
         setUiStatus("thinking")
 
         const controller = new AbortController()
@@ -304,7 +305,7 @@ function AiWritingHostReady({
               const prevLen = forkEditor.document.length
               session.applyPartial(event)
               forkEditor.tiptap.commands.focus()
-              // 新块出现时立刻刷新锚点；同块打字只 rAF 合并 UI
+              // applyPartial 内已 syncForkDecorations；此处只刷新提示条 UI
               if (forkEditor.document.length !== prevLen) {
                 flushSyncUi()
               } else {

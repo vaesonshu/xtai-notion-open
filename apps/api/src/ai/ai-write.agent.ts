@@ -11,6 +11,11 @@ import {
 } from "@xtai-notion/editor-core/server"
 import type { Environment } from "../config/environment"
 import type { AiWriteAgentEvent, AiWriteRequest } from "./ai.types"
+import {
+  delayMs,
+  isRetryableLlmError,
+  toLlmUnavailableMessage,
+} from "./llm-stream"
 
 export type AiWriteToolRunner = (input: {
   request: AiWriteRequest
@@ -166,6 +171,8 @@ function createDefaultRunner(environment: Environment): AiWriteToolRunner {
       model: OPENAI_MODEL,
       configuration: { baseURL: OPENAI_BASE_URL },
       streaming: true,
+      timeout: 180_000,
+      maxRetries: 0,
     }).bindTools(AI_WRITE_TOOLS)
 
     const messages = [
@@ -173,57 +180,74 @@ function createDefaultRunner(environment: Environment): AiWriteToolRunner {
       new HumanMessage(buildUserMessage(request)),
     ]
 
-    try {
-      const stream = await model.stream(messages, { signal })
-      // LangChain 按 index 给出增量 args 字符串，边拼边产出 partial
-      const pending = new Map<number, PendingToolCall>()
-      const lastPartialJson = new Map<number, string>()
+    const maxAttempts = 3
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (signal?.aborted) {
+        return
+      }
+      try {
+        const stream = await model.stream(messages, { signal })
+        // LangChain 按 index 给出增量 args 字符串，边拼边产出 partial
+        const pending = new Map<number, PendingToolCall>()
 
-      for await (const chunk of stream) {
+        for await (const chunk of stream) {
+          if (signal?.aborted) {
+            return
+          }
+          const parts = (chunk as AIMessageChunk).tool_call_chunks ?? []
+          for (const part of parts) {
+            const index = readChunkIndex(part)
+            const current = pending.get(index) ?? { args: "" }
+            if (part.name) current.name = part.name
+            if (typeof part.args === "string") current.args += part.args
+            pending.set(index, current)
+
+            if (!current.name) continue
+            const parsed = parsePartialToolArgs(current.args)
+            if (!parsed) continue
+            const sanitized = sanitizePartialToolArgs(current.name, parsed)
+            if (!sanitized) continue
+            yield {
+              type: "tool_partial" as const,
+              toolIndex: index,
+              name: sanitized.name,
+              args: sanitized.args,
+            }
+          }
+        }
+
+        for (const [index, current] of pending) {
+          if (!current.name) continue
+          let args: Record<string, unknown>
+          try {
+            const parsed: unknown = JSON.parse(current.args)
+            if (
+              !parsed ||
+              typeof parsed !== "object" ||
+              Array.isArray(parsed)
+            ) {
+              continue
+            }
+            args = parsed as Record<string, unknown>
+          } catch {
+            continue
+          }
+          yield { type: current.name, toolIndex: index, ...args }
+        }
+        return
+      } catch (error) {
         if (signal?.aborted) {
           return
         }
-        const parts = (chunk as AIMessageChunk).tool_call_chunks ?? []
-        for (const part of parts) {
-          const index = readChunkIndex(part)
-          const current = pending.get(index) ?? { args: "" }
-          if (part.name) current.name = part.name
-          if (typeof part.args === "string") current.args += part.args
-          pending.set(index, current)
-
-          if (!current.name) continue
-          const parsed = parsePartialToolArgs(current.args)
-          if (!parsed) continue
-          const sanitized = sanitizePartialToolArgs(current.name, parsed)
-          if (!sanitized) continue
-          const serialized = JSON.stringify(sanitized.args)
-          if (lastPartialJson.get(index) === serialized) continue
-          lastPartialJson.set(index, serialized)
-          yield {
-            type: "tool_partial" as const,
-            toolIndex: index,
-            name: sanitized.name,
-            args: sanitized.args,
-          }
-        }
-      }
-
-      for (const [index, current] of pending) {
-        if (!current.name) continue
-        let args: Record<string, unknown>
-        try {
-          const parsed: unknown = JSON.parse(current.args)
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            continue
-          }
-          args = parsed as Record<string, unknown>
-        } catch {
+        const retryable = isRetryableLlmError(error)
+        if (retryable && attempt < maxAttempts) {
+          await delayMs(400 * attempt, signal)
           continue
         }
-        yield { type: current.name, toolIndex: index, ...args }
+        throw new ServiceUnavailableException(
+          toLlmUnavailableMessage(error, environment.NODE_ENV)
+        )
       }
-    } catch {
-      throw new ServiceUnavailableException("AI 服务暂不可用")
     }
   }
 }

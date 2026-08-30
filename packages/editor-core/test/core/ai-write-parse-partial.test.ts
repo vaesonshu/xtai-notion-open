@@ -41,6 +41,16 @@ describe("sanitizePartialToolArgs", () => {
     ).toBeNull()
   })
 
+  it("keeps streaming placement prefixes by omitting placement", () => {
+    const result = sanitizePartialToolArgs("insert_blocks", {
+      refId: "a",
+      placement: "aft",
+      blocks: [{ type: "paragraph", text: "hel" }],
+    })
+    expect(result?.args.placement).toBeUndefined()
+    expect(result?.args.blocks).toEqual([{ type: "paragraph", text: "hel" }])
+  })
+
   it("omits blocks whose type is present but not writable", () => {
     const result = sanitizePartialToolArgs("insert_blocks", {
       refId: "a",

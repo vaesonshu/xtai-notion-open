@@ -1,11 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { BlockEditor } from "@core/block-editor"
-import {
-  applyAiWriteOp,
-  canReplayAiWriteOps,
-  collectAiWriteDraftIds,
-  extractDraftBlocks,
-} from "@core/ai-write"
+import { applyAiWriteOp, collectAiWriteDraftIds } from "@core/ai-write"
 
 const editors: BlockEditor[] = []
 function create() {
@@ -47,17 +42,15 @@ describe("applyAiWriteOp", () => {
     }
   })
 
-  it("refuses replay when ref id disappeared", () => {
-    const live = create()
-    const ops = [
-      {
-        type: "insert_blocks" as const,
-        refId: "missing",
-        placement: "after" as const,
-        blocks: [{ type: "paragraph" as const, text: "x", id: "x" }],
-      },
-    ]
-    expect(canReplayAiWriteOps(live, ops)).toBe(false)
+  it("refuses insert when ref id does not exist", () => {
+    const editor = create()
+    const result = applyAiWriteOp(editor, {
+      type: "insert_blocks",
+      refId: "missing",
+      placement: "after",
+      blocks: [{ type: "paragraph", text: "x" }],
+    })
+    expect(result.ok).toBe(false)
   })
 })
 

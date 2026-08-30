@@ -4,6 +4,7 @@ import {
   createAiWriteStreamApplier,
   isEmptyTextBlock,
   mergeForkInto,
+  setAiWriteAgentCursor,
   setAiWriteDraftIds,
   type AiWriteMode,
   type AiWriteOp,
@@ -31,6 +32,7 @@ export type AiWritingSession = {
   applyRemoteOp(op: AiWriteOp, toolIndex?: number): void
   draftIds(): string[]
   lastTouchedBlockId(): string | undefined
+  syncForkDecorations(): void
   markSharedStale(): void
   accept(): { ok: true } | { ok: false; reason: "stale" | "empty" | "merge" }
   reject(): void
@@ -60,7 +62,7 @@ function opsHaveNonEmptyText(ops: AiWriteOp[]): boolean {
       }
       continue
     }
-    if (op.text.length > 0) {
+    if (typeof op.text === "string" && op.text.length > 0) {
       return true
     }
   }
@@ -93,6 +95,22 @@ export function createAiWritingSession(input: {
   // toolIndex → session.ops 下标，避免完整 tool_call 重复入列
   const committedToolIndexes = new Map<number, number>()
 
+  /** 同步 fork 上的背景高亮与 AI 代理光标（仅 PM 装饰，不进 Yjs） */
+  function syncForkDecorations() {
+    setAiWriteDraftIds(forkEditor, session.draftIds())
+    const showAgentCursor =
+      session.status === "thinking" || session.status === "ai-writing"
+    setAiWriteAgentCursor(
+      forkEditor,
+      showAgentCursor ? (session.lastTouchedBlockId() ?? null) : null
+    )
+  }
+
+  function clearForkDecorations() {
+    setAiWriteDraftIds(forkEditor, [])
+    setAiWriteAgentCursor(forkEditor, null)
+  }
+
   const session: AiWritingSession = {
     mode,
     emptyCursorBlockToDelete,
@@ -105,7 +123,7 @@ export function createAiWritingSession(input: {
         return
       }
       session.status = "ai-writing"
-      setAiWriteDraftIds(forkEditor, session.draftIds())
+      syncForkDecorations()
     },
     applyRemoteOp(op, toolIndex) {
       // 缺 toolIndex 时按已提交 ops 序号退化；同一 index 不重复 push
@@ -122,7 +140,7 @@ export function createAiWritingSession(input: {
         session.ops.push(result.op)
       }
       session.status = "ai-writing"
-      setAiWriteDraftIds(forkEditor, session.draftIds())
+      syncForkDecorations()
     },
     draftIds() {
       return collectAiWriteDraftIds(
@@ -133,6 +151,7 @@ export function createAiWritingSession(input: {
       const ids = session.draftIds()
       return ids.length > 0 ? ids[ids.length - 1] : cursorBlockId
     },
+    syncForkDecorations,
     markSharedStale() {
       session.sharedStale = true
     },
@@ -168,11 +187,13 @@ export function createAiWritingSession(input: {
         return { ok: false, reason: "merge" }
       }
 
-      // 不销毁 fork Y.Doc：Host 改绑后再 destroy
+      // merge 后去掉 fork 装饰，避免改绑前残留
+      clearForkDecorations()
       session.status = "closed"
       return { ok: true }
     },
     reject() {
+      clearForkDecorations()
       session.status = "closed"
     },
     stop() {
@@ -181,8 +202,10 @@ export function createAiWritingSession(input: {
         if (session.ops.length === 0) {
           session.ops = applier.synthesizeOps()
         }
+        syncForkDecorations()
         return
       }
+      clearForkDecorations()
       session.status = "closed"
     },
   }

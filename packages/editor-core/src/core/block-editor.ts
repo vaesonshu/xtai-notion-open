@@ -303,9 +303,9 @@ export class BlockEditor {
     this.editor = new Editor({
       extensions: options.editorSchema
         ? createBlockSchemaExtensionsFromRegistry(
-            extensionOptions,
-            options.editorSchema.registry
-          )
+          extensionOptions,
+          options.editorSchema.registry
+        )
         : createBlockSchemaExtensions(extensionOptions),
       editable: options.editable ?? true,
       editorProps: {

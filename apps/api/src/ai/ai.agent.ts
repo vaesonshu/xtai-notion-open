@@ -4,6 +4,11 @@ import { ChatOpenAI } from "@langchain/openai"
 import type { Environment } from "../config/environment"
 import type { AiChatMessage } from "./ai.types"
 import { ENVIRONMENT } from "../config/tokens"
+import {
+  delayMs,
+  isRetryableLlmError,
+  toLlmUnavailableMessage,
+} from "./llm-stream"
 
 const SYSTEM_PROMPT = `你是当前文档的只读协作助手。只能使用当前文档全文和当前会话消息，不得声称访问了其他文档、数据库或外部网络。无法从当前内容得出结论时，明确说明信息不足。不执行文档修改、删除、发布或其他外部操作。请面向普通用户使用简洁、清晰的中文回答。`
 
@@ -26,6 +31,8 @@ export class AiAgent {
       model: OPENAI_MODEL,
       configuration: { baseURL: OPENAI_BASE_URL },
       streaming: true,
+      timeout: 180_000,
+      maxRetries: 0,
     })
     const messages = [
       new SystemMessage(SYSTEM_PROMPT),
@@ -37,15 +44,28 @@ export class AiAgent {
       ),
     ]
 
-    try {
-      const stream = await model.stream(messages, { signal: input.signal })
-      for await (const chunk of stream) {
+    const maxAttempts = 3
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (input.signal?.aborted) return
+      try {
+        const stream = await model.stream(messages, { signal: input.signal })
+        for await (const chunk of stream) {
+          if (input.signal?.aborted) return
+          const content = typeof chunk.content === "string" ? chunk.content : ""
+          if (content) yield content
+        }
+        return
+      } catch (error) {
         if (input.signal?.aborted) return
-        const content = typeof chunk.content === "string" ? chunk.content : ""
-        if (content) yield content
+        const retryable = isRetryableLlmError(error)
+        if (retryable && attempt < maxAttempts) {
+          await delayMs(400 * attempt, input.signal)
+          continue
+        }
+        throw new ServiceUnavailableException(
+          toLlmUnavailableMessage(error, this.environment.NODE_ENV)
+        )
       }
-    } catch {
-      throw new ServiceUnavailableException("AI 服务暂不可用")
     }
   }
 }

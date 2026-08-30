@@ -5,7 +5,7 @@ import type { AiInsertBlockInput, AiWriteOp } from "./types"
 
 type ApplyResult = { ok: true; op: AiWriteOp } | { ok: false; reason: string }
 
-/** 将 AI 输出的纯文本转为单段 unstyled 行内内容 */
+/** 将 AI 输出的纯文本转为单段 unstyled 行内内容（供 apply-stream 复用） */
 export function textToInlineContent(text: string): InlineContent[] {
   return [{ type: "text", text, styles: {} }]
 }
@@ -97,7 +97,7 @@ export function applyAiWriteOp(
 }
 
 /**
- * 收集应高亮为草稿的块 id：insert 用已生成的 block.id，update 用 op.id。
+ * 收集应高亮为待确认的块 id：insert 用已生成的 block.id，update 用 op.id。
  * 不含 refId（锚点不是 AI 新内容，除非该块也被 update）。
  */
 export function collectAiWriteDraftIds(ops: AiWriteOp[]): string[] {
@@ -114,65 +114,4 @@ export function collectAiWriteDraftIds(ops: AiWriteOp[]): string[] {
     }
   }
   return ids
-}
-
-/** 收集重放前必须在 live 文档中仍存在的锚点 id（insert refId + update id） */
-export function collectAiWriteOpTargetIds(ops: AiWriteOp[]): string[] {
-  const ids: string[] = []
-  for (const op of ops) {
-    if (op.type === "insert_blocks") {
-      ids.push(op.refId)
-    } else {
-      ids.push(op.id)
-    }
-  }
-  return ids
-}
-
-/** 接受前检查：每条 op 的 refId / update id 是否仍在 live 文档树中 */
-export function canReplayAiWriteOps(
-  live: BlockEditor,
-  ops: AiWriteOp[]
-): boolean {
-  for (const op of ops) {
-    if (op.type === "insert_blocks") {
-      if (!blockExists(live.document, op.refId)) {
-        return false
-      }
-    } else if (!blockExists(live.document, op.id)) {
-      return false
-    }
-  }
-  return true
-}
-
-/** 从影子编辑器按前序遍历提取 insert/update 涉及的块（含完整子树） */
-export function extractDraftBlocks(
-  shadow: BlockEditor,
-  ops: AiWriteOp[]
-): Block[] {
-  const targetIds = new Set<string>()
-  for (const op of ops) {
-    if (op.type === "insert_blocks") {
-      for (const block of op.blocks) {
-        if (block.id) {
-          targetIds.add(block.id)
-        }
-      }
-    } else {
-      targetIds.add(op.id)
-    }
-  }
-
-  const result: Block[] = []
-  function walk(blocks: Block[]) {
-    for (const block of blocks) {
-      if (targetIds.has(block.id)) {
-        result.push(block)
-      }
-      walk(block.children)
-    }
-  }
-  walk(shadow.document)
-  return result
 }

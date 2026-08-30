@@ -298,10 +298,13 @@ export function createAiWriteStreamApplier(input: {
     const blockType =
       typeof args.blockType === "string" ? args.blockType : undefined
     const props = asRecord(args.props) ?? undefined
-    const hasText = typeof args.text === "string"
     // 仅首次缺 text 时用空串覆盖旧文；后续 partial 无 text 则保留已打出内容
-    const text =
-      hasText ? args.text : state.started ? undefined : ""
+    const text: string | undefined =
+      typeof args.text === "string"
+        ? args.text
+        : state.started
+          ? undefined
+          : ""
     updateLocalBlock(editor, id, { type: blockType, text, props })
     state.started = true
     return { applied: true, touchedId: id }
@@ -422,7 +425,8 @@ export function createAiWriteStreamApplier(input: {
 
   function synthesizeOps(): AiWriteOp[] {
     const ops: AiWriteOp[] = []
-    const indexes = [...states.keys()].toSorted((a, b) => a - b)
+    // 复制后再 sort，避免依赖 ES2023 的 toSorted（当前 ts lib 为 es2022）
+    const indexes = [...states.keys()].sort((a, b) => a - b)
     for (const toolIndex of indexes) {
       const state = states.get(toolIndex)!
       if (state.completed) {

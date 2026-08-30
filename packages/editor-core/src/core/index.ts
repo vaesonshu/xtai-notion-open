@@ -50,9 +50,11 @@ export {
   propsToAttributes,
 } from "./schema"
 export {
-  aiWriteDraftPluginKey,
   setAiWriteDraftIds,
 } from "./extensions/ai-write-draft-extension"
+export {
+  setAiWriteAgentCursor,
+} from "./extensions/ai-write-agent-cursor-extension"
 export { ImageUploadNode } from "./extensions/image-upload-node"
 export type { BlockCommandMode, SlashCommand } from "./slash-commands"
 export {
@@ -115,19 +117,15 @@ export {
   AI_WRITABLE_BLOCK_TYPES,
   applyAiWriteOp,
   blocksToAiBlockViews,
-  canReplayAiWriteOps,
   collectAiBlockIds,
   collectAiWriteDraftIds,
-  collectAiWriteOpTargetIds,
   // 流式 applier：fork 编辑器消费 tool_partial，避免重复 insert
   createAiWriteStreamApplier,
-  extractDraftBlocks,
   isAiWritableBlockType,
   isEmptyTextBlock,
   parsePartialToolArgs,
   partialArgsHaveNonEmptyText,
   sanitizePartialToolArgs,
-  textToInlineContent,
   validateAiWriteOp,
   type AiBlockView,
   type AiInsertBlockInput,

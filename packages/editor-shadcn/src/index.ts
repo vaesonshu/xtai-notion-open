@@ -28,8 +28,6 @@ export {
 } from "./components/ai/ai-write-prompt-bar"
 export type { AiWritePromptAnchorProps } from "./components/ai/ai-write-prompt-anchor"
 export { AiWritePromptAnchor } from "./components/ai/ai-write-prompt-anchor"
-export type { AiWriteDraftProps } from "./components/ai/ai-write-draft"
-export { AiWriteDraft } from "./components/ai/ai-write-draft"
 export { BlockHandle } from "./components/handles/block-handle"
 export { ImageUpload, useImageUpload } from "./components/nodes/image-upload"
 export type { ImageUploadControls } from "./components/nodes/image-upload"

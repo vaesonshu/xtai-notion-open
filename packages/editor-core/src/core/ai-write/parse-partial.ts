@@ -136,6 +136,11 @@ export function parsePartialToolArgs(
 
 const VALID_PLACEMENTS = new Set(["before", "after"])
 
+/** placement 尚在流式前缀阶段时先省略，避免整帧 partial 被丢弃 */
+function isPlacementStreamPrefix(value: string): boolean {
+  return "before".startsWith(value) || "after".startsWith(value)
+}
+
 /** 浅过滤流式 tool args：丢弃未知工具、非法 placement 与不可写块类型 */
 export function sanitizePartialToolArgs(
   name: string,
@@ -148,13 +153,18 @@ export function sanitizePartialToolArgs(
   const toolName = name as AiWriteToolName
   const sanitized: Record<string, unknown> = { ...args }
 
-  if (
-    "placement" in sanitized &&
-    sanitized.placement !== undefined &&
-    (typeof sanitized.placement !== "string" ||
-      !VALID_PLACEMENTS.has(sanitized.placement))
-  ) {
-    return null
+  if ("placement" in sanitized && sanitized.placement !== undefined) {
+    if (typeof sanitized.placement !== "string") {
+      return null
+    }
+    if (!VALID_PLACEMENTS.has(sanitized.placement)) {
+      // 流式写出 "aft" 时尚不能判定为 after，先去掉 placement 继续解析 text
+      if (isPlacementStreamPrefix(sanitized.placement)) {
+        delete sanitized.placement
+      } else {
+        return null
+      }
+    }
   }
 
   if (toolName === "insert_blocks" && Array.isArray(sanitized.blocks)) {

@@ -309,27 +309,30 @@ export function DocumentWorkspace({
           <WorkspaceToolbarBridge onTextReady={handleTextReady} />
         )}
         className="flex min-h-0 flex-1 flex-col"
-        renderSurface={(surface) => <DocumentPane>{surface}</DocumentPane>}
-      >
-        <AiWritingHost
-          apiUrl={apiUrl}
-          documentId={documentId}
-          userId={user.id}
-          canWrite={editable}
-        >
-          <EditorToolbar
-            title={title}
-            parentTitle={parentTitle}
+        // AiWritingHost 必须包住 EditorSurface，斜杠/气泡菜单才能读到 AiWriteHostContext
+        renderSurface={(surface) => (
+          <AiWritingHost
             apiUrl={apiUrl}
             documentId={documentId}
-            canShare={editable}
-            publicationStatus={publicationStatus}
-            onPublish={editable ? () => void submitPublication() : undefined}
-            aiOpen={aiOpen}
-            onAiToggle={() => setAiOpen((open) => !open)}
-          />
-          {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
-        </AiWritingHost>
+            userId={user.id}
+            canWrite={editable}
+          >
+            <DocumentPane>{surface}</DocumentPane>
+          </AiWritingHost>
+        )}
+      >
+        <EditorToolbar
+          title={title}
+          parentTitle={parentTitle}
+          apiUrl={apiUrl}
+          documentId={documentId}
+          canShare={editable}
+          publicationStatus={publicationStatus}
+          onPublish={editable ? () => void submitPublication() : undefined}
+          aiOpen={aiOpen}
+          onAiToggle={() => setAiOpen((open) => !open)}
+        />
+        {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
       </DocumentEditor>
       <AiAssistantPanel
         open={aiOpen}

@@ -1,6 +1,7 @@
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
 import { BlockDropcursor } from "./block-dropcursor"
+import { createAiWriteAgentCursorExtension } from "./ai-write-agent-cursor-extension"
 import { createAiWriteDraftExtension } from "./ai-write-draft-extension"
 import { createBlockPlaceholderExtension } from "./block-placeholder-extension"
 import TableCell from "@tiptap/extension-table-cell"
@@ -75,8 +76,9 @@ export function buildBlockSchemaExtensions(
       class: "ProseMirror-dropcursor",
     }),
     createBlockPlaceholderExtension(options),
-    // AI 草稿高亮只走 PM 装饰，避免把 class 写入协作文档
+    // AI 写入态只走 PM 装饰，避免把 class / 光标写入协作文档
     createAiWriteDraftExtension(),
+    createAiWriteAgentCursorExtension(),
     MentionNode,
   ]
 

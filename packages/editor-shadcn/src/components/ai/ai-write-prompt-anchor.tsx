@@ -57,8 +57,11 @@ export function AiWritePromptAnchor({
   useEffect(() => {
     measure()
     // capture：编辑区 overflow 容器的 scroll 不冒泡到 window
-    const scrollOptions = { passive: true, capture: true } as const
-    const resizeOptions = { passive: true } as const
+    const scrollOptions: AddEventListenerOptions = {
+      passive: true,
+      capture: true,
+    }
+    const resizeOptions: AddEventListenerOptions = { passive: true }
     window.addEventListener("scroll", measure, scrollOptions)
     window.addEventListener("resize", measure, resizeOptions)
 

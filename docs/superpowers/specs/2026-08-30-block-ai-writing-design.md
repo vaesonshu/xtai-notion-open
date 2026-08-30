@@ -1,7 +1,8 @@
 # 块级 AI 写作设计
 
 **日期：** 2026-08-30  
-**状态：** 已确认，待用户审阅后写实施计划
+**状态：** 实施完成  
+**实施计划：** [`docs/superpowers/plans/2026-08-30-block-ai-writing.md`](../plans/2026-08-30-block-ai-writing.md)
 
 ## 目标
 

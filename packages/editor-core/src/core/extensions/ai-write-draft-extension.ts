@@ -6,7 +6,7 @@ import type { BlockEditor } from "../block-editor"
 
 export const aiWriteDraftPluginKey = new PluginKey("aiWriteDraft")
 
-/** 按草稿 id 给 blockContainer 加 class，不写入 Yjs 属性 */
+/** 按块 id 加待确认高亮 class，不写入 Yjs 属性 */
 function decorationsForIds(doc: PMNode, ids: Set<string>): DecorationSet {
   const decorations: Decoration[] = []
   doc.descendants((node, pos) => {
@@ -24,7 +24,7 @@ function decorationsForIds(doc: PMNode, ids: Set<string>): DecorationSet {
   return DecorationSet.create(doc, decorations)
 }
 
-/** 本机 fork 草稿高亮：plugin state 存 id 集合，装饰仅作用于 PM 视图 */
+/** 本机 fork 待确认高亮：plugin state 存 id 集合，装饰仅作用于 PM 视图 */
 export function createAiWriteDraftExtension() {
   return Extension.create({
     name: "aiWriteDraft",
@@ -59,7 +59,7 @@ export function createAiWriteDraftExtension() {
   })
 }
 
-/** 用 meta 替换草稿 id 集合，触发装饰重算而不改 block attrs */
+/** 用 meta 替换高亮块 id 集合，触发装饰重算而不改 block attrs */
 export function setAiWriteDraftIds(
   editor: BlockEditor,
   ids: Iterable<string>
