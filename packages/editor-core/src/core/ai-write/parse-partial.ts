@@ -37,32 +37,68 @@ function scanJsonState(text: string): {
   return { inString, stack }
 }
 
-/** 去掉末尾未写完的键名（如 `,"te` 或 `{"te`），避免 repair 后 JSON 语法错误 */
-function stripIncompleteKey(text: string): string {
-  const withoutTrailingComma = text.replace(/,\s*$/, "")
-  const truncated = withoutTrailingComma.replace(/([{,]\s*)"[^"]*$/, "$1")
-  return truncated === withoutTrailingComma
-    ? withoutTrailingComma
-    : stripIncompleteKey(truncated)
+/** 从末尾向前定位当前未闭合字符串的起始引号 */
+function findUnclosedStringStart(text: string): number {
+  let escape = false
+  for (let i = text.length - 1; i >= 0; i--) {
+    const ch = text[i]!
+    if (escape) {
+      escape = false
+      continue
+    }
+    if (ch === "\\") {
+      escape = true
+      continue
+    }
+    if (ch === '"') return i
+  }
+  return 0
 }
 
-/** 补全流式截断的 JSON：闭合字符串并按栈补 `}` / `]` */
+function skipWhitespaceBefore(text: string, index: number): number {
+  let i = index
+  while (i >= 0 && /\s/.test(text[i]!)) i--
+  return i
+}
+
+/**
+ * 去掉末尾未写完的键名（如 `,"te` 或 `{"te`）。
+ * 字符串内截断时也要区分：跟在 `:` 后是 value，跟在 `{`/`,` 后是 key。
+ */
+function stripIncompleteKey(text: string): string {
+  let result = text.replace(/,\s*$/, "")
+  const { inString } = scanJsonState(result)
+
+  if (inString) {
+    const openQuote = findUnclosedStringStart(result)
+    const before = skipWhitespaceBefore(result, openQuote - 1)
+    const prev = before >= 0 ? result[before] : undefined
+    // 未闭合的是键名而非 value 时，从开引号处截断
+    if (prev === "{" || prev === ",") {
+      result = result.slice(0, openQuote).replace(/,\s*$/, "")
+      return stripIncompleteKey(result)
+    }
+    return result
+  }
+
+  const truncated = result.replace(/([{,]\s*)"[^"]*$/, "$1")
+  return truncated === result ? result : stripIncompleteKey(truncated)
+}
+
+/** 补全流式截断的 JSON：先剥 key，再闭字符串，最后按栈补括号 */
 function repairPartialJson(input: string): string {
   let text = input.trim()
   if (!text) return text
 
-  let { inString, stack } = scanJsonState(text)
+  text = stripIncompleteKey(text)
 
+  let { inString, stack } = scanJsonState(text)
   if (inString) {
-    // 流式输出可能在字符串中间截断，先补闭合引号
+    // 剥 key 后若仍在 value 字符串内，再补闭合引号
     text += '"'
-    ;({ stack } = scanJsonState(text))
-  } else {
-    text = stripIncompleteKey(text)
     ;({ stack } = scanJsonState(text))
   }
 
-  // 按未闭合的括号栈依次补全
   while (stack.length > 0) {
     const open = stack.pop()!
     text += open === "{" ? "}" : "]"

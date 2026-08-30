@@ -16,6 +16,16 @@ describe("parsePartialToolArgs", () => {
     expect(parsePartialToolArgs('{"text":"hel')).toEqual({ text: "hel" })
   })
 
+  it("drops an incomplete trailing key after a complete field", () => {
+    expect(parsePartialToolArgs('{"text":"hello","te')).toEqual({
+      text: "hello",
+    })
+  })
+
+  it("repairs an incomplete first key", () => {
+    expect(parsePartialToolArgs('{"te')).toEqual({})
+  })
+
   it("returns null for empty or irreparable input", () => {
     expect(parsePartialToolArgs("")).toBeNull()
     expect(parsePartialToolArgs("{")).toEqual({})
