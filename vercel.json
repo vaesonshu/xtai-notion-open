@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile && pnpm --filter api prisma:generate && pnpm turbo build --filter=@xtai-notion/editor-core",
-  "buildCommand": "pnpm turbo build --filter=web",
+  "buildCommand": "pnpm --filter api build && pnpm turbo build --filter=web",
   "rewrites": [
     {
       "source": "/auth/:path*",
@@ -14,7 +14,7 @@
   ],
   "functions": {
     "apps/web/api/nest.ts": {
-      "includeFiles": "{apps/api/prisma/**,apps/api/src/generated/**}",
+      "includeFiles": "{apps/api/dist/**,apps/api/prisma/**,apps/api/src/generated/**}",
       "maxDuration": 30
     }
   }
