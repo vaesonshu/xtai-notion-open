@@ -4,6 +4,10 @@
   "buildCommand": "pnpm turbo build --filter=web",
   "rewrites": [
     {
+      "source": "/auth/:path*",
+      "destination": "/apps/web/api/nest"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/apps/web/api/nest"
     }

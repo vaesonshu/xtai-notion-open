@@ -70,7 +70,7 @@ NEXT_PUBLIC_COLLABORATION_URL=wss://<render-协作服务>.onrender.com
 | `/api/documents/*` | Nest serverless |
 | `/api/ai/*` | Nest serverless |
 | `/documents`、`/square` 等 | Next.js 页面 |
-| `/auth/*`（浏览器） | Next.js rewrite → `/api/auth/*`（保持 cookie 同域） |
+| `/auth/*`（浏览器） | vercel.json → `/api/nest`（同域 cookie，见 `apps/web/api/nest.ts`） |
 
 ---
 
