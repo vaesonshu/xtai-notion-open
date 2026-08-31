@@ -42,13 +42,16 @@ async function getApp(): Promise<INestApplication> {
   return cachedApp
 }
 
-// @vercel/node invokes this exported handler for every HTTP request. The Nest
-// HttpServer is an Express-style (req, res) => void handler once initialized.
+// @vercel/node invokes this exported handler for every HTTP request.
+// getHttpAdapter() 返回 ExpressAdapter 包装对象，不是 (req,res) 函数；需 getInstance()。
 export default async function handler(
   req: unknown,
   res: unknown
 ): Promise<void> {
-  const app = await getApp()
-  const adapter = app.getHttpAdapter()
-  ;(adapter as unknown as (req: unknown, res: unknown) => void)(req, res)
+  const nestApp = await getApp()
+  const expressApp = nestApp.getHttpAdapter().getInstance() as (
+    req: unknown,
+    res: unknown
+  ) => void
+  expressApp(req, res)
 }
