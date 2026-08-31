@@ -1,6 +1,9 @@
 import type { NextConfig } from "next"
 
-const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
+// Vercel 同项目部署时默认走同域 /api；本地或拆分部署仍用 NEXT_PUBLIC_API_URL。
+const apiUrl = (
+  process.env.NEXT_PUBLIC_API_URL ?? (process.env.VERCEL ? "/api" : "")
+).replace(/\/$/, "")
 
 const nextConfig: NextConfig = {
   transpilePackages: [

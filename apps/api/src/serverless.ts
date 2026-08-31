@@ -31,6 +31,11 @@ async function getApp(): Promise<INestApplication> {
     void loadEnvironment()
     const app = await NestFactory.create(AppModule)
     app.enableCors({ origin: true, credentials: true })
+    // 与 Web 同域部署时，Vercel 将 /api/* 转发到此 handler；加前缀避免与
+    // Next.js 页面路由（如 /documents、/square）冲突。
+    if (process.env.VERCEL) {
+      app.setGlobalPrefix("api")
+    }
     // app.init() (not listen) because Vercel routes HTTP onto this handler.
     cachedApp = app.init()
   }

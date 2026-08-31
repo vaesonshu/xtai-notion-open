@@ -223,7 +223,7 @@ import { Button } from "@workspace/ui/components/button"
 
 | 组件 | 推荐平台 |
 |------|----------|
-| Web + REST API | [Vercel](https://vercel.com)（`serverless.ts`） |
+| Web + REST API | [Vercel](https://vercel.com)（同项目，见 [`docs/deploy-vercel.md`](./docs/deploy-vercel.md)） |
 | 协作 WebSocket | [Render](https://render.com) 免费层（`collab-main.ts`） |
 | 数据库 | [Neon](https://neon.tech) |
 
