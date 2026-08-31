@@ -35,7 +35,7 @@ Build / Install 命令由 `apps/web/vercel.json`（Root Directory = `apps/web`�
 
 1. **Vercel 环境变量**：确认已设置 `DATABASE_URL`（Neon 池化连接串）。未配置时 Nest 启动会失败。
 2. **数据库迁移**：在 Neon 上执行 `pnpm --filter api prisma:migrate:deploy`（或 CI 中跑一次）。
-3. **重新部署**：确保使用最新代码（`nest.ts` 从 `apps/api/dist/serverless.js` 加载，构建命令会先 `pnpm --filter api build`）。
+3. **重新部署**：确保使用最新代码（`nest.ts` 从 `apps/api/dist/serverless.js` 加载；`api build` 会为 dist 内相对路径补上 `.js` 后缀）。
 4. **查看函数日志**：Vercel Dashboard → Deployments → Functions → `api/nest`，查看具体错误堆栈。
 
 > `No Output Directory named "public" found after the Build completed`
