@@ -227,4 +227,70 @@ export class DocumentsRepository {
       workspaceName: document.workspace.name,
     }
   }
+
+  async countByPublicationStatus(): Promise<{
+    published: number
+    draft: number
+    pending: number
+  }> {
+    const [published, draft, pending] = await Promise.all([
+      this.prisma.client.document.count({
+        where: { publicationStatus: "published" },
+      }),
+      this.prisma.client.document.count({
+        where: { publicationStatus: "draft" },
+      }),
+      this.prisma.client.document.count({
+        where: { publicationStatus: "pending" },
+      }),
+    ])
+    return { published, draft, pending }
+  }
+
+  async listWorkspaceNames(): Promise<string[]> {
+    const rows = await this.prisma.client.workspace.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    })
+    return rows.map((row) => row.name)
+  }
+
+  async listAdminArticles(filters: {
+    status?: PublicationStatus
+    category?: string
+    query?: string
+  }): Promise<
+    Array<{
+      row: DocumentRow
+      authorName: string | null
+      workspaceName: string
+    }>
+  > {
+    const query = filters.query?.trim().toLowerCase()
+    const documents = await this.prisma.client.document.findMany({
+      where: {
+        ...(filters.status ? { publicationStatus: filters.status } : {}),
+        ...(filters.category
+          ? { workspace: { name: filters.category } }
+          : {}),
+      },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        owner: { select: { displayName: true } },
+        workspace: { select: { name: true } },
+      },
+    })
+    return documents
+      .map((document) => ({
+        row: this.toDocumentRow(document),
+        authorName: document.owner?.displayName ?? null,
+        workspaceName: document.workspace.name,
+      }))
+      .filter((article) => {
+        if (!query) return true
+        const haystack =
+          `${article.row.title} ${article.authorName ?? ""} ${article.row.id}`.toLowerCase()
+        return haystack.includes(query)
+      })
+  }
 }

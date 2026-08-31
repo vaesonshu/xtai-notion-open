@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest"
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
@@ -249,6 +249,29 @@ describe("DocumentWorkspace", () => {
       expect(proseMirror).not.toBeNull()
       expect(proseMirror).toHaveAttribute("contenteditable", "false")
     })
+  })
+
+  it("keeps the editor alongside the AI assistant panel", async () => {
+    mockDocumentRole("owner")
+    const provider = createMockProvider()
+
+    render(
+      <DocumentWorkspace
+        {...baseProps}
+        createProvider={() => provider as unknown as HocuspocusProvider}
+      />
+    )
+
+    // Opening the assistant must share the workspace row instead of replacing it.
+    await screen.findByRole("button", { name: "AI 协作助手" })
+    fireEvent.click(screen.getByRole("button", { name: "AI 协作助手" }))
+
+    const layout = screen.getByTestId("document-workspace-layout")
+    expect(layout).toHaveClass("flex-row")
+    expect(screen.getByTestId("editor-workspace")).toBeInTheDocument()
+    expect(
+      screen.getByRole("complementary", { name: "AI 协作助手" })
+    ).toBeInTheDocument()
   })
 
   it("surfaces offline collaboration status", async () => {

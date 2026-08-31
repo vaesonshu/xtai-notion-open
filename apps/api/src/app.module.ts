@@ -11,6 +11,7 @@ import { CommentsModule } from "./comments/comments.module"
 import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
 import { AiModule } from "./ai/ai.module"
+import { AdminModule } from "./admin/admin.module"
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AiModule } from "./ai/ai.module"
     CosModule,
     ImageUploadModule,
     AiModule,
+    AdminModule,
   ],
   providers: [
     // Register SessionInitGuard globally so every request will attempt to

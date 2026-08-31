@@ -19,7 +19,13 @@ type PendingPublication = {
   updatedAt: string
 }
 
-export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
+export function PublicationApprovalQueue({
+  apiUrl,
+  onChanged,
+}: {
+  apiUrl: string
+  onChanged?: () => void
+}) {
   const auth = useAuthOptional()
   const userId = auth?.user?.id
   const [items, setItems] = useState<PendingPublication[]>([])
@@ -30,13 +36,10 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
   useEffect(() => {
     if (!apiUrl || !userId) return
     let cancelled = false
-    void fetch(
-      `${apiUrl.replace(/\/$/, "")}/admin/publications?status=pending`,
-      {
-        credentials: "include",
-        headers: { "x-dev-user-id": userId },
-      }
-    )
+    void fetch(`${apiUrl.replace(/\/$/, "")}/admin/publications`, {
+      credentials: "include",
+      headers: { "x-dev-user-id": userId },
+    })
       .then(async (response) => {
         if (!response.ok)
           throw new Error(`无法加载待审批文章 (${response.status})`)
@@ -86,6 +89,7 @@ export function PublicationApprovalQueue({ apiUrl }: { apiUrl: string }) {
       setTarget(null)
       setReason("")
       toast.success(decision === "approve" ? "已通过发布" : "已拒绝发布")
+      onChanged?.()
     } catch (nextError) {
       toast.error(nextError instanceof Error ? nextError.message : "审批失败")
     } finally {

@@ -9,13 +9,19 @@ import React, {
   useState,
 } from "react"
 
-type PublicUser = { id: string; name: string; color?: string } | null
+type PublicUser = {
+  id: string
+  name: string
+  color?: string
+  role?: "user" | "admin"
+} | null
 
 type AuthMeResponse = {
   id: string
   displayName?: string
   name?: string
   color?: string
+  role?: "user" | "admin"
 } | null
 
 type AuthContextValue = {
@@ -59,7 +65,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Normalize the API payload so downstream components can depend on a
       // stable `name` field even though the backend exposes `displayName`.
-      setUser(name ? { id: body.id, name, color: body.color } : null)
+      setUser(
+        name
+          ? {
+              id: body.id,
+              name,
+              color: body.color,
+              role: body.role === "admin" ? "admin" : "user",
+            }
+          : null
+      )
     } catch {
       if (currentRequestId !== requestId.current) return
       setUser(null)

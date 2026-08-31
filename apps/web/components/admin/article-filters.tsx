@@ -9,41 +9,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
-
-export type ArticleFiltersValue = {
-  query: string
-  category: string
-  status: string
-}
+import type { ArticleFiltersValue } from "./article-types"
 
 const statusItems = [
   { label: "全部状态", value: "全部状态" },
   { label: "已发布", value: "已发布" },
   { label: "草稿", value: "草稿" },
-]
-
-const categoryItems = [
-  { label: "全部分类", value: "全部分类" },
-  { label: "内容策略", value: "内容策略" },
-  { label: "设计趋势", value: "设计趋势" },
-  { label: "用户研究", value: "用户研究" },
-  { label: "团队管理", value: "团队管理" },
+  { label: "待审核", value: "待审核" },
 ]
 
 export function ArticleFilters({
   value,
   onChange,
+  categories,
+  totalCount,
 }: {
   value: ArticleFiltersValue
   onChange: (next: ArticleFiltersValue) => void
+  categories: readonly string[]
+  totalCount: number
 }) {
+  const categoryItems = [
+    { label: "全部分类", value: "全部分类" },
+    ...categories.map((category) => ({ label: category, value: category })),
+  ]
+
   return (
     <div className="flex h-11 w-full items-center gap-3">
       <label className="flex h-11 w-[286px] items-center gap-2 rounded-[7px] bg-white px-[11px] outline outline-[#e1e8e4]">
         <SearchIcon className="size-[15px] text-[#7e9087]" />
-        {/* <span className="sr-only">搜索标题、作者或编号</span> */}
         <Input
-          aria-label=""
+          aria-label="搜索标题、作者或编号"
           value={value.query}
           onChange={(event) =>
             onChange({ ...value, query: event.target.value })
@@ -100,8 +96,11 @@ export function ArticleFilters({
           </SelectGroup>
         </SelectContent>
       </Select>
-      {/* Items arrays keep Select behavior consistent with the repository's demo pattern. */}
-      <span className="ml-auto text-[12px] text-[#74857c]">共 128 篇文章</span>
+      <span className="ml-auto text-[12px] text-[#74857c]">
+        共 {totalCount} 篇文章
+      </span>
     </div>
   )
 }
+
+export type { ArticleFiltersValue }

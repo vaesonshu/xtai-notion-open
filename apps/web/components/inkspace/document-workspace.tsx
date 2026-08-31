@@ -291,49 +291,58 @@ export function DocumentWorkspace({
   })
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <DocumentEditor
-        collaboration={{
-          documentId,
-          websocketUrl: collaborationUrl,
-          token: user.id,
-          user,
-        }}
-        editable={editable}
-        imageUpload={imageUpload}
-        canvasImageFetch={canvasImageFetch}
-        createProvider={createProvider}
-        mentionProvider={mentionProvider}
-        mentionNavigate={mentionNavigate}
-        renderToolbar={() => (
-          <WorkspaceToolbarBridge onTextReady={handleTextReady} />
-        )}
+    <div
+      className="flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden"
+      data-testid="document-workspace-layout"
+    >
+      <div
         className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-        // AiWritingHost 必须包住 EditorSurface，斜杠/气泡菜单才能读到 AiWriteHostContext
-        renderSurface={(surface) => (
-          <AiWritingHost
+        data-testid="editor-workspace"
+      >
+        <DocumentEditor
+          collaboration={{
+            documentId,
+            websocketUrl: collaborationUrl,
+            token: user.id,
+            user,
+          }}
+          editable={editable}
+          imageUpload={imageUpload}
+          canvasImageFetch={canvasImageFetch}
+          createProvider={createProvider}
+          mentionProvider={mentionProvider}
+          mentionNavigate={mentionNavigate}
+          renderToolbar={() => (
+            <WorkspaceToolbarBridge onTextReady={handleTextReady} />
+          )}
+          // The editor must shrink beside the AI panel without losing its own column layout.
+          className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+          // AiWritingHost 必须包住 EditorSurface，斜杠/气泡菜单才能读到 AiWriteHostContext
+          renderSurface={(surface) => (
+            <AiWritingHost
+              apiUrl={apiUrl}
+              documentId={documentId}
+              userId={user.id}
+              canWrite={editable}
+            >
+              <DocumentPane>{surface}</DocumentPane>
+            </AiWritingHost>
+          )}
+        >
+          <EditorToolbar
+            title={title}
+            parentTitle={parentTitle}
             apiUrl={apiUrl}
             documentId={documentId}
-            userId={user.id}
-            canWrite={editable}
-          >
-            <DocumentPane>{surface}</DocumentPane>
-          </AiWritingHost>
-        )}
-      >
-        <EditorToolbar
-          title={title}
-          parentTitle={parentTitle}
-          apiUrl={apiUrl}
-          documentId={documentId}
-          canShare={editable}
-          publicationStatus={publicationStatus}
-          onPublish={editable ? () => void submitPublication() : undefined}
-          aiOpen={aiOpen}
-          onAiToggle={() => setAiOpen((open) => !open)}
-        />
-        {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
-      </DocumentEditor>
+            canShare={editable}
+            publicationStatus={publicationStatus}
+            onPublish={editable ? () => void submitPublication() : undefined}
+            aiOpen={aiOpen}
+            onAiToggle={() => setAiOpen((open) => !open)}
+          />
+          {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
+        </DocumentEditor>
+      </div>
       <AiAssistantPanel
         open={aiOpen}
         onClose={() => setAiOpen(false)}

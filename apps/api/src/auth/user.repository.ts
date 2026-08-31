@@ -62,4 +62,72 @@ export class UserRepository {
     })
     return user ? this.toRecord(user) : null
   }
+
+  async listUsers(): Promise<UserRecord[]> {
+    const users = await this.prisma.client.appUser.findMany({
+      orderBy: { createdAt: "desc" },
+    })
+    return users.map((user) => this.toRecord(user))
+  }
+
+  async createUserWithRole(
+    email: string,
+    password_hash: string,
+    display_name: string,
+    color: string,
+    role: "user" | "admin"
+  ): Promise<UserRecord> {
+    const user = await this.prisma.client.appUser.create({
+      data: {
+        email,
+        passwordHash: password_hash,
+        displayName: display_name,
+        color,
+        role,
+      },
+    })
+    return this.toRecord(user)
+  }
+
+  async updateUser(
+    id: string,
+    data: {
+      email?: string
+      password_hash?: string
+      display_name?: string
+      color?: string
+      role?: "user" | "admin"
+    }
+  ): Promise<UserRecord | null> {
+    const result = await this.prisma.client.appUser.updateMany({
+      where: { id },
+      data: {
+        email: data.email,
+        passwordHash: data.password_hash,
+        displayName: data.display_name,
+        color: data.color,
+        role: data.role,
+        updatedAt: new Date(),
+      },
+    })
+    if (result.count === 0) return null
+    return this.findById(id)
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await this.prisma.client.$transaction(async (tx) => {
+      await tx.userSession.deleteMany({ where: { userId: id } })
+      await tx.documentMember.deleteMany({ where: { userId: id } })
+      return tx.appUser.deleteMany({ where: { id } })
+    })
+    return result.count > 0
+  }
+
+  async countUsers(): Promise<number> {
+    return this.prisma.client.appUser.count()
+  }
+
+  async countAdmins(): Promise<number> {
+    return this.prisma.client.appUser.count({ where: { role: "admin" } })
+  }
 }
