@@ -1,3 +1,4 @@
+import { buildApiUrl } from "@/lib/resolve-api-url"
 import { NextResponse } from "next/server"
 
 type RouteContext = { params: Promise<{ documentId: string }> }
@@ -12,18 +13,19 @@ function forwardHeaders(request: Request): Headers {
 }
 
 export async function GET(request: Request, context: RouteContext) {
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
   const { documentId } = await context.params
-  if (!apiUrl || !documentId) {
+  const target = buildApiUrl(
+    request,
+    `/square/articles/${encodeURIComponent(documentId)}/comments`
+  )
+  if (!target) {
     return NextResponse.json(
       { message: "Comment service is not configured" },
       { status: 503 }
     )
   }
 
-  const response = await fetch(
-    `${apiUrl}/square/articles/${encodeURIComponent(documentId)}/comments`
-  )
+  const response = await fetch(target)
   const body = await response.arrayBuffer()
   return new NextResponse(body, {
     status: response.status,
@@ -35,9 +37,12 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
   const { documentId } = await context.params
-  if (!apiUrl || !documentId) {
+  const target = buildApiUrl(
+    request,
+    `/square/articles/${encodeURIComponent(documentId)}/comments`
+  )
+  if (!target) {
     return NextResponse.json(
       { message: "Comment service is not configured" },
       { status: 503 }
@@ -46,7 +51,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   // 同源代理评论写入，确保 HttpOnly session cookie 能随请求转发到 API。
   const response = await fetch(
-    `${apiUrl}/square/articles/${encodeURIComponent(documentId)}/comments`,
+    target,
     {
       method: "POST",
       headers: forwardHeaders(request),

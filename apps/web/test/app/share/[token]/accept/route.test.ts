@@ -36,4 +36,23 @@ describe("share acceptance proxy", () => {
     expect(headers.get("cookie")).toBe("session_token=session-1")
     expect(headers.get("x-dev-user-id")).toBe("user-1")
   })
+
+  it("resolves /api to an absolute URL on Vercel", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "/api"
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify({ documentId: "doc-1" })))
+
+    const request = new Request(
+      "https://xtai-notion-open-web.vercel.app/share/token/accept",
+      { method: "POST" }
+    )
+
+    await POST(request, { params: Promise.resolve({ token: "token" }) })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://xtai-notion-open-web.vercel.app/api/share/token/accept",
+      expect.objectContaining({ method: "POST" })
+    )
+  })
 })

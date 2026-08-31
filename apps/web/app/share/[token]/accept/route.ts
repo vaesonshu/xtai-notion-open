@@ -1,11 +1,15 @@
+import { buildApiUrl } from "@/lib/resolve-api-url"
 import { NextResponse } from "next/server"
 
 type RouteContext = { params: Promise<{ token: string }> }
 
 export async function POST(request: Request, context: RouteContext) {
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
   const { token } = await context.params
-  if (!apiUrl || !token) {
+  const target = buildApiUrl(
+    request,
+    `/share/${encodeURIComponent(token)}/accept`
+  )
+  if (!target) {
     return NextResponse.json(
       { message: "Share service is not configured" },
       { status: 503 }
@@ -20,7 +24,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (value) headers.set(name, value)
   }
   const response = await fetch(
-    `${apiUrl}/share/${encodeURIComponent(token)}/accept`,
+    target,
     {
       method: "POST",
       headers,
