@@ -12,7 +12,7 @@ import {
   AlertTitle,
 } from "@workspace/ui/components/alert"
 import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
@@ -191,9 +191,7 @@ export function DocumentWorkspace({
         toast.success("发布成功")
       }
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "发布失败，请稍后重试"
-      )
+      toastError(error, "发布失败，请稍后重试")
     }
   }, [apiUrl, documentId, user.id])
 
@@ -215,7 +213,9 @@ export function DocumentWorkspace({
       .catch((error: unknown) => {
         if (!cancelled) {
           setRole(null)
-          setLoadError(getLoadErrorMessage(error))
+          const message = getLoadErrorMessage(error)
+          toastError(error, message)
+          setLoadError(message)
         }
       })
 

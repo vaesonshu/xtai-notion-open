@@ -26,7 +26,7 @@ import {
   use,
   type ReactNode,
 } from "react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import type { Doc as YDoc } from "yjs"
 
 export type AiWritingHostProps = {

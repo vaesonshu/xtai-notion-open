@@ -21,7 +21,7 @@ import { useAuth } from "../../components/auth-provider"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 function getSafeReturnTo(value: string | null) {
   // Authentication redirects stay inside this application even if the query
@@ -72,11 +72,10 @@ function LoginForm() {
       // Refresh the shared auth state before navigation so the destination
       // renders authenticated controls without a stale logged-out frame.
       await refreshAuth()
+      toast.success("登录成功")
       router.push(returnTo)
     } catch (caught) {
-      toast.error(
-        caught instanceof Error ? caught.message : "登录失败，请稍后重试"
-      )
+      toastError(caught, "登录失败，请稍后重试")
     } finally {
       setLoading(false)
     }

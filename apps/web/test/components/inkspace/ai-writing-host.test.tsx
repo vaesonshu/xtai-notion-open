@@ -16,7 +16,7 @@ import {
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import * as Y from "yjs"
 import { use, useEffect } from "react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import { AiWritingHost } from "@/components/inkspace/ai-writing-host"
 
 const PARA_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"

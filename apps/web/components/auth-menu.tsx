@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import { useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 function getInitials(name: string) {
   const trimmed = name.trim()
@@ -51,7 +51,7 @@ export function AuthMenu() {
       // router and isolated test harnesses that render this component.
       window.location.assign("/login")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err))
+      toastError(err, "退出登录失败")
     } finally {
       setBusy(false)
     }

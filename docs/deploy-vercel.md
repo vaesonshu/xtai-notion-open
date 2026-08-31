@@ -2,6 +2,8 @@
 
 Web（Next.js）与 REST API（Nest serverless）可以部署在 **同一个 Vercel 项目** 中。协作 WebSocket 仍需单独部署在 Render，见 [`deploy-render.md`](./deploy-render.md)。
 
+架构总览与时序图见 [部署架构与时序.md](./部署架构与时序.md)。
+
 ## 架构
 
 ```text

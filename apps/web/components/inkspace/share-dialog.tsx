@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
@@ -46,9 +46,7 @@ export function ShareDialog({
       // Keep the generated URL same-origin so cookies and login handoff work.
       setShareUrl(`${window.location.origin}/share/${body.token}`)
     } catch (cause) {
-      toast.error(
-        cause instanceof Error ? cause.message : "无法生成分享链接"
-      )
+      toastError(cause, "无法生成分享链接")
     } finally {
       setLoading(false)
     }

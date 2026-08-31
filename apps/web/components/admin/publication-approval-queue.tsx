@@ -10,7 +10,7 @@ import {
 } from "@workspace/ui/components/dialog"
 import { Textarea } from "@workspace/ui/components/textarea"
 import { useEffect, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 import { useAuthOptional } from "../auth-provider"
 
 type PendingPublication = {
@@ -50,9 +50,7 @@ export function PublicationApprovalQueue({
       })
       .catch((nextError: unknown) => {
         if (!cancelled) {
-          toast.error(
-            nextError instanceof Error ? nextError.message : "加载失败"
-          )
+          toastError(nextError, "加载失败")
         }
       })
     return () => {
@@ -91,7 +89,7 @@ export function PublicationApprovalQueue({
       toast.success(decision === "approve" ? "已通过发布" : "已拒绝发布")
       onChanged?.()
     } catch (nextError) {
-      toast.error(nextError instanceof Error ? nextError.message : "审批失败")
+      toastError(nextError, "审批失败")
     } finally {
       setBusyId(null)
     }

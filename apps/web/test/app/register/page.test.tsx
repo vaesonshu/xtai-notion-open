@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import RegisterPage from "@/app/register/page"
 
 const push = vi.fn()
@@ -73,6 +73,28 @@ describe("RegisterPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "创建账号" }))
 
     expect(toast.error).toHaveBeenCalledWith("两次输入的密码不一致")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("shows a toast when password is too short", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+    render(<RegisterPage />)
+
+    fireEvent.change(screen.getByLabelText("昵称"), {
+      target: { value: "林墨" },
+    })
+    fireEvent.change(screen.getByLabelText("邮箱"), {
+      target: { value: "new@example.com" },
+    })
+    fireEvent.change(screen.getByLabelText("密码"), {
+      target: { value: "short" },
+    })
+    fireEvent.change(screen.getByLabelText("确认密码"), {
+      target: { value: "short" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "创建账号" }))
+
+    expect(toast.error).toHaveBeenCalledWith("密码至少需要 8 个字符")
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

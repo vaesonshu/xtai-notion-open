@@ -227,6 +227,8 @@ import { Button } from "@workspace/ui/components/button"
 | 协作 WebSocket | [Render](https://render.com) 免费层（`collab-main.ts`） |
 | 数据库 | [Neon](https://neon.tech) |
 
+整体架构与各平台职责、打开文档时的请求时序见 [`docs/部署架构与时序.md`](./docs/部署架构与时序.md)。
+
 协作服务部署步骤见 [`docs/deploy-render.md`](./docs/deploy-render.md)。
 
 ## 相关文档

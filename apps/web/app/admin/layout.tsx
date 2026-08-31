@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { useAuth } from "@/components/auth-provider"
+import { toast } from "@/lib/toast"
 
 export default function AdminLayout({
   children,
@@ -22,6 +23,7 @@ export default function AdminLayout({
     }
     // 仅管理员可进入后台；role 来自 /auth/me 持久化记录。
     if (user.role !== "admin") {
+      toast.error("无权访问后台管理")
       router.replace("/documents")
     }
   }, [loading, pathname, router, user])

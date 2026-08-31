@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@workspace/ui/components/select"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 import {
   createAdminUser,
@@ -66,7 +66,7 @@ export function UserManagementPage() {
       const next = await fetchAdminUsers(userId)
       setUsers(next)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载用户失败")
+      toastError(error, "加载用户失败")
     } finally {
       setLoading(false)
     }
@@ -136,7 +136,7 @@ export function UserManagementPage() {
       setDialogOpen(false)
       await loadUsers()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "保存失败")
+      toastError(error, "保存失败")
     } finally {
       setBusy(false)
     }
@@ -151,7 +151,7 @@ export function UserManagementPage() {
       toast.success("用户已删除")
       await loadUsers()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除失败")
+      toastError(error, "删除失败")
     } finally {
       setBusy(false)
     }

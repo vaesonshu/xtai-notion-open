@@ -4,7 +4,7 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import { useAuth } from "../../../components/auth-provider"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
+import { toastError } from "@/lib/toast"
 
 function getToken(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -60,7 +60,7 @@ export default function ShareAcceptancePage() {
         if (cancelled) return
         const message =
           caught instanceof Error ? caught.message : "无法接受分享链接"
-        toast.error(message)
+        toastError(caught, message)
         setError(message)
       }
     }

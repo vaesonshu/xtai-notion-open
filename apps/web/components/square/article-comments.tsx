@@ -13,7 +13,7 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import Link from "next/link"
 import { loadEmojiMart, preloadEmojiMart } from "../../lib/emoji-mart-loader"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 export type ArticleCommentNode = {
   id: string
@@ -174,7 +174,7 @@ function CommentComposer({
       onSubmitted()
       toast.success(parentId ? "回复已发布" : "评论已发布")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "发表评论失败")
+      toastError(error, "发表评论失败")
     } finally {
       setSubmitting(false)
     }
@@ -336,7 +336,10 @@ export function ArticleComments({ articleId }: { articleId: string }) {
       const body = (await response.json()) as ArticleCommentNode[]
       setComments(body)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "加载评论失败")
+      const message =
+        caught instanceof Error ? caught.message : "加载评论失败"
+      toastError(caught, "加载评论失败")
+      setError(message)
     } finally {
       setLoading(false)
     }

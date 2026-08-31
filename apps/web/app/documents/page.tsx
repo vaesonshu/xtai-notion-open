@@ -5,7 +5,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Spinner } from "@workspace/ui/components/spinner"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 type DocumentListItem = {
   id: string
@@ -54,9 +54,7 @@ export default function DocumentsIndexPage() {
         setLoading(false)
       } catch (caught) {
         if (!cancelled) {
-          toast.error(
-            caught instanceof Error ? caught.message : "加载文档失败"
-          )
+          toastError(caught, "加载文档失败")
           setLoading(false)
         }
       }
@@ -88,7 +86,7 @@ export default function DocumentsIndexPage() {
       }
       router.replace(`/documents/${document.id}`)
     } catch (caught) {
-      toast.error(caught instanceof Error ? caught.message : "新建文档失败")
+      toastError(caught, "新建文档失败")
       setLoading(false)
     }
   }

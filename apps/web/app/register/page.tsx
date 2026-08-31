@@ -27,7 +27,7 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 function getSafeReturnTo(value: string | null) {
   // Keep the eventual post-login destination internal when registration was
@@ -53,6 +53,16 @@ function RegisterForm() {
 
     if (password !== passwordConfirmation) {
       toast.error("两次输入的密码不一致")
+      return
+    }
+
+    if (password.length < 8) {
+      toast.error("密码至少需要 8 个字符")
+      return
+    }
+
+    if (!displayName.trim()) {
+      toast.error("请填写昵称")
       return
     }
 
@@ -83,9 +93,7 @@ function RegisterForm() {
       const params = new URLSearchParams({ registered: "1", returnTo })
       router.push(`/login?${params.toString()}`)
     } catch (caught) {
-      toast.error(
-        caught instanceof Error ? caught.message : "注册失败，请稍后重试"
-      )
+      toastError(caught, "注册失败，请稍后重试")
     } finally {
       setLoading(false)
     }

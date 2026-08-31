@@ -18,7 +18,7 @@ import * as d3 from "d3-force"
 import { LoaderCircleIcon } from "@workspace/icons"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 import { DocumentGraphEdge } from "./graph-edge"
 import { DocumentGraphNode } from "./graph-node"
 
@@ -140,9 +140,7 @@ export function DocumentGraph({
       })
       .catch((error) => {
         if (!cancelled) {
-          toast.error(
-            error instanceof Error ? error.message : "加载文档图谱失败"
-          )
+          toastError(error, "加载文档图谱失败")
           setLoading(false)
         }
       })

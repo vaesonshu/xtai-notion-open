@@ -2,6 +2,8 @@
 
 本项目的 **REST API** 适合放在 Vercel Serverless；**实时协作 WebSocket** 需要长连接进程，应单独部署在 [Render](https://render.com) 免费层。
 
+架构总览与时序图见 [部署架构与时序.md](./部署架构与时序.md)。
+
 ## 架构
 
 ```text

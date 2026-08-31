@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { PlusIcon } from "@workspace/icons"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 
 import {
   fetchAdminArticles,
@@ -74,7 +74,7 @@ export function ArticleManagementPage() {
         }))
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "加载后台数据失败")
+      toastError(error, "加载后台数据失败")
     } finally {
       setLoading(false)
     }

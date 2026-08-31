@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
-import { toast } from "sonner"
+import { toast, toastError } from "@/lib/toast"
 import {
   DocumentWorkspace,
   type DocumentWorkspaceProps,
@@ -133,7 +133,7 @@ export function WorkspaceShell({
         )
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "重命名失败")
+      toastError(error, "重命名失败")
     }
   }
   async function deleteDocument(id: string) {
@@ -153,7 +153,7 @@ export function WorkspaceShell({
         router.push(nextDocumentId ? `/documents/${nextDocumentId}` : "/")
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "删除失败")
+      toastError(error, "删除失败")
     }
   }
   useEffect(() => {
@@ -238,7 +238,7 @@ export function WorkspaceShell({
       syncDocuments((current) => [...current, document])
       router.push(`/documents/${document.id}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "创建子文档失败")
+      toastError(error, "创建子文档失败")
     }
   }
 

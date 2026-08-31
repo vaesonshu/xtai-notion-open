@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import {
   getDocumentIdAfterDeletion,
   resetDocumentsCacheForTests,
