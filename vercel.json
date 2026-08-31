@@ -5,11 +5,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/apps/api/src/serverless.ts"
+      "destination": "/apps/web/api/nest"
     }
   ],
   "functions": {
-    "apps/api/src/serverless.ts": {
+    "apps/web/api/nest.ts": {
       "includeFiles": "{apps/api/prisma/**,apps/api/src/generated/**}",
       "maxDuration": 30
     }

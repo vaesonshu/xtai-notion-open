@@ -27,13 +27,17 @@ API 挂在 `/api` 前缀下（例如 `/api/documents`），避免与 Next.js 页
 | **Output Directory** | **留空**（不要填 `public`） |
 | **Include source files outside of the Root Directory** | **勾选**（monorepo 必须） |
 
-Build / Install 命令由 `apps/web/vercel.json`（或根目录 `vercel.json`）提供，一般无需在 Dashboard 里重复填写。
+Build / Install 命令由 `apps/web/vercel.json`（Root Directory = `apps/web`）或根目录 `vercel.json`（Root Directory 留空）提供。
 
 ### 常见错误
 
 > `No Output Directory named "public" found after the Build completed`
 
 把 **Output Directory** 清空即可。Next.js 输出在 `.next`，由 Vercel 自动处理。
+
+> `The pattern "apps/api/src/serverless.ts" defined in functions doesn't match any Serverless Functions`
+
+Vercel 无法直接把 `apps/api` 下的文件注册为函数。本项目已通过 `apps/web/api/nest.ts` 转发到 Nest handler，请确保使用最新版 `vercel.json`，不要手动改回 `apps/api/src/serverless.ts`。
 
 ---
 
