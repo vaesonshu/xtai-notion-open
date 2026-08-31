@@ -125,6 +125,10 @@ PORT=3101 pnpm --filter api exec tsx --env-file=.env src/collab-main.ts
 
 ## 常见问题
 
+### `DevelopmentIdentityGuard must not be enabled when NODE_ENV=production`
+
+协作进程应使用 `collab-main.ts`（加载精简的 `CollabAppModule`），且 `DevelopmentIdentityGuard` 仅在开发路由上生效，生产环境不会在应用启动时因该 Guard 构造失败。若仍看到此错误，请确认 Start Command 为 `pnpm --filter api start:collab` 且已部署最新代码。
+
 ### `ERR_MODULE_NOT_FOUND`（找不到 `app.module`）
 
 `apps/api` 使用 ESM（`"type": "module"`），`tsc` 编译后的 `dist/*.js` 不带 `.js` 扩展名，Node 无法按 ESM 规则解析相对导入。协作服务应通过 **`tsx` 直接运行源码**（见 `start:collab`），不要执行 `node dist/collab-main.js`。

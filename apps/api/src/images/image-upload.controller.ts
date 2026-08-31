@@ -15,8 +15,8 @@ import {
 import type { Response } from "express"
 import { FileInterceptor } from "@nestjs/platform-express"
 import { CurrentUser } from "../auth/current-user.decorator"
+import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import type { DevUser } from "../auth/dev-user"
-import { DevelopmentIdentityGuard } from "../auth/development-identity.guard"
 import type {
   PresignImageRequest,
   PresignImageResponse,
@@ -24,7 +24,7 @@ import type {
 import { ImageUploadService } from "./image-upload.service"
 
 @Controller("documents/:documentId/images")
-@UseGuards(DevelopmentIdentityGuard)
+@UseGuards(AuthenticatedIdentityGuard)
 export class ImageUploadController {
   constructor(
     @Inject(ImageUploadService) private readonly images: ImageUploadService

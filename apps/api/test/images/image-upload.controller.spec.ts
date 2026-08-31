@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { describe, expect, it, vi } from "vitest"
-import { DevelopmentIdentityGuard } from "@api/auth/development-identity.guard"
+import { AuthenticatedIdentityGuard } from "@api/auth/authenticated-identity.guard"
 import { ENVIRONMENT } from "@api/config/tokens"
 import { ImageUploadController } from "@api/images/image-upload.controller"
 import { ImageUploadService } from "@api/images/image-upload.service"
@@ -23,12 +23,11 @@ describe("ImageUploadController", () => {
           provide: ENVIRONMENT,
           useValue: { NODE_ENV: "test" },
         },
-        {
-          provide: DevelopmentIdentityGuard,
-          useValue: { canActivate: () => true },
-        },
       ],
-    }).compile()
+    })
+      .overrideGuard(AuthenticatedIdentityGuard)
+      .useValue({ canActivate: () => true })
+      .compile()
     const controller = moduleRef.get(ImageUploadController)
 
     await expect(

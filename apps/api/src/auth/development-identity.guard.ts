@@ -18,17 +18,15 @@ import { DEV_USER_HEADER, DEV_USER_REQUEST_KEY } from "./dev-user"
 
 @Injectable()
 export class DevelopmentIdentityGuard implements CanActivate {
-  constructor(
-    @Inject(ENVIRONMENT) private readonly env: Environment
-  ) {
+  constructor(@Inject(ENVIRONMENT) private readonly env: Environment) {}
+
+  canActivate(context: ExecutionContext): boolean {
     if (this.env.NODE_ENV === "production") {
       throw new Error(
         "DevelopmentIdentityGuard must not be enabled when NODE_ENV=production"
       )
     }
-  }
 
-  canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<{
       headers: Record<string, string | string[] | undefined>
       [DEV_USER_REQUEST_KEY]?: DevUser

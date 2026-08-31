@@ -1,7 +1,7 @@
 import "reflect-metadata"
 import { Logger } from "@nestjs/common"
 import { NestFactory } from "@nestjs/core"
-import { AppModule } from "./app.module"
+import { CollabAppModule } from "./collab-app.module"
 import { loadEnvironment } from "./config/environment"
 
 const logger = new Logger("CollabMain")
@@ -19,7 +19,7 @@ applyCollaborationOnlyPortDefaults()
 
 async function bootstrap(): Promise<void> {
   const env = loadEnvironment()
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create(CollabAppModule, {
     logger: env.NODE_ENV === "production" ? ["error", "warn", "log"] : undefined,
   })
   // 只初始化 Nest DI 与 CollaborationService；REST 留在 Vercel，此处不绑定 HTTP。

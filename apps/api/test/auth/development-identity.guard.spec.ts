@@ -33,10 +33,11 @@ function createContext(headers: Record<string, string | undefined>): {
 }
 
 describe("DevelopmentIdentityGuard", () => {
-  it("throws when constructed in production", () => {
-    expect(
-      () => new DevelopmentIdentityGuard(createEnv("production"))
-    ).toThrow(/production/i)
+  it("throws when activated in production", () => {
+    const guard = new DevelopmentIdentityGuard(createEnv("production"))
+    const { context } = createContext({ "x-dev-user-id": "user-42" })
+
+    expect(() => guard.canActivate(context)).toThrow(/production/i)
   })
 
   it("allows construction in development and test", () => {
