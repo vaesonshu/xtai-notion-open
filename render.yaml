@@ -1,0 +1,27 @@
+# Render Blueprint：协作 WebSocket 服务（Hocuspocus）
+# REST API 仍部署在 Vercel（apps/api/src/serverless.ts），本服务只负责实时协作。
+#
+# 使用方式：
+# 1. 在 Render Dashboard → New → Blueprint，连接本仓库
+# 2. 按提示填写 DATABASE_URL（Neon 池化连接串）
+# 3. 部署完成后，将 wss://<服务名>.onrender.com 写入 Vercel / 本地的
+#    NEXT_PUBLIC_COLLABORATION_URL
+
+services:
+  - type: web
+    name: xtai-collaboration
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: >-
+      pnpm install --frozen-lockfile
+      && pnpm --filter @xtai-notion/editor-core build
+      && pnpm --filter api exec prisma migrate deploy
+      && pnpm --filter api build
+    startCommand: node apps/api/dist/collab-main.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false

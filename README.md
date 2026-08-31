@@ -219,6 +219,16 @@ pnpm dlx shadcn@latest add button -c apps/web
 import { Button } from "@workspace/ui/components/button"
 ```
 
+## 部署
+
+| 组件 | 推荐平台 |
+|------|----------|
+| Web + REST API | [Vercel](https://vercel.com)（`serverless.ts`） |
+| 协作 WebSocket | [Render](https://render.com) 免费层（`collab-main.ts`） |
+| 数据库 | [Neon](https://neon.tech) |
+
+协作服务部署步骤见 [`docs/deploy-render.md`](./docs/deploy-render.md)。
+
 ## 相关文档
 
 - 技术参考：[Tiptap](https://tiptap.dev) · [BlockNote](https://www.blocknotejs.org)
