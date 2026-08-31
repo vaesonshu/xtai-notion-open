@@ -80,7 +80,7 @@ NEXT_PUBLIC_COLLABORATION_URL=wss://xtai-collaboration.onrender.com
 |--------|-----|
 | **Root Directory** | （留空，使用仓库根目录） |
 | **Build Command** | 见下方 |
-| **Start Command** | `node apps/api/dist/collab-main.js` |
+| **Start Command** | `pnpm --filter api start:collab` |
 | **Health Check Path** | `/` |
 | **Plan** | Free |
 
@@ -124,6 +124,10 @@ PORT=3101 pnpm --filter api exec tsx --env-file=.env src/collab-main.ts
 对个人项目、演示通常够用。需要无休眠可升级到 Render Starter（约 $7/月）。
 
 ## 常见问题
+
+### `ERR_MODULE_NOT_FOUND`（找不到 `app.module`）
+
+`apps/api` 使用 ESM（`"type": "module"`），`tsc` 编译后的 `dist/*.js` 不带 `.js` 扩展名，Node 无法按 ESM 规则解析相对导入。协作服务应通过 **`tsx` 直接运行源码**（见 `start:collab`），不要执行 `node dist/collab-main.js`。
 
 ### 构建失败：找不到 `@xtai-notion/editor-core`
 

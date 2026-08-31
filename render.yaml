@@ -18,7 +18,8 @@ services:
       && pnpm --filter @xtai-notion/editor-core build
       && pnpm --filter api exec prisma migrate deploy
       && pnpm --filter api build
-    startCommand: node apps/api/dist/collab-main.js
+    # NestJS + ESM：tsc 产物缺少 .js 扩展名，Node 无法直接运行 dist；用 tsx 执行源码。
+    startCommand: pnpm --filter api start:collab
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
