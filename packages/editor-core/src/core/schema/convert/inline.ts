@@ -22,16 +22,20 @@ export function marksToStyles(marks: readonly Mark[]): InlineStyles {
       case "code":
         styles.code = true
         break
+      case "textStyle": {
+        const color = mark.attrs.color
+        if (typeof color === "string" && color.length > 0) {
+          styles.color = color
+        }
+        break
+      }
     }
   }
   return styles
 }
 
 /** Block styles → PM marks */
-export function stylesToMarks(
-  styles: InlineStyles,
-  schema: Schema
-): Mark[] {
+export function stylesToMarks(styles: InlineStyles, schema: Schema): Mark[] {
   const marks: Mark[] = []
   if (styles.bold && schema.marks.bold) {
     marks.push(schema.marks.bold.create())
@@ -47,6 +51,9 @@ export function stylesToMarks(
   }
   if (styles.code && schema.marks.code) {
     marks.push(schema.marks.code.create())
+  }
+  if (styles.color && schema.marks.textStyle) {
+    marks.push(schema.marks.textStyle.create({ color: styles.color }))
   }
   return marks
 }

@@ -29,6 +29,7 @@ describe("FixedEditorToolbar", () => {
 
     expect(screen.getByRole("toolbar")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "粗体" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "文字颜色" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument()
   })
 

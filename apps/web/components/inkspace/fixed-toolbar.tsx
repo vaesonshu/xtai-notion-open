@@ -33,7 +33,11 @@ import {
   useBlockEditor,
   useEditorState,
 } from "@xtai-notion/editor-react"
-import { TableGridPicker, useImageUpload } from "@xtai-notion/editor-shadcn"
+import {
+  TableGridPicker,
+  TextColorControl,
+  useImageUpload,
+} from "@xtai-notion/editor-shadcn"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
@@ -214,8 +218,7 @@ function FixedEditorToolbarReady() {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [tablePickerOpen, setTablePickerOpen] = useState(false)
   // 查看者隐藏；AI 写作 fork 会临时只读，但仍保留工具栏占位
-  const canEditDocument =
-    editorContext?.canEditDocument ?? editor.isEditable
+  const canEditDocument = editorContext?.canEditDocument ?? editor.isEditable
   const toolbarDisabled = !editor.isEditable
 
   const toolbarState = useEditorState({
@@ -292,6 +295,9 @@ function FixedEditorToolbarReady() {
           </Toggle>
         </ToolbarTooltip>
       ))}
+      <ToolbarTooltip label="文字颜色">
+        <TextColorControl editor={editor} onMouseDown={keepEditorSelection} />
+      </ToolbarTooltip>
       <Separator orientation="vertical" className="mx-1 h-6" />
       {canUpload ? (
         <Tooltip>

@@ -33,6 +33,11 @@ export { ImageUpload, useImageUpload } from "./components/nodes/image-upload"
 export type { ImageUploadControls } from "./components/nodes/image-upload"
 export { TableGridPicker } from "./components/menus/table-grid-picker"
 export type { TableGridPickerProps } from "./components/menus/table-grid-picker"
+export {
+  TEXT_COLOR_PRESETS,
+  TextColorControl,
+} from "./components/menus/text-color-control"
+export type { TextColorControlProps } from "./components/menus/text-color-control"
 export { TableMenu } from "./components/menus/table-menu"
 export { CanvasBlockNode } from "./components/nodes/canvas-block-node-extension"
 export { createImageBlockSpec } from "./components/nodes/image-block-node-extension"

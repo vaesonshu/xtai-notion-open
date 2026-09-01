@@ -1,5 +1,7 @@
 import Collaboration from "@tiptap/extension-collaboration"
 import CollaborationCaret from "@tiptap/extension-collaboration-caret"
+import { Color } from "@tiptap/extension-color"
+import { TextStyle } from "@tiptap/extension-text-style"
 import { BlockDropcursor } from "./block-dropcursor"
 import { createAiWriteAgentCursorExtension } from "./ai-write-agent-cursor-extension"
 import { createAiWriteDraftExtension } from "./ai-write-draft-extension"
@@ -61,6 +63,9 @@ export function buildBlockSchemaExtensions(
       link: { openOnClick: false, autolink: true },
       undoRedo: bindsCollaborationDocument ? false : {},
     }),
+    // 文字颜色依赖 TextStyle mark 承载 color 属性
+    TextStyle,
+    Color.configure({ types: ["textStyle"] }),
     BlockDoc,
     BlockGroup,
     BlockContainer,

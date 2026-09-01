@@ -18,11 +18,7 @@ import {
 } from "../../icons"
 import { Button } from "../../ui/button"
 import { Input } from "../../ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../../ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover"
 import { Toggle } from "../../ui/toggle"
 import {
   setEditorLink,
@@ -31,6 +27,7 @@ import {
 } from "@xtai-notion/editor-core/commands"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 import { AiWriteHostContext } from "../ai/ai-write-context"
+import { TextColorControl } from "./text-color-control"
 
 export type ShouldShowBubbleToolbarProps = {
   editor: Editor
@@ -85,7 +82,7 @@ function LinkControl({ editor }: { editor: Editor }) {
   return (
     <Popover
       open={open}
-      onOpenChange={nextOpen => {
+      onOpenChange={(nextOpen) => {
         setOpen(nextOpen)
         if (nextOpen) {
           setValue(href)
@@ -113,8 +110,8 @@ function LinkControl({ editor }: { editor: Editor }) {
           aria-label="链接地址"
           placeholder="https://"
           value={value}
-          onChange={event => setValue(event.target.value)}
-          onKeyDown={event => {
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault()
               setEditorLink(editor, value)
@@ -187,6 +184,7 @@ function BubbleToolbarControls({ editor }: { editor: Editor }) {
           <Icon />
         </Toggle>
       ))}
+      <TextColorControl editor={editor} />
       <LinkControl editor={editor} />
       {aiWriteHandlers ? (
         <Button

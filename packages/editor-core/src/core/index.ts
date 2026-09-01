@@ -49,12 +49,8 @@ export {
   defineBlockSpec,
   propsToAttributes,
 } from "./schema"
-export {
-  setAiWriteDraftIds,
-} from "./extensions/ai-write-draft-extension"
-export {
-  setAiWriteAgentCursor,
-} from "./extensions/ai-write-agent-cursor-extension"
+export { setAiWriteDraftIds } from "./extensions/ai-write-draft-extension"
+export { setAiWriteAgentCursor } from "./extensions/ai-write-agent-cursor-extension"
 export { ImageUploadNode } from "./extensions/image-upload-node"
 export type { BlockCommandMode, SlashCommand } from "./slash-commands"
 export {
@@ -67,7 +63,13 @@ export {
   UPLOAD_IMAGE_SLASH_COMMAND,
 } from "./slash-commands"
 export type { InlineMark } from "./commands"
-export { setEditorLink, toggleInlineMark } from "./commands"
+export {
+  normalizeTextColorInput,
+  setEditorLink,
+  setTextColor,
+  toggleInlineMark,
+  unsetTextColor,
+} from "./commands"
 export type {
   MentionableItem,
   MentionOptions,

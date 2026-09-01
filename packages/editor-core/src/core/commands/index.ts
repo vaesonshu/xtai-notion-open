@@ -10,3 +10,39 @@ export function setEditorLink(editor: Editor, href: string): boolean {
   const chain = editor.chain().focus()
   return href.trim() ? chain.setLink({ href }).run() : chain.unsetLink().run()
 }
+
+/** 将用户输入规范化为 #RRGGBB，无法解析时返回 null */
+export function normalizeTextColorInput(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const hexMatch = trimmed.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+  if (!hexMatch) {
+    return null
+  }
+
+  const raw = hexMatch[1]!.toUpperCase()
+  if (raw.length === 3) {
+    return `#${raw
+      .split("")
+      .map((char) => `${char}${char}`)
+      .join("")}`
+  }
+
+  return `#${raw}`
+}
+
+export function setTextColor(editor: Editor, color: string): boolean {
+  const normalized = normalizeTextColorInput(color)
+  if (!normalized) {
+    return false
+  }
+
+  return editor.chain().focus().setColor(normalized).run()
+}
+
+export function unsetTextColor(editor: Editor): boolean {
+  return editor.chain().focus().unsetColor().run()
+}

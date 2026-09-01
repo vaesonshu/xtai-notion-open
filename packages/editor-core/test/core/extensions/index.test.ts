@@ -34,6 +34,7 @@ describe("editor core", () => {
         "blockKeymap",
         "placeholder",
         "mention",
+        "textStyle",
       ])
     )
   })

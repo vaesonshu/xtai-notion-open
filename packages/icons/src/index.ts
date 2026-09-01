@@ -43,6 +43,7 @@ export {
   LogOut as LogOutIcon,
   MessageSquare as MessageSquareIcon,
   Pencil as PencilIcon,
+  Palette as PaletteIcon,
   Mail as MailIcon,
   Pilcrow as PilcrowIcon,
   Plus as PlusIcon,

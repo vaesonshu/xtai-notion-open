@@ -18,6 +18,8 @@ export type InlineStyles = {
   underline?: boolean
   strike?: boolean
   code?: boolean
+  /** 行内文字颜色，如 #24866B */
+  color?: string
 }
 
 export type InlineContent =
