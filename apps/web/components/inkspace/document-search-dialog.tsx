@@ -97,6 +97,7 @@ export function DocumentSearchDialog({
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
+      shouldFilter={false}
       title="搜索文档"
       description="按标题、正文或文档 ID 搜索"
     >
