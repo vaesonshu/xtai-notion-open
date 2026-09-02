@@ -102,6 +102,7 @@ export function WorkspaceShell({
   const [creating, setCreating] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [showFavorites, setShowFavorites] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
   const [trashedDocuments, setTrashedDocuments] = useState<SidebarDocument[]>(
     []
   )
@@ -186,12 +187,18 @@ export function WorkspaceShell({
           body: JSON.stringify({ isFavorite }),
         }
       )
-      if (!response.ok) throw new Error("更新收藏失败")
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "")
+        throw new Error(detail || "更新收藏失败")
+      }
+      const updated = (await response.json()) as { isFavorite?: boolean }
+      const nextFavorite = updated.isFavorite ?? isFavorite
       syncDocuments((current) =>
         current.map((item) =>
-          item.id === id ? { ...item, isFavorite } : item
+          item.id === id ? { ...item, isFavorite: nextFavorite } : item
         )
       )
+      toast.success(nextFavorite ? "已加入收藏" : "已取消收藏")
     } catch (error) {
       toastError(error, "更新收藏失败")
     }
@@ -403,15 +410,12 @@ export function WorkspaceShell({
         onSelect={(id) => router.push(`/documents/${id}`)}
       />
       <WorkspaceSidebar
-        documents={
-          showFavorites
-            ? favoriteDocuments
-            : personalDocuments
-        }
+        documents={showFavorites ? favoriteDocuments : personalDocuments}
         collaborativeDocuments={collaborativeDocuments}
         recentDocuments={recentDocuments}
         trashedDocuments={trashedDocuments}
         showFavorites={showFavorites}
+        showTrash={showTrash}
         selectedDocumentId={documentId}
         activeNav={activeNav}
         onSelectDocument={(id) => router.push(`/documents/${id}`)}
@@ -423,7 +427,24 @@ export function WorkspaceShell({
         onOpenSquare={() => router.push("/square")}
         onOpenGraph={() => router.push("/documents/graph")}
         onOpenSearch={() => setSearchOpen(true)}
-        onToggleFavorites={() => setShowFavorites((current) => !current)}
+        onToggleFavorites={() => {
+          setShowTrash(false)
+          setShowFavorites((current) => {
+            const next = !current
+            // 进入收藏视图时若列表为空，提示用户如何添加收藏
+            if (
+              next &&
+              documents.filter((item) => item.isFavorite).length === 0
+            ) {
+              toast.info("暂无收藏，悬停文档后点击星标即可收藏")
+            }
+            return next
+          })
+        }}
+        onToggleTrash={() => {
+          setShowTrash((current) => !current)
+          setShowFavorites(false)
+        }}
         onImportMarkdown={() => importInputRef.current?.click()}
         onToggleFavorite={toggleFavorite}
         onRestoreDocument={restoreDocument}

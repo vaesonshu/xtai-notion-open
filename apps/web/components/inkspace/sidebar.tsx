@@ -12,6 +12,7 @@ import {
   SquarePenIcon,
   StarIcon,
   WaypointsIcon,
+  RotateCcwIcon,
 } from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import {
@@ -86,6 +87,7 @@ export function WorkspaceSidebar({
   recentDocuments = [],
   trashedDocuments = [],
   showFavorites = false,
+  showTrash = false,
   selectedDocumentId,
   onSelectDocument,
   onRenameDocument,
@@ -95,6 +97,7 @@ export function WorkspaceSidebar({
   onOpenGraph,
   onOpenSearch,
   onToggleFavorites,
+  onToggleTrash,
   onImportMarkdown,
   onToggleFavorite,
   onRestoreDocument,
@@ -109,6 +112,7 @@ export function WorkspaceSidebar({
   recentDocuments?: SidebarDocument[]
   trashedDocuments?: SidebarDocument[]
   showFavorites?: boolean
+  showTrash?: boolean
   selectedDocumentId?: string
   activeNav?: "editor" | "graph" | "square"
   onSelectDocument?: (id: string) => void
@@ -118,6 +122,7 @@ export function WorkspaceSidebar({
   onOpenGraph?: () => void
   onOpenSearch?: () => void
   onToggleFavorites?: () => void
+  onToggleTrash?: () => void
   onImportMarkdown?: () => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
   onRestoreDocument?: (id: string) => void
@@ -207,43 +212,63 @@ export function WorkspaceSidebar({
           className="-mt-[6px]"
           onClick={onToggleFavorites}
         />
+        <SideAction
+          itemKey="trash"
+          selectedKey={showTrash ? "trash" : selectedKey}
+          onSelect={select}
+          icon={RotateCcwIcon}
+          label={showTrash ? "全部文档" : "回收站"}
+          className="-mt-[3px]"
+          onClick={onToggleTrash}
+        />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-white">
-        {recentDocuments.length > 0 && !showFavorites ? (
-          <SideSection
-            title="最近"
-            count={String(recentDocuments.length)}
-            items={recentDocuments}
-            selectedDocumentId={selectedDocumentId}
-            onSelect={selectDocument}
-            onToggleFavorite={onToggleFavorite}
-          />
-        ) : null}
-        <SideSection
-          title="协作文档"
-          count={String(collaborativeDocuments.length)}
-          items={collaborativeDocuments}
-          selectedDocumentId={selectedDocumentId}
-          onSelect={selectDocument}
-        />
-        <SideSection
-          title={showFavorites ? "收藏" : "个人文档"}
-          count={String(documents.length)}
-          items={documents}
-          selectedDocumentId={selectedDocumentId}
-          onSelect={selectDocument}
-          onRename={onRenameDocument}
-          onDelete={onDeleteDocument}
-          onCreateChild={onCreateChildDocument}
-          onToggleFavorite={onToggleFavorite}
-        />
-        {trashedDocuments.length > 0 ? (
+        {showTrash ? (
           <TrashSection
             items={trashedDocuments}
             onRestore={onRestoreDocument}
             onPurge={onPurgeDocument}
           />
-        ) : null}
+        ) : (
+          <>
+            {recentDocuments.length > 0 && !showFavorites ? (
+              <SideSection
+                title="最近"
+                count={String(recentDocuments.length)}
+                items={recentDocuments}
+                selectedDocumentId={selectedDocumentId}
+                onSelect={selectDocument}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ) : null}
+            {!showFavorites && collaborativeDocuments.length > 0 ? (
+              <SideSection
+                title="协作文档"
+                count={String(collaborativeDocuments.length)}
+                items={collaborativeDocuments}
+                selectedDocumentId={selectedDocumentId}
+                onSelect={selectDocument}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ) : null}
+            <SideSection
+              title={showFavorites ? "收藏" : "个人文档"}
+              count={String(documents.length)}
+              items={documents}
+              selectedDocumentId={selectedDocumentId}
+              onSelect={selectDocument}
+              onRename={onRenameDocument}
+              onDelete={onDeleteDocument}
+              onCreateChild={onCreateChildDocument}
+              onToggleFavorite={onToggleFavorite}
+            />
+            <TrashSection
+              items={trashedDocuments}
+              onRestore={onRestoreDocument}
+              onPurge={onPurgeDocument}
+            />
+          </>
+        )}
       </div>
       <Separator />
       <div className="flex flex-col gap-[10px] px-1 pt-[10px]">
@@ -357,9 +382,15 @@ function SideSection({
         <span className="font-normal">{count}</span>
       </div>
       <div className="flex flex-col gap-0.5">
-        {visibleItems.map(({ id, title: label }, index) => {
+        {visibleItems.length === 0 ? (
+          <p className="px-2 text-[12px] text-[#78746C]">
+            {title === "收藏" ? "暂无收藏的文档" : "暂无文档"}
+          </p>
+        ) : null}
+        {visibleItems.map(({ id, title: label }) => {
           const depth = getDocumentDepth(itemById.get(id)!, itemById)
           const active = selectedDocumentId === id
+          const favorited = itemById.get(id)?.isFavorite ?? false
           const Component = hasChildren.has(id)
             ? collapsedIds.has(id)
               ? FolderIcon
@@ -375,7 +406,7 @@ function SideSection({
                 variant="ghost"
                 aria-current={active ? "page" : undefined}
                 onClick={() => onSelect(id)}
-                className={`h-8 w-full !justify-start gap-[9px] rounded-[7px] px-2 pr-8 ${active ? "!bg-[#E6F3EC] !text-[#24866B]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
+                className={`h-8 w-full !justify-start gap-[9px] rounded-[7px] px-2 ${onToggleFavorite ? "pr-14" : "pr-8"} ${active ? "!bg-[#E6F3EC] !text-[#24866B]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
               >
                 {hasChildren.has(id) && (
                   <span
@@ -439,6 +470,24 @@ function SideSection({
                   </>
                 )}
               </Button>
+              {onToggleFavorite ? (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={favorited ? "取消收藏" : "收藏"}
+                  className={`absolute right-7 ${favorited ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onToggleFavorite(id, !favorited)
+                  }}
+                >
+                  <PencilIcon
+                    icon={StarIcon}
+                    size={14}
+                    color={favorited ? "#F59E0B" : "#78746C"}
+                  />
+                </Button>
+              ) : null}
               {(onRename || onDelete || onCreateChild || onToggleFavorite) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger
@@ -455,16 +504,9 @@ function SideSection({
                   <DropdownMenuContent align="end">
                     {onToggleFavorite ? (
                       <DropdownMenuItem
-                        onClick={() =>
-                          onToggleFavorite(
-                            id,
-                            !items.find((item) => item.id === id)?.isFavorite
-                          )
-                        }
+                        onClick={() => onToggleFavorite(id, !favorited)}
                       >
-                        {items.find((item) => item.id === id)?.isFavorite
-                          ? "取消收藏"
-                          : "收藏"}
+                        {favorited ? "取消收藏" : "收藏"}
                       </DropdownMenuItem>
                     ) : null}
                     {(!items.find((item) => item.id === id)?.depth ||
@@ -505,7 +547,8 @@ function SideSection({
           <AlertDialogHeader>
             <AlertDialogTitle>移入回收站？</AlertDialogTitle>
             <AlertDialogDescription>
-              “{deleteTarget?.title}”将移入回收站，之后可从回收站恢复或永久删除。
+              “{deleteTarget?.title}
+              ”将移入回收站，之后可从回收站恢复或永久删除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -547,43 +590,47 @@ function TrashSection({
         <span className="flex-1" />
         <span className="font-normal">{items.length}</span>
       </div>
-      <div className="flex flex-col gap-0.5">
-        {items.map((item) => (
-          <div key={item.id} className="group relative flex items-center">
-            <Button
-              variant="ghost"
-              className="h-8 w-full !justify-start gap-[9px] rounded-[7px] px-2 pr-8 !text-[#78746C]"
-            >
-              <PencilIcon icon={FileTextIcon} color="#78746C" />
-              <span className="truncate text-[13px]">{item.title}</span>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="absolute right-1 opacity-0 group-hover:opacity-100"
-                  />
-                }
+      {items.length === 0 ? (
+        <p className="px-2 text-[12px] text-[#78746C]">暂无已删除的文档</p>
+      ) : (
+        <div className="flex flex-col gap-0.5">
+          {items.map((item) => (
+            <div key={item.id} className="group relative flex items-center">
+              <Button
+                variant="ghost"
+                className="h-8 w-full !justify-start gap-[9px] rounded-[7px] px-2 pr-8 !text-[#78746C]"
               >
-                <PencilIcon icon={EllipsisIcon} size={16} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onRestore?.(item.id)}>
-                  恢复
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => setPurgeTarget(item)}
+                <PencilIcon icon={FileTextIcon} color="#78746C" />
+                <span className="truncate text-[13px]">{item.title}</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="absolute right-1 opacity-0 group-hover:opacity-100"
+                    />
+                  }
                 >
-                  永久删除
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
-      </div>
+                  <PencilIcon icon={EllipsisIcon} size={16} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onRestore?.(item.id)}>
+                    恢复
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => setPurgeTarget(item)}
+                  >
+                    永久删除
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+        </div>
+      )}
       <AlertDialog
         open={purgeTarget !== null}
         onOpenChange={(open) => {
