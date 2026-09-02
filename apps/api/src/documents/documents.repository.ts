@@ -30,6 +30,7 @@ export class DocumentsRepository {
       rejection_reason: document.rejectionReason,
       published_at: document.publishedAt,
       published_by: document.publishedBy,
+      deleted_at: document.deletedAt,
     }
   }
 
@@ -45,8 +46,16 @@ export class DocumentsRepository {
   }
 
   async findById(documentId: string): Promise<DocumentRow | null> {
-    const document = await this.prisma.client.document.findUnique({
-      where: { id: documentId },
+    const document = await this.prisma.client.document.findFirst({
+      where: { id: documentId, deletedAt: null },
+    })
+    return document ? this.toDocumentRow(document) : null
+  }
+
+  /** 回收站列表：仅返回当前用户可访问且已软删除的文档 */
+  async findTrashedById(documentId: string): Promise<DocumentRow | null> {
+    const document = await this.prisma.client.document.findFirst({
+      where: { id: documentId, deletedAt: { not: null } },
     })
     return document ? this.toDocumentRow(document) : null
   }
@@ -73,16 +82,98 @@ export class DocumentsRepository {
 
   async listForUser(userId: string): Promise<DocumentListRow[]> {
     const documents = await this.prisma.client.document.findMany({
-      where: { members: { some: { userId } } },
+      where: {
+        deletedAt: null,
+        members: { some: { userId } },
+      },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      include: { members: { where: { userId }, select: { role: true } } },
+      include: {
+        members: { where: { userId }, select: { role: true } },
+        userPrefs: {
+          where: { userId },
+          select: { isFavorite: true, lastOpenedAt: true },
+        },
+      },
     })
     return documents.map((document) => ({
       ...this.toDocumentRow(document),
       role: isDocumentRole(document.members[0]?.role)
         ? (document.members[0]?.role as DocumentRole)
         : "viewer",
+      is_favorite: document.userPrefs[0]?.isFavorite ?? false,
+      last_opened_at: document.userPrefs[0]?.lastOpenedAt ?? null,
     }))
+  }
+
+  async listTrashedForUser(userId: string): Promise<DocumentListRow[]> {
+    const documents = await this.prisma.client.document.findMany({
+      where: {
+        deletedAt: { not: null },
+        members: { some: { userId } },
+      },
+      orderBy: { deletedAt: "desc" },
+      include: {
+        members: { where: { userId }, select: { role: true } },
+        userPrefs: {
+          where: { userId },
+          select: { isFavorite: true, lastOpenedAt: true },
+        },
+      },
+    })
+    return documents.map((document) => ({
+      ...this.toDocumentRow(document),
+      role: isDocumentRole(document.members[0]?.role)
+        ? (document.members[0]?.role as DocumentRole)
+        : "viewer",
+      is_favorite: document.userPrefs[0]?.isFavorite ?? false,
+      last_opened_at: document.userPrefs[0]?.lastOpenedAt ?? null,
+    }))
+  }
+
+  async listFavoritesForUser(userId: string): Promise<DocumentListRow[]> {
+    const rows = await this.listForUser(userId)
+    return rows.filter((row) => row.is_favorite)
+  }
+
+  async listRecentForUser(
+    userId: string,
+    limit = 10
+  ): Promise<DocumentListRow[]> {
+    const rows = await this.listForUser(userId)
+    return rows
+      .filter((row) => row.last_opened_at)
+      .sort(
+        (a, b) =>
+          (b.last_opened_at?.getTime() ?? 0) -
+          (a.last_opened_at?.getTime() ?? 0)
+      )
+      .slice(0, limit)
+  }
+
+  async upsertUserPref(
+    userId: string,
+    documentId: string,
+    data: { isFavorite?: boolean; lastOpenedAt?: Date }
+  ): Promise<void> {
+    await this.prisma.client.userDocumentPref.upsert({
+      where: {
+        userId_documentId: { userId, documentId },
+      },
+      create: {
+        userId,
+        documentId,
+        isFavorite: data.isFavorite ?? false,
+        lastOpenedAt: data.lastOpenedAt ?? null,
+      },
+      update: {
+        ...(data.isFavorite !== undefined
+          ? { isFavorite: data.isFavorite }
+          : {}),
+        ...(data.lastOpenedAt !== undefined
+          ? { lastOpenedAt: data.lastOpenedAt }
+          : {}),
+      },
+    })
   }
 
   async rename(documentId: string, title: string): Promise<DocumentRow | null> {
@@ -96,6 +187,22 @@ export class DocumentsRepository {
       where: { id: documentId },
     })
     return document ? this.toDocumentRow(document) : null
+  }
+
+  async softDelete(documentId: string): Promise<boolean> {
+    const result = await this.prisma.client.document.updateMany({
+      where: { id: documentId, deletedAt: null },
+      data: { deletedAt: new Date(), updatedAt: new Date() },
+    })
+    return result.count > 0
+  }
+
+  async restore(documentId: string): Promise<boolean> {
+    const result = await this.prisma.client.document.updateMany({
+      where: { id: documentId, deletedAt: { not: null } },
+      data: { deletedAt: null, updatedAt: new Date() },
+    })
+    return result.count > 0
   }
 
   async remove(documentId: string): Promise<boolean> {

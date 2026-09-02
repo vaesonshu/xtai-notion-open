@@ -1,8 +1,10 @@
 ﻿import { Inject, Injectable, Logger, Optional } from "@nestjs/common"
 import {
   CURRENT_SCHEMA_VERSION,
+  createBlockSchemaYDoc,
   readYDocSchemaVersion,
 } from "@xtai-notion/editor-core/server"
+import type { Block } from "@xtai-notion/editor-core/server"
 import * as Y from "yjs"
 import { DocumentsRepository } from "../documents/documents.repository"
 import { YjsPersistenceRepository } from "./yjs-persistence.repository"
@@ -209,6 +211,18 @@ export class YjsPersistenceService {
   async flushAll(): Promise<void> {
     const documentIds = [...this.buffers.keys()]
     await Promise.all(documentIds.map((id) => this.flushDocument(id)))
+  }
+
+  /** 为新文档写入初始 Block[] 快照（导入 Markdown 等场景） */
+  async seedInitialContent(documentId: string, blocks: Block[]): Promise<void> {
+    const existing = await this.repository.getLatestSnapshot(documentId)
+    if (existing) {
+      return
+    }
+    const yDoc = createBlockSchemaYDoc(blocks)
+    const snapshot = Y.encodeStateAsUpdate(yDoc)
+    yDoc.destroy()
+    await this.repository.insertSnapshot(documentId, snapshot, 1)
   }
 
   private getOrCreateBuffer(documentId: string): DocumentBuffer {

@@ -26,10 +26,13 @@ export interface DocumentRow {
   rejection_reason?: string | null
   published_at?: Date | null
   published_by?: string | null
+  deleted_at?: Date | null
 }
 
 export interface DocumentListRow extends DocumentRow {
   role: DocumentRole
+  is_favorite?: boolean
+  last_opened_at?: Date | null
 }
 
 export interface DocumentMetadata {
@@ -45,6 +48,9 @@ export interface DocumentMetadata {
   rejectionReason: string | null
   publishedAt: Date | null
   publishedBy: string | null
+  isFavorite: boolean
+  lastOpenedAt: Date | null
+  deletedAt?: Date | null
 }
 
 export interface PublicationMetadata extends DocumentMetadata {

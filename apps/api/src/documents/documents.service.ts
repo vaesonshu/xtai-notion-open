@@ -10,6 +10,8 @@ import {
   documentFromYjs,
   documentToPlainText,
   collectMentionIds,
+  createBlockSchemaYDoc,
+  markdownToBlocks,
 } from "@xtai-notion/editor-core/server"
 import { UserRepository } from "../auth/user.repository"
 import { YjsPersistenceService } from "../collaboration/yjs-persistence.service"
@@ -82,6 +84,107 @@ export class DocumentsService {
     return rows.map((row) => this.toMetadata(row, row.role))
   }
 
+  async listTrashedDocuments(userId: string): Promise<DocumentMetadata[]> {
+    const rows = await this.documents.listTrashedForUser(userId)
+    return rows.map((row) => this.toMetadata(row, row.role))
+  }
+
+  async listFavoriteDocuments(userId: string): Promise<DocumentMetadata[]> {
+    const rows = await this.documents.listFavoritesForUser(userId)
+    return rows.map((row) => this.toMetadata(row, row.role))
+  }
+
+  async listRecentDocuments(userId: string): Promise<DocumentMetadata[]> {
+    const rows = await this.documents.listRecentForUser(userId)
+    return rows.map((row) => this.toMetadata(row, row.role))
+  }
+
+  async searchDocuments(
+    userId: string,
+    query: string
+  ): Promise<DocumentMetadata[]> {
+    const trimmed = query.trim().toLowerCase()
+    const rows = await this.documents.listForUser(userId)
+    const filtered = trimmed
+      ? rows.filter((row) => {
+          const haystack = `${row.title} ${row.id}`.toLowerCase()
+          return haystack.includes(trimmed)
+        })
+      : rows
+    return filtered.map((row) => this.toMetadata(row, row.role))
+  }
+
+  async updateDocumentPref(
+    documentId: string,
+    userId: string,
+    pref: { isFavorite?: boolean; recordOpened?: boolean }
+  ): Promise<DocumentMetadata> {
+    const role = await this.assertCanRead(documentId, userId)
+    await this.documents.upsertUserPref(userId, documentId, {
+      ...(pref.isFavorite !== undefined
+        ? { isFavorite: pref.isFavorite }
+        : {}),
+      ...(pref.recordOpened ? { lastOpenedAt: new Date() } : {}),
+    })
+    const row = await this.documents.findById(documentId)
+    if (!row) throw new NotFoundException("Document not found")
+    const listRow = await this.documents.listForUser(userId)
+    const match = listRow.find((item) => item.id === documentId)
+    return this.toMetadata(
+      match ?? { ...row, role, is_favorite: false, last_opened_at: null },
+      role
+    )
+  }
+
+  async restoreDocument(
+    documentId: string,
+    userId: string
+  ): Promise<DocumentMetadata> {
+    await this.assertCanWrite(documentId, userId)
+    const restored = await this.documents.restore(documentId)
+    if (!restored) throw new NotFoundException("Document not in trash")
+    const row = await this.documents.findById(documentId)
+    if (!row) throw new NotFoundException("Document not found")
+    const role = await this.getMemberRole(documentId, userId)
+    return this.toMetadata(
+      { ...row, role: role ?? "owner", is_favorite: false, last_opened_at: null },
+      role ?? "owner"
+    )
+  }
+
+  async purgeDocument(documentId: string, userId: string): Promise<void> {
+    await this.assertCanWrite(documentId, userId)
+    const trashed = await this.documents.findTrashedById(documentId)
+    if (!trashed) throw new NotFoundException("Document not in trash")
+    const removed = await this.documents.remove(documentId)
+    if (!removed) throw new NotFoundException("Document not found")
+  }
+
+  async importMarkdown(
+    userId: string,
+    title: string,
+    markdown: string
+  ): Promise<DocumentMetadata> {
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+    const blocks = markdownToBlocks(markdown)
+    const row = await this.documents.createForOwner(userId)
+    const nextTitle = title.trim() || "导入的文档"
+    await this.documents.rename(row.id, nextTitle)
+    await this.yjsPersistence.seedInitialContent(row.id, blocks)
+    return this.toMetadata(
+      {
+        ...row,
+        title: nextTitle,
+        role: "owner",
+        is_favorite: false,
+        last_opened_at: null,
+      },
+      "owner"
+    )
+  }
+
   /** 聚合用户可见文档及其 @mention 引用关系，供关系图谱可视化。 */
   async listDocumentGraph(userId: string): Promise<DocumentGraphNode[]> {
     if (!this.yjsPersistence) {
@@ -129,7 +232,7 @@ export class DocumentsService {
 
   async deleteDocument(documentId: string, userId: string): Promise<void> {
     await this.assertCanWrite(documentId, userId)
-    const removed = await this.documents.remove(documentId)
+    const removed = await this.documents.softDelete(documentId)
     if (!removed) throw new NotFoundException("Document not found")
   }
 
@@ -249,7 +352,13 @@ export class DocumentsService {
     }
   }
 
-  private toMetadata(row: DocumentRow, role: DocumentRole): DocumentMetadata {
+  private toMetadata(
+    row: DocumentRow & {
+      is_favorite?: boolean
+      last_opened_at?: Date | null
+    },
+    role: DocumentRole
+  ): DocumentMetadata {
     // Old rows and test fixtures without the migration fields are drafts.
     return {
       id: row.id,
@@ -264,6 +373,9 @@ export class DocumentsService {
       rejectionReason: row.rejection_reason ?? null,
       publishedAt: row.published_at ?? null,
       publishedBy: row.published_by ?? null,
+      isFavorite: row.is_favorite ?? false,
+      lastOpenedAt: row.last_opened_at ?? null,
+      deletedAt: row.deleted_at ?? null,
     }
   }
 }

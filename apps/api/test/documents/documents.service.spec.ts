@@ -116,6 +116,9 @@ describe("DocumentsService", () => {
       rejectionReason: null,
       publishedAt: null,
       publishedBy: null,
+      isFavorite: false,
+      lastOpenedAt: null,
+      deletedAt: null,
     })
   })
 
@@ -170,6 +173,9 @@ describe("DocumentsService", () => {
       rejectionReason: null,
       publishedAt: null,
       publishedBy: null,
+      isFavorite: false,
+      lastOpenedAt: null,
+      deletedAt: null,
     })
     expect(repo.createForOwner).toHaveBeenCalledWith("user-1")
   })

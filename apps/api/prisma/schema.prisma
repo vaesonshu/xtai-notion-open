@@ -35,6 +35,7 @@ model Document {
   rejectionReason   String?   @map("rejection_reason")
   publishedAt       DateTime? @map("published_at") @db.Timestamptz(6)
   publishedBy       String?   @map("published_by") @db.Uuid
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
   workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -47,8 +48,10 @@ model Document {
   yjsUpdates        YjsUpdate[]
   shareLinks        DocumentShareLink[]
   comments          ArticleComment[]
+  userPrefs         UserDocumentPref[]
 
   @@index([workspaceId])
+  @@index([deletedAt])
   @@index([parentId])
   @@index([ownerId])
   @@index([publicationStatus, updatedAt(sort: Desc)], map: "document_publication_status_idx")
@@ -81,8 +84,24 @@ model AppUser {
   publishedDocuments Document[] @relation("PublishedBy")
   shareLinks       DocumentShareLink[]
   articleComments  ArticleComment[]
+  documentPrefs    UserDocumentPref[]
 
   @@map("app_user")
+}
+
+// 用户对文档的收藏与最近打开时间（按用户维度，不影响协作文档本身）
+model UserDocumentPref {
+  userId       String    @map("user_id") @db.Uuid
+  documentId   String    @map("document_id") @db.Uuid
+  isFavorite   Boolean   @default(false) @map("is_favorite")
+  lastOpenedAt DateTime? @map("last_opened_at") @db.Timestamptz(6)
+  user         AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  document     Document  @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([userId, documentId])
+  @@index([userId, isFavorite])
+  @@index([userId, lastOpenedAt(sort: Desc)])
+  @@map("user_document_pref")
 }
 
 // 广场已发布文章下的评论；parentId 自引用实现多级嵌套回复。

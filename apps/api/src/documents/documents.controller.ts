@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Optional,
+  Query,
   UseGuards,
 } from "@nestjs/common"
 import { CurrentUser } from "../auth/current-user.decorator"
@@ -57,6 +58,47 @@ export class DocumentsController {
     return this.documents.listDocuments(user.id)
   }
 
+  @Get("search")
+  searchDocuments(
+    @CurrentUser() user: DevUser,
+    @Query("q") query = ""
+  ): Promise<DocumentMetadata[]> {
+    return this.documents.searchDocuments(user.id, query)
+  }
+
+  @Get("trash")
+  listTrashedDocuments(
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata[]> {
+    return this.documents.listTrashedDocuments(user.id)
+  }
+
+  @Get("favorites")
+  listFavoriteDocuments(
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata[]> {
+    return this.documents.listFavoriteDocuments(user.id)
+  }
+
+  @Get("recent")
+  listRecentDocuments(
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata[]> {
+    return this.documents.listRecentDocuments(user.id)
+  }
+
+  @Post("import")
+  importMarkdown(
+    @CurrentUser() user: DevUser,
+    @Body() body: { title?: string; markdown?: string }
+  ): Promise<DocumentMetadata> {
+    return this.documents.importMarkdown(
+      user.id,
+      body.title ?? "导入的文档",
+      body.markdown ?? ""
+    )
+  }
+
   @Get("graph")
   listDocumentGraph(
     @CurrentUser() user: DevUser
@@ -90,12 +132,38 @@ export class DocumentsController {
     return this.documents.renameDocument(documentId, user.id, body.title ?? "")
   }
 
+  @Patch(":documentId/pref")
+  updateDocumentPref(
+    @Param("documentId") documentId: string,
+    @Body()
+    body: { isFavorite?: boolean; recordOpened?: boolean },
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata> {
+    return this.documents.updateDocumentPref(documentId, user.id, body)
+  }
+
+  @Post(":documentId/restore")
+  restoreDocument(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentMetadata> {
+    return this.documents.restoreDocument(documentId, user.id)
+  }
+
   @Delete(":documentId")
   deleteDocument(
     @Param("documentId") documentId: string,
     @CurrentUser() user: DevUser
   ): Promise<void> {
     return this.documents.deleteDocument(documentId, user.id)
+  }
+
+  @Delete(":documentId/permanent")
+  purgeDocument(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<void> {
+    return this.documents.purgeDocument(documentId, user.id)
   }
 }
 
