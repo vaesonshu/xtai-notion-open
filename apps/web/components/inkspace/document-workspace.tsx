@@ -196,6 +196,19 @@ export function DocumentWorkspace({
   }, [apiUrl, documentId, user.id])
 
   useEffect(() => {
+    if (!configured || !documentId) return
+    void fetch(`${apiUrl.replace(/\/$/, "")}/documents/${documentId}/pref`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        "x-dev-user-id": user.id,
+      },
+      body: JSON.stringify({ recordOpened: true }),
+    }).catch(() => undefined)
+  }, [apiUrl, configured, documentId, user.id])
+
+  useEffect(() => {
     if (!configured) {
       return
     }

@@ -1,12 +1,13 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { toast, toastError } from "@/lib/toast"
 import {
   DocumentWorkspace,
   type DocumentWorkspaceProps,
 } from "./document-workspace"
+import { DocumentSearchDialog } from "./document-search-dialog"
 import { WorkspaceSidebar } from "./sidebar"
 
 type CreatedDocumentResponse = { id: string; title?: string }
@@ -16,6 +17,8 @@ type SidebarDocument = DocumentListItem & {
   role: DocumentRole
   parentId: string | null
   depth: number
+  isFavorite?: boolean
+  lastOpenedAt?: string | null
 }
 
 function normalizeDocumentHierarchy(
@@ -38,6 +41,9 @@ function normalizeDocumentHierarchy(
     role: item.role ?? "owner",
     parentId: item.parentId ?? null,
     depth: depthOf(item),
+    isFavorite: item.isFavorite ?? false,
+    lastOpenedAt:
+      typeof item.lastOpenedAt === "string" ? item.lastOpenedAt : null,
   }))
 }
 
@@ -92,7 +98,13 @@ export function WorkspaceShell({
   activeNav = "editor",
 }: WorkspaceShellProps) {
   const router = useRouter()
+  const importInputRef = useRef<HTMLInputElement>(null)
   const [creating, setCreating] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [showFavorites, setShowFavorites] = useState(false)
+  const [trashedDocuments, setTrashedDocuments] = useState<SidebarDocument[]>(
+    []
+  )
   const [documents, setDocuments] = useState<SidebarDocument[]>(() =>
     documentsCache?.userId === user.id ? documentsCache.items : []
   )
@@ -110,6 +122,139 @@ export function WorkspaceShell({
   const collaborativeDocuments = documents.filter(
     (item) => item.role !== "owner"
   )
+  const favoriteDocuments = documents.filter((item) => item.isFavorite)
+  const recentDocuments = [...documents]
+    .filter((item) => item.lastOpenedAt)
+    .sort(
+      (a, b) =>
+        new Date(b.lastOpenedAt ?? 0).getTime() -
+        new Date(a.lastOpenedAt ?? 0).getTime()
+    )
+    .slice(0, 8)
+
+  const apiHeaders = useCallback(
+    () => ({
+      "content-type": "application/json",
+      "x-dev-user-id": user.id,
+    }),
+    [user.id]
+  )
+
+  const refreshDocuments = useCallback(async () => {
+    if (!apiUrl) return
+    const [activeResponse, trashResponse] = await Promise.all([
+      fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+        credentials: "include",
+        headers: { "x-dev-user-id": user.id },
+      }),
+      fetch(`${apiUrl.replace(/\/$/, "")}/documents/trash`, {
+        credentials: "include",
+        headers: { "x-dev-user-id": user.id },
+      }),
+    ])
+    const activeItems = activeResponse.ok
+      ? ((await activeResponse.json()) as Array<
+          Partial<SidebarDocument> & DocumentListItem & { isFavorite?: boolean }
+        >)
+      : []
+    const trashItems = trashResponse.ok
+      ? ((await trashResponse.json()) as Array<
+          Partial<SidebarDocument> & DocumentListItem
+        >)
+      : []
+    const normalized = normalizeDocumentHierarchy(activeItems)
+    documentsCache = { userId: user.id, items: normalized }
+    setDocuments(normalized)
+    setTrashedDocuments(
+      trashItems.map((item) => ({
+        id: item.id,
+        title: item.title || "未命名文档",
+        role: (item.role as DocumentRole) ?? "owner",
+        parentId: item.parentId ?? null,
+        depth: item.depth ?? 1,
+      }))
+    )
+  }, [apiUrl, user.id])
+  async function toggleFavorite(id: string, isFavorite: boolean) {
+    try {
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/${id}/pref`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: apiHeaders(),
+          body: JSON.stringify({ isFavorite }),
+        }
+      )
+      if (!response.ok) throw new Error("更新收藏失败")
+      syncDocuments((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, isFavorite } : item
+        )
+      )
+    } catch (error) {
+      toastError(error, "更新收藏失败")
+    }
+  }
+
+  async function restoreDocument(id: string) {
+    try {
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/${id}/restore`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "x-dev-user-id": user.id },
+        }
+      )
+      if (!response.ok) throw new Error("恢复失败")
+      await refreshDocuments()
+      router.push(`/documents/${id}`)
+    } catch (error) {
+      toastError(error, "恢复失败")
+    }
+  }
+
+  async function purgeDocument(id: string) {
+    try {
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/${id}/permanent`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "x-dev-user-id": user.id },
+        }
+      )
+      if (!response.ok) throw new Error("永久删除失败")
+      setTrashedDocuments((current) => current.filter((item) => item.id !== id))
+    } catch (error) {
+      toastError(error, "永久删除失败")
+    }
+  }
+
+  async function importMarkdownFile(file: File) {
+    try {
+      const markdown = await file.text()
+      const title = file.name.replace(/\.md$/i, "") || "导入的文档"
+      const response = await fetch(
+        `${apiUrl.replace(/\/$/, "")}/documents/import`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: apiHeaders(),
+          body: JSON.stringify({ title, markdown }),
+        }
+      )
+      if (!response.ok) throw new Error("导入失败")
+      const document = (await response.json()) as CreatedDocumentResponse
+      await refreshDocuments()
+      router.push(`/documents/${document.id}`)
+      toast.success("Markdown 导入成功")
+    } catch (error) {
+      toastError(error, "导入失败")
+    }
+  }
+
   async function renameDocument(id: string, title: string) {
     try {
       const response = await fetch(
@@ -148,6 +293,7 @@ export function WorkspaceShell({
       )
       if (!response.ok) throw new Error("删除失败")
       syncDocuments((current) => current.filter((item) => item.id !== id))
+      void refreshDocuments()
       if (id === documentId) {
         const nextDocumentId = getDocumentIdAfterDeletion(personalDocuments, id)
         router.push(nextDocumentId ? `/documents/${nextDocumentId}` : "/")
@@ -160,27 +306,20 @@ export function WorkspaceShell({
     if (!apiUrl) return
     if (documentsCache?.userId === user.id) {
       setDocuments(documentsCache.items)
-      return
     }
+    void refreshDocuments().catch(() => undefined)
+  }, [apiUrl, refreshDocuments, user.id])
 
-    let cancelled = false
-    void fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
-      credentials: "include",
-      headers: { "x-dev-user-id": user.id },
-    })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((items: Array<Partial<SidebarDocument> & DocumentListItem>) => {
-        if (cancelled) return
-        const normalized = normalizeDocumentHierarchy(items)
-        documentsCache = { userId: user.id, items: normalized }
-        setDocuments(normalized)
-      })
-      .catch(() => undefined)
-
-    return () => {
-      cancelled = true
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault()
+        setSearchOpen(true)
+      }
     }
-  }, [apiUrl, user.id])
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   useEffect(() => {
     if (!openFirstDocument) return
@@ -244,9 +383,35 @@ export function WorkspaceShell({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 overflow-hidden">
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".md,text/markdown"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) void importMarkdownFile(file)
+          event.target.value = ""
+        }}
+      />
+      <DocumentSearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        documents={documents}
+        apiUrl={apiUrl}
+        userId={user.id}
+        onSelect={(id) => router.push(`/documents/${id}`)}
+      />
       <WorkspaceSidebar
-        documents={personalDocuments}
+        documents={
+          showFavorites
+            ? favoriteDocuments
+            : personalDocuments
+        }
         collaborativeDocuments={collaborativeDocuments}
+        recentDocuments={recentDocuments}
+        trashedDocuments={trashedDocuments}
+        showFavorites={showFavorites}
         selectedDocumentId={documentId}
         activeNav={activeNav}
         onSelectDocument={(id) => router.push(`/documents/${id}`)}
@@ -257,6 +422,12 @@ export function WorkspaceShell({
         onCreateChildDocument={(id) => void createChildDocument(id)}
         onOpenSquare={() => router.push("/square")}
         onOpenGraph={() => router.push("/documents/graph")}
+        onOpenSearch={() => setSearchOpen(true)}
+        onToggleFavorites={() => setShowFavorites((current) => !current)}
+        onImportMarkdown={() => importInputRef.current?.click()}
+        onToggleFavorite={toggleFavorite}
+        onRestoreDocument={restoreDocument}
+        onPurgeDocument={purgeDocument}
       />
       <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FCFCFA] !text-[#242321]">
         {children ??

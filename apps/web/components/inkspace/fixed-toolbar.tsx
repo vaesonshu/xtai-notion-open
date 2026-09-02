@@ -38,6 +38,7 @@ import {
   TextColorControl,
   useImageUpload,
 } from "@xtai-notion/editor-shadcn"
+import { MarkdownExportButton } from "./markdown-export-button"
 import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { Toggle } from "@workspace/ui/components/toggle"
@@ -390,6 +391,8 @@ function FixedEditorToolbarReady() {
         </PopoverContent>
       </Popover>
       <Separator orientation="vertical" className="mx-1 h-6" />
+      <Separator orientation="vertical" className="mx-1 h-6" />
+      <MarkdownExportButton />
       <ToolbarTooltip label="撤销">
         <Button
           variant="ghost"
