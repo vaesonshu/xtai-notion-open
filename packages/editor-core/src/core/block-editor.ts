@@ -585,6 +585,27 @@ export class BlockEditor {
     return result
   }
 
+  /** 解析当前选区所在的 blockContainer id（折叠光标也可用） */
+  getActiveBlockContainerId(): string | null {
+    const state = this.editor.state
+    if (!state.selection.empty) {
+      const selected = this.getSelectedBlocks()
+      if (selected[0]?.id) {
+        return selected[0].id
+      }
+    }
+
+    const { from } = state.selection
+    const $pos = state.doc.resolve(from)
+    for (let depth = $pos.depth; depth > 0; depth -= 1) {
+      const node = $pos.node(depth)
+      if (node.type.name === "blockContainer") {
+        return node.attrs.id as string
+      }
+    }
+    return null
+  }
+
   onChange(listener: (blocks: Block[]) => void): () => void {
     const handler = () => {
       listener(this.document)

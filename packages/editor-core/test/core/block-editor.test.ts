@@ -127,4 +127,12 @@ describe("BlockEditor", () => {
     expect(editor.document[0]?.type).toBe("paragraph")
     expect(editor.document[0]?.content).toEqual([])
   })
+
+  it("getActiveBlockContainerId resolves block under collapsed cursor", () => {
+    const editor = create()
+    editor.tiptap.commands.setTextSelection(3)
+    expect(editor.getActiveBlockContainerId()).toBe(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    )
+  })
 })
