@@ -12,7 +12,8 @@ import {
 } from "@workspace/ui/components/sheet"
 import { Textarea } from "@workspace/ui/components/textarea"
 import { useBlockEditor } from "@xtai-notion/editor-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
+import { use, useCallback, useEffect, useMemo, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
 import { PencilIcon } from "./icon"
 
@@ -30,6 +31,21 @@ export type DocumentCommentNode = {
   replies: DocumentCommentNode[]
 }
 
+/** 从评论树收集所有被标注的块 id */
+export function collectCommentedBlockIds(
+  comments: readonly DocumentCommentNode[]
+): string[] {
+  const ids = new Set<string>()
+  const walk = (nodes: readonly DocumentCommentNode[]) => {
+    for (const node of nodes) {
+      ids.add(node.blockId)
+      walk(node.replies)
+    }
+  }
+  walk(comments)
+  return [...ids]
+}
+
 type DocumentCommentsPanelProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -37,6 +53,7 @@ type DocumentCommentsPanelProps = {
   documentId: string
   userId: string
   activeBlockId: string | null
+  onCommentedBlockIdsChange?: (blockIds: string[]) => void
 }
 
 const DEFAULT_AUTHOR_COLOR = "#242321"
@@ -152,6 +169,7 @@ export function DocumentCommentsPanel({
   documentId,
   userId,
   activeBlockId,
+  onCommentedBlockIdsChange,
 }: DocumentCommentsPanelProps) {
   const [comments, setComments] = useState<DocumentCommentNode[]>([])
   const [loading, setLoading] = useState(false)
@@ -171,12 +189,18 @@ export function DocumentCommentsPanel({
       if (!response.ok) throw new Error("加载评论失败")
       const items = (await response.json()) as DocumentCommentNode[]
       setComments(items)
+      onCommentedBlockIdsChange?.(collectCommentedBlockIds(items))
     } catch (error) {
       toastError(error, "加载评论失败")
     } finally {
       setLoading(false)
     }
-  }, [baseUrl, userId])
+  }, [baseUrl, userId, onCommentedBlockIdsChange])
+
+  // 打开文档即加载评论，以便正文显示批注标记（不仅限侧栏打开时）
+  useEffect(() => {
+    void loadComments()
+  }, [loadComments])
 
   useEffect(() => {
     if (open) void loadComments()
@@ -244,7 +268,7 @@ export function DocumentCommentsPanel({
             文档评论
           </SheetTitle>
           <SheetDescription>
-            将光标放在段落上即可评论该块；点击「定位到块」可跳转到原文。
+            将光标放在段落上即可评论该块；评论后正文会以高亮与下划线标识，点击「定位到块」可跳转。
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4 pb-6">
@@ -318,6 +342,61 @@ export function DocumentCommentsPanel({
       </SheetContent>
     </Sheet>
   )
+}
+
+/** 在编辑器 DOM 上同步评论锚点样式（块级高亮 + 下划线） */
+export function DocumentCommentMarkers({
+  commentedBlockIds,
+  activeBlockId,
+}: {
+  commentedBlockIds: readonly string[]
+  activeBlockId?: string | null
+}) {
+  const context = use(EditorContext)
+  if (!context?.blockEditor) {
+    return null
+  }
+  return (
+    <DocumentCommentMarkersReady
+      commentedBlockIds={commentedBlockIds}
+      activeBlockId={activeBlockId}
+    />
+  )
+}
+
+function DocumentCommentMarkersReady({
+  commentedBlockIds,
+  activeBlockId,
+}: {
+  commentedBlockIds: readonly string[]
+  activeBlockId?: string | null
+}) {
+  const blockEditor = useBlockEditor()
+
+  const applyMarks = useCallback(() => {
+    const marked = new Set(commentedBlockIds)
+    document
+      .querySelectorAll('[data-node-type="blockContainer"]')
+      .forEach((element) => {
+        const blockId = element.getAttribute("data-id")
+        element.classList.remove(
+          "document-comment-marked",
+          "document-comment-marked-active"
+        )
+        if (!blockId || !marked.has(blockId)) return
+        element.classList.add("document-comment-marked")
+        if (blockId === activeBlockId) {
+          element.classList.add("document-comment-marked-active")
+        }
+      })
+  }, [activeBlockId, commentedBlockIds])
+
+  useEffect(() => {
+    applyMarks()
+    return blockEditor.onChange(() => applyMarks())
+  }, [applyMarks, blockEditor])
+
+  return null
 }
 
 /** 订阅选区变化，向工作区报告当前块 id 供评论锚定 */

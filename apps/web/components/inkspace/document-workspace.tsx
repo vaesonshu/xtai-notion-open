@@ -24,6 +24,7 @@ import { AiAssistantPanel } from "./ai-assistant-panel"
 import { AiWritingHost } from "./ai-writing-host"
 import {
   DocumentCommentBridge,
+  DocumentCommentMarkers,
   DocumentCommentsPanel,
 } from "./document-inline-comments"
 import { BlockStructureDebugger } from "./block-structure-debugger"
@@ -159,6 +160,7 @@ export function DocumentWorkspace({
   const [aiOpen, setAiOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
+  const [commentedBlockIds, setCommentedBlockIds] = useState<string[]>([])
   const [getDocumentText, setGetDocumentText] = useState<() => string>(
     () => () => ""
   )
@@ -352,7 +354,13 @@ export function DocumentWorkspace({
               userId={user.id}
               canWrite={editable}
             >
-              <DocumentPane>{surface}</DocumentPane>
+              <DocumentPane>
+                <DocumentCommentMarkers
+                  commentedBlockIds={commentedBlockIds}
+                  activeBlockId={activeBlockId}
+                />
+                {surface}
+              </DocumentPane>
             </AiWritingHost>
           )}
         >
@@ -379,6 +387,7 @@ export function DocumentWorkspace({
             documentId={documentId}
             userId={user.id}
             activeBlockId={activeBlockId}
+            onCommentedBlockIdsChange={setCommentedBlockIds}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>

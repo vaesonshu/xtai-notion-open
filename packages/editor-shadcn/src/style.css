@@ -40,6 +40,31 @@
   border-radius: 0.25rem;
 }
 
+/* 文档评论锚点：块级高亮 + 正文下划线（当前按整块锚定，非选区精确标注） */
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked {
+  background: rgba(255, 212, 0, 0.12);
+  border-radius: 0.25rem;
+}
+
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked > p,
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked > h1,
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked > h2,
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked > h3,
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked > blockquote,
+.ProseMirror [data-node-type="blockContainer"].document-comment-marked > li {
+  text-decoration: underline;
+  text-decoration-color: rgba(234, 179, 8, 0.55);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.ProseMirror
+  [data-node-type="blockContainer"].document-comment-marked.document-comment-marked-active {
+  background: rgba(255, 212, 0, 0.22);
+  outline: 2px solid rgba(234, 179, 8, 0.35);
+  outline-offset: 1px;
+}
+
 /* 本机 AI 代理光标（参考 BlockNote collaboration cursor，不广播 awareness） */
 .ai-write-agent-cursor {
   display: inline;
