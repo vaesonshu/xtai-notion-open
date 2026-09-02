@@ -9,6 +9,21 @@
 | **[Tiptap](https://tiptap.dev)** | 编辑内核：ProseMirror 封装、扩展体系、Yjs 协作集成 |
 | **[BlockNote](https://www.blocknotejs.org)** | 块模型与 UX：`Block[]` 对外 API、每块 UUID、斜杠菜单、块级 Enter / Backspace |
 
+## 项目优势
+
+相对飞书文档、Notion、语雀等闭源 SaaS，本项目的差异化不在功能广度，而在**可控性、可扩展性与开发者体验**：
+
+| 优势 | 说明 |
+|------|------|
+| **开源可自托管** | 编辑器 SDK 采用 **MIT** 许可；支持 Vercel + Render + Neon 等组合部署，文档与协作数据存于自有 PostgreSQL，满足数据主权与私有化需求 |
+| **可嵌入的编辑器 SDK** | 拆分为 `editor-core` / `editor-react` / `editor-shadcn` 三层，既可开箱即用，也可 Headless 嵌入 CRM、工单、知识库等自有产品 |
+| **`Block[]` 一等公民** | 对外文档模型为带 UUID 的块数组，语义与 Notion / 飞书一致；服务端无需 React 即可读写（见下文对比表） |
+| **UI 与块类型可扩展** | 通过 `ComponentsContext` 替换 UI 主题；通过 `defineBlockSpec` 注册自定义块，不被单一设计系统绑定 |
+| **全栈透明可改造** | Tiptap 3 + Yjs + NestJS 全链路开源，可深度定制协作协议、权限模型、AI 流程与存储策略 |
+| **AI 集成灵活** | 支持 OpenAI 兼容接口与自建模型；编辑器内续写 / 改写先本地草稿预览，接受后才同步协作，成本与流程可控 |
+
+**适合谁？** 需要私有化知识库、将 Notion 式编辑器嵌入现有产品、或希望 fork 后按业务深度定制的团队。若追求开箱即用的大厂级企业功能（SSO、审计、模板市场等），商业 SaaS 仍是更成熟的选择。
+
 ## 产品能力
 
 | 能力 | 说明 |
