@@ -347,11 +347,14 @@ export function DocumentWorkspace({
             parentTitle={parentTitle}
             apiUrl={apiUrl}
             documentId={documentId}
+            userId={user.id}
             canShare={editable}
+            canWrite={editable}
             publicationStatus={publicationStatus}
             onPublish={editable ? () => void submitPublication() : undefined}
             aiOpen={aiOpen}
             onAiToggle={() => setAiOpen((open) => !open)}
+            onVersionRestored={() => window.location.reload()}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>

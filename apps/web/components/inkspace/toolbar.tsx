@@ -8,6 +8,7 @@ import {
 import type { CollaborationUser } from "@xtai-notion/editor-core"
 import {
   ChevronDownIcon,
+  Clock3Icon,
   CloudCheckIcon,
   EllipsisIcon,
   FileTextIcon,
@@ -23,6 +24,12 @@ import {
 } from "@workspace/ui/components/avatar"
 import { Badge } from "@workspace/ui/components/badge"
 import { Button } from "@workspace/ui/components/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@workspace/ui/components/dropdown-menu"
 import { Separator } from "@workspace/ui/components/separator"
 import {
   Tooltip,
@@ -34,6 +41,8 @@ import { cn } from "@workspace/ui/lib/utils"
 import { PencilIcon } from "./icon"
 import { AuthMenu } from "../auth-menu"
 import { ShareDialog } from "./share-dialog"
+import { DocumentVersionHistory } from "./document-version-history"
+import { useState } from "react"
 
 export type EditorToolbarProps = {
   /** When omitted, status is read from CollaborationEditorProvider when available. */
@@ -41,11 +50,14 @@ export type EditorToolbarProps = {
   parentTitle?: string
   apiUrl?: string
   documentId?: string
+  userId?: string
   canShare?: boolean
+  canWrite?: boolean
   aiOpen?: boolean
   onAiToggle?: () => void
   publicationStatus?: "draft" | "pending" | "published"
   onPublish?: () => void
+  onVersionRestored?: () => void
 }
 
 // 发布按钮用背景色区分草稿、待审批与已上线三种状态。
@@ -204,12 +216,16 @@ export function EditorToolbar({
   parentTitle,
   apiUrl,
   documentId,
+  userId,
   canShare = true,
+  canWrite = true,
   aiOpen = false,
   onAiToggle,
   publicationStatus = "draft",
   onPublish,
+  onVersionRestored,
 }: EditorToolbarProps) {
+  const [versionOpen, setVersionOpen] = useState(false)
   const publicationLabel =
     publicationStatus === "pending"
       ? "待审批"
@@ -243,13 +259,39 @@ export function EditorToolbar({
           <PencilIcon icon={MessageSquareIcon} size={17} color="#615E58" />
           <span className="font-medium">AI</span>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="!text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
-        >
-          <PencilIcon icon={EllipsisIcon} size={17} color="#615E58" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="更多操作"
+                className="!text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
+              />
+            }
+          >
+            <PencilIcon icon={EllipsisIcon} size={17} color="#615E58" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {apiUrl && documentId && userId ? (
+              <DropdownMenuItem onClick={() => setVersionOpen(true)}>
+                <PencilIcon icon={Clock3Icon} size={16} />
+                版本历史
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {apiUrl && documentId && userId ? (
+          <DocumentVersionHistory
+            open={versionOpen}
+            onOpenChange={setVersionOpen}
+            apiUrl={apiUrl}
+            documentId={documentId}
+            userId={userId}
+            canWrite={canWrite}
+            onRestored={onVersionRestored}
+          />
+        ) : null}
         {apiUrl && documentId ? (
           <ShareDialog
             apiUrl={apiUrl}
