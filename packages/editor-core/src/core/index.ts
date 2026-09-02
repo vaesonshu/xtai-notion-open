@@ -138,3 +138,4 @@ export {
   type AiWriteValidationContext,
   type AiWritableBlockType,
 } from "./ai-write"
+export { blocksToMarkdown, markdownToBlocks } from "./markdown"

@@ -17,6 +17,7 @@ export {
   documentToPlainText,
 } from "./core/yjs-document"
 export { collectMentionIds } from "./core/mention-collect"
+export { blocksToMarkdown, markdownToBlocks } from "./core/markdown"
 export {
   AI_WRITABLE_BLOCK_TYPES,
   blocksToAiBlockViews,
