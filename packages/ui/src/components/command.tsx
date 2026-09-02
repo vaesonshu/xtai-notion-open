@@ -39,12 +39,15 @@ function CommandDialog({
   children,
   className,
   showCloseButton = false,
+  shouldFilter,
   ...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
   title?: string
   description?: string
   className?: string
   showCloseButton?: boolean
+  /** 关闭 cmdk 内置过滤，由调用方自行筛选列表项 */
+  shouldFilter?: boolean
   children: React.ReactNode
 }) {
   return (
@@ -60,7 +63,13 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        {/* cmdk 子组件（Input/List/Item）必须挂在 Command 上下文内 */}
+        <Command
+          shouldFilter={shouldFilter}
+          className="rounded-none border-0 bg-transparent shadow-none"
+        >
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   )
