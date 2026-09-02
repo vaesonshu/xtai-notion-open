@@ -49,6 +49,7 @@ model Document {
   shareLinks        DocumentShareLink[]
   comments          ArticleComment[]
   userPrefs         UserDocumentPref[]
+  documentComments  DocumentComment[]
 
   @@index([workspaceId])
   @@index([deletedAt])
@@ -84,6 +85,7 @@ model AppUser {
   publishedDocuments Document[] @relation("PublishedBy")
   shareLinks       DocumentShareLink[]
   articleComments  ArticleComment[]
+  documentComments DocumentComment[]
   documentPrefs    UserDocumentPref[]
 
   @@map("app_user")
@@ -122,6 +124,28 @@ model ArticleComment {
 
   @@index([articleId, createdAt])
   @@map("article_comment")
+}
+
+// 协作文档内块级评论；与广场 article_comment 分离，按 block_id 锚定。
+model DocumentComment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  blockId    String   @map("block_id")
+  userId     String   @map("user_id") @db.Uuid
+  parentId   String?  @map("parent_id") @db.Uuid
+  depth      Int      @default(0)
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  document Document          @relation(fields: [documentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user     AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parent   DocumentComment?  @relation("DocumentCommentReplies", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies  DocumentComment[] @relation("DocumentCommentReplies")
+
+  @@index([documentId, blockId, createdAt])
+  @@index([documentId, createdAt])
+  @@map("document_comment")
 }
 
 model UserSession {

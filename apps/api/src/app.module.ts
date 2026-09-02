@@ -8,6 +8,7 @@ import { ConfigModule } from "./config/config.module"
 import { PrismaModule } from "./database/prisma.module"
 import { DocumentsModule } from "./documents/documents.module"
 import { CommentsModule } from "./comments/comments.module"
+import { DocumentCommentsModule } from "./document-comments/document-comments.module"
 import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
 import { AiModule } from "./ai/ai.module"
@@ -20,6 +21,7 @@ import { AdminModule } from "./admin/admin.module"
     AuthModule,
     DocumentsModule,
     CommentsModule,
+    DocumentCommentsModule,
     CollaborationModule,
     CosModule,
     ImageUploadModule,
