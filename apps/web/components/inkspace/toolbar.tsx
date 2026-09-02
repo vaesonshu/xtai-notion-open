@@ -55,6 +55,8 @@ export type EditorToolbarProps = {
   canWrite?: boolean
   aiOpen?: boolean
   onAiToggle?: () => void
+  commentsOpen?: boolean
+  onCommentsToggle?: () => void
   publicationStatus?: "draft" | "pending" | "published"
   onPublish?: () => void
   onVersionRestored?: () => void
@@ -221,6 +223,8 @@ export function EditorToolbar({
   canWrite = true,
   aiOpen = false,
   onAiToggle,
+  commentsOpen = false,
+  onCommentsToggle,
   publicationStatus = "draft",
   onPublish,
   onVersionRestored,
@@ -247,6 +251,20 @@ export function EditorToolbar({
       </div>
       <div className="flex items-center gap-2.5">
         <CollaborationPresence />
+        {onCommentsToggle ? (
+          <Button
+            aria-label="文档评论"
+            title="文档评论"
+            aria-expanded={commentsOpen}
+            onClick={onCommentsToggle}
+            variant={commentsOpen ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1.5 !text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
+          >
+            <PencilIcon icon={MessageSquareIcon} size={17} color="#615E58" />
+            <span className="font-medium">评论</span>
+          </Button>
+        ) : null}
         <Button
           aria-label="AI 协作助手"
           title="AI 协作助手"

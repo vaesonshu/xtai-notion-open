@@ -22,6 +22,10 @@ import {
 } from "./image-upload"
 import { AiAssistantPanel } from "./ai-assistant-panel"
 import { AiWritingHost } from "./ai-writing-host"
+import {
+  DocumentCommentBridge,
+  DocumentCommentsPanel,
+} from "./document-inline-comments"
 import { BlockStructureDebugger } from "./block-structure-debugger"
 
 const showBlockStructureDebugger = process.env.NODE_ENV === "development"
@@ -153,6 +157,8 @@ export function DocumentWorkspace({
   >("draft")
   const [loadError, setLoadError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
   const [getDocumentText, setGetDocumentText] = useState<() => string>(
     () => () => ""
   )
@@ -160,6 +166,9 @@ export function DocumentWorkspace({
     (reader: () => string) => setGetDocumentText(() => reader),
     []
   )
+  const handleActiveBlockIdChange = useCallback((blockId: string | null) => {
+    setActiveBlockId(blockId)
+  }, [])
 
   const configured = isConfigured(apiUrl, collaborationUrl)
   const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
@@ -326,7 +335,12 @@ export function DocumentWorkspace({
           mentionProvider={mentionProvider}
           mentionNavigate={mentionNavigate}
           renderToolbar={() => (
-            <WorkspaceToolbarBridge onTextReady={handleTextReady} />
+            <>
+              <WorkspaceToolbarBridge onTextReady={handleTextReady} />
+              <DocumentCommentBridge
+                onActiveBlockIdChange={handleActiveBlockIdChange}
+              />
+            </>
           )}
           // The editor must shrink beside the AI panel without losing its own column layout.
           className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -354,7 +368,17 @@ export function DocumentWorkspace({
             onPublish={editable ? () => void submitPublication() : undefined}
             aiOpen={aiOpen}
             onAiToggle={() => setAiOpen((open) => !open)}
+            commentsOpen={commentsOpen}
+            onCommentsToggle={() => setCommentsOpen((open) => !open)}
             onVersionRestored={() => window.location.reload()}
+          />
+          <DocumentCommentsPanel
+            open={commentsOpen}
+            onOpenChange={setCommentsOpen}
+            apiUrl={apiUrl}
+            documentId={documentId}
+            userId={user.id}
+            activeBlockId={activeBlockId}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>
