@@ -2,6 +2,8 @@
 import {
   CURRENT_SCHEMA_VERSION,
   createBlockSchemaYDoc,
+  documentFromYjs,
+  documentToPlainText,
   readYDocSchemaVersion,
 } from "@xtai-notion/editor-core/server"
 import type { Block } from "@xtai-notion/editor-core/server"
@@ -223,6 +225,85 @@ export class YjsPersistenceService {
     const snapshot = Y.encodeStateAsUpdate(yDoc)
     yDoc.destroy()
     await this.repository.insertSnapshot(documentId, snapshot, 1)
+  }
+
+  /** 将当前协作文档固化为可回滚的历史版本 */
+  async saveVersion(documentId: string): Promise<{
+    id: string
+    sequence: number
+    createdAt: Date
+    excerpt: string
+  }> {
+    await this.flushDocument(documentId)
+    const doc = await this.loadDocument(documentId)
+    try {
+      const content = documentFromYjs(doc)
+      const excerpt = documentToPlainText(content).slice(0, 120)
+      const snapshot = Y.encodeStateAsUpdate(doc)
+      const maxSequence = await this.repository.getMaxSequence(documentId)
+      await this.repository.insertSnapshot(documentId, snapshot, maxSequence)
+      const versions = await this.repository.listSnapshots(documentId)
+      const latest = versions[0]
+      if (!latest) {
+        throw new Error("Failed to persist document version")
+      }
+      return {
+        id: latest.id.toString(),
+        sequence: latest.sequence,
+        createdAt: latest.createdAt,
+        excerpt,
+      }
+    } finally {
+      doc.destroy()
+    }
+  }
+
+  /** 列出文档历史版本（基于 Yjs 快照） */
+  async listVersions(documentId: string): Promise<
+    Array<{
+      id: string
+      sequence: number
+      createdAt: Date
+      excerpt: string
+    }>
+  > {
+    const rows = await this.repository.listSnapshots(documentId)
+    return rows.map((row) => {
+      const yDoc = new Y.Doc()
+      Y.applyUpdate(yDoc, new Uint8Array(row.snapshot))
+      let excerpt = ""
+      try {
+        const content = documentFromYjs(yDoc)
+        excerpt = documentToPlainText(content).slice(0, 120)
+      } catch {
+        excerpt = ""
+      } finally {
+        yDoc.destroy()
+      }
+      return {
+        id: row.id.toString(),
+        sequence: row.sequence,
+        createdAt: row.createdAt,
+        excerpt,
+      }
+    })
+  }
+
+  /** 将文档内容回滚到指定快照，并清空后续增量更新 */
+  async restoreVersion(documentId: string, versionId: string): Promise<void> {
+    const snapshotId = BigInt(versionId)
+    const row = await this.repository.getSnapshotById(snapshotId)
+    if (!row || row.documentId !== documentId) {
+      throw new Error("Version not found")
+    }
+    await this.flushDocument(documentId)
+    const nextSequence = (await this.repository.getMaxSequence(documentId)) + 1
+    await this.repository.deleteAllUpdates(documentId)
+    await this.repository.insertSnapshot(
+      documentId,
+      new Uint8Array(row.snapshot),
+      nextSequence
+    )
   }
 
   private getOrCreateBuffer(documentId: string): DocumentBuffer {

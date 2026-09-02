@@ -20,6 +20,7 @@ import type {
   DocumentRole,
   DocumentRow,
   DocumentGraphNode,
+  DocumentVersionSummary,
   PublishedArticle,
   PublishedArticleDetail,
 } from "./document-types"
@@ -147,7 +148,7 @@ export class DocumentsService {
     if (!row) throw new NotFoundException("Document not found")
     const role = await this.getMemberRole(documentId, userId)
     return this.toMetadata(
-      { ...row, role: role ?? "owner", is_favorite: false, last_opened_at: null },
+      { ...row, is_favorite: false, last_opened_at: null },
       role ?? "owner"
     )
   }
@@ -177,12 +178,49 @@ export class DocumentsService {
       {
         ...row,
         title: nextTitle,
-        role: "owner",
         is_favorite: false,
         last_opened_at: null,
       },
       "owner"
     )
+  }
+
+  async listDocumentVersions(
+    documentId: string,
+    userId: string
+  ): Promise<DocumentVersionSummary[]> {
+    await this.assertCanRead(documentId, userId)
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+    return this.yjsPersistence.listVersions(documentId)
+  }
+
+  async saveDocumentVersion(
+    documentId: string,
+    userId: string
+  ): Promise<DocumentVersionSummary> {
+    await this.assertCanWrite(documentId, userId)
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+    return this.yjsPersistence.saveVersion(documentId)
+  }
+
+  async restoreDocumentVersion(
+    documentId: string,
+    versionId: string,
+    userId: string
+  ): Promise<void> {
+    await this.assertCanWrite(documentId, userId)
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+    try {
+      await this.yjsPersistence.restoreVersion(documentId, versionId)
+    } catch {
+      throw new NotFoundException("Version not found")
+    }
   }
 
   /** 聚合用户可见文档及其 @mention 引用关系，供关系图谱可视化。 */

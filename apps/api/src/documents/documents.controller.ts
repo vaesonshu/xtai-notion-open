@@ -19,6 +19,7 @@ import type {
   PublishedArticle,
   PublishedArticleDetail,
   DocumentGraphNode,
+  DocumentVersionSummary,
 } from "./document-types"
 import { DocumentsService } from "./documents.service"
 import { ShareLinkService } from "./share-link.service"
@@ -121,6 +122,35 @@ export class DocumentsController {
   ): Promise<DocumentMetadata> {
     // Service owns membership rules so this endpoint cannot drift from sharing.
     return this.documents.submitPublication(documentId, user.id)
+  }
+
+  @Get(":documentId/versions")
+  listDocumentVersions(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentVersionSummary[]> {
+    return this.documents.listDocumentVersions(documentId, user.id)
+  }
+
+  @Post(":documentId/versions")
+  saveDocumentVersion(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<DocumentVersionSummary> {
+    return this.documents.saveDocumentVersion(documentId, user.id)
+  }
+
+  @Post(":documentId/versions/:versionId/restore")
+  restoreDocumentVersion(
+    @Param("documentId") documentId: string,
+    @Param("versionId") versionId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<void> {
+    return this.documents.restoreDocumentVersion(
+      documentId,
+      versionId,
+      user.id
+    )
   }
 
   @Patch(":documentId")

@@ -84,3 +84,11 @@ export interface DocumentGraphNode {
   title: string
   links: string[]
 }
+
+/** Yjs 快照对应的历史版本摘要 */
+export interface DocumentVersionSummary {
+  id: string
+  sequence: number
+  createdAt: Date
+  excerpt: string
+}

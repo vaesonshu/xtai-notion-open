@@ -133,6 +133,56 @@ export class YjsPersistenceRepository {
     })
   }
 
+  /** 列出文档全部 Yjs 快照，供版本历史展示 */
+  async listSnapshots(documentId: string): Promise<
+    Array<{
+      id: bigint
+      sequence: number
+      createdAt: Date
+      snapshot: Buffer
+    }>
+  > {
+    const rows = await this.prisma.client.yjsSnapshot.findMany({
+      where: { documentId },
+      orderBy: { createdAt: "desc" },
+    })
+    return rows.map((row) => ({
+      id: row.id,
+      sequence: toNumber(row.sequence),
+      createdAt: row.createdAt,
+      snapshot: Buffer.from(row.snapshot),
+    }))
+  }
+
+  async getSnapshotById(
+    snapshotId: bigint
+  ): Promise<{
+    id: bigint
+    documentId: string
+    sequence: number
+    createdAt: Date
+    snapshot: Buffer
+  } | null> {
+    const row = await this.prisma.client.yjsSnapshot.findUnique({
+      where: { id: snapshotId },
+    })
+    if (!row) return null
+    return {
+      id: row.id,
+      documentId: row.documentId,
+      sequence: toNumber(row.sequence),
+      createdAt: row.createdAt,
+      snapshot: Buffer.from(row.snapshot),
+    }
+  }
+
+  /** 清空增量更新，使协作文档仅由新快照驱动 */
+  async deleteAllUpdates(documentId: string): Promise<void> {
+    await this.prisma.client.yjsUpdate.deleteMany({
+      where: { documentId },
+    })
+  }
+
   private async nextSequenceIn(
     tx: Prisma.TransactionClient,
     documentId: string
