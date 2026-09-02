@@ -34,15 +34,32 @@ export function normalizeTextColorInput(value: string): string | null {
   return `#${raw}`
 }
 
-export function setTextColor(editor: Editor, color: string): boolean {
+export function setTextColor(
+  editor: Editor,
+  color: string,
+  options?: { focus?: boolean }
+): boolean {
   const normalized = normalizeTextColorInput(color)
   if (!normalized) {
     return false
   }
 
-  return editor.chain().focus().setColor(normalized).run()
+  const chain = editor.chain()
+  if (options?.focus !== false) {
+    chain.focus()
+  }
+
+  return chain.setColor(normalized).run()
 }
 
-export function unsetTextColor(editor: Editor): boolean {
-  return editor.chain().focus().unsetColor().run()
+export function unsetTextColor(
+  editor: Editor,
+  options?: { focus?: boolean }
+): boolean {
+  const chain = editor.chain()
+  if (options?.focus !== false) {
+    chain.focus()
+  }
+
+  return chain.unsetColor().run()
 }
