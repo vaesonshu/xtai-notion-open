@@ -31,7 +31,7 @@
 | **块编辑器** | 段落、标题、列表、待办、引用、代码、分割线、表格、图片、Excalidraw 画板等 |
 | **Notion 式交互** | `/` 斜杠菜单、选区气泡工具栏、左侧块拖拽把手、块级 Enter / Backspace 行为 |
 | **实时协作** | Yjs + Hocuspocus，多光标、离线恢复、PostgreSQL 持久化快照 |
-| **文档工作区** | 多文档管理、分享链接、成员角色（owner / editor / viewer） |
+| **文档工作区** | 多文档管理、分享链接、成员角色（owner / editor / viewer）；**回收站**、**收藏 / 最近**、**⌘K 搜索**、**Markdown 导入导出**、**版本历史**、**块级评论** |
 | **知识广场** | 文档发布、公开阅读、评论 |
 | **文档图谱** | 可视化文档之间的引用关系 |
 | **AI 助手** | 可选 OpenAI 兼容接口：编辑器内 `/ai` 斜杠续写与选区改写（本地草稿预览，接受后才同步协作）；侧边栏聊天为只读问答（需配置 API Key） |
@@ -41,6 +41,50 @@
 - 文档编辑：`/documents/[documentId]`
 - 编辑器测试台（无需完整后端）：`/editor-playground`
 - 知识广场：`/square`
+
+## 文档工作区能力（P0）
+
+以下能力对标飞书 / Notion / 语雀的「文档日常闭环」，已在工作区落地，可直接使用。
+
+| 功能 | 入口 / 操作 | 说明 |
+|------|-------------|------|
+| **回收站** | 侧边栏「回收站」；删除文档 → 移入回收站 | 软删除（`deleted_at`），支持恢复或永久删除；协作 Yjs 数据保留 |
+| **收藏 & 最近** | 侧边栏「收藏」视图；文档菜单收藏；打开文档自动记录 | 按用户维度存储偏好（`user_document_pref`）；最近列表展示最近 8 篇 |
+| **全文搜索** | 侧边栏「搜索」或 **⌘K / Ctrl+K** | 按标题、文档 ID、正文检索；正文命中时展示摘要片段 |
+| **Markdown 导入** | 侧边栏「导入 Markdown」 | 选择 `.md` 文件创建新文档（`markdownToBlocks`） |
+| **Markdown 导出** | 编辑器固定工具栏下载按钮 | 将当前文档导出为 `.md`（`blocksToMarkdown`） |
+| **版本历史** | 工具栏 **⋯ → 版本历史** | 基于 Yjs 快照：手动保存当前版本、列表浏览、回滚到历史版本 |
+| **文档内评论** | 工具栏 **「评论」** | 块级锚定（`block_id`）；光标所在段落可评论，支持嵌套回复与跳转到对应块 |
+
+### 相关 API（节选）
+
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| `GET` | `/documents/search?q=` | 全文搜索 |
+| `GET` | `/documents/trash` | 回收站列表 |
+| `POST` | `/documents/:id/restore` | 从回收站恢复 |
+| `DELETE` | `/documents/:id/permanent` | 永久删除 |
+| `PATCH` | `/documents/:id/pref` | 收藏 / 记录最近打开 |
+| `GET` | `/documents/favorites` · `/documents/recent` | 收藏与最近文档 |
+| `POST` | `/documents/import` | Markdown 导入 |
+| `GET` · `POST` | `/documents/:id/versions` | 列出版本 / 保存当前版本 |
+| `POST` | `/documents/:id/versions/:versionId/restore` | 恢复到指定版本 |
+| `GET` · `POST` | `/documents/:id/comments` | 文档内评论列表 / 发表（可选 `?blockId=`） |
+
+### 数据库迁移
+
+P0 能力依赖以下迁移（在 [`apps/api/prisma/migrations`](./apps/api/prisma/migrations)）：
+
+| 迁移 | 内容 |
+|------|------|
+| `003_document_lifecycle` | `document.deleted_at`；`user_document_pref`（收藏、最近打开） |
+| `004_document_comment` | `document_comment`（块级评论线程） |
+
+升级或首次部署后执行：
+
+```bash
+pnpm --filter api prisma migrate deploy
+```
 
 ## 为什么选择 Block[]，而不是 Tiptap JSON？
 
