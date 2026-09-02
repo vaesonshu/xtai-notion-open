@@ -14,6 +14,8 @@ import { useEffect, useState } from "react"
 export type SearchDocument = {
   id: string
   title: string
+  matchIn?: "title" | "body" | "id"
+  matchExcerpt?: string
 }
 
 type DocumentSearchDialogProps = {
@@ -63,11 +65,13 @@ export function DocumentSearchDialog({
         }
       )
         .then((response) => (response.ok ? response.json() : []))
-        .then((items: Array<{ id: string; title: string }>) => {
+        .then((items: Array<SearchDocument & { matchIn?: string; matchExcerpt?: string }>) => {
           setRemote(
             items.map((item) => ({
               id: item.id,
               title: item.title || "未命名文档",
+              matchIn: item.matchIn as SearchDocument["matchIn"],
+              matchExcerpt: item.matchExcerpt,
             }))
           )
         })
@@ -94,7 +98,7 @@ export function DocumentSearchDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="搜索文档"
-      description="按标题或文档 ID 搜索"
+      description="按标题、正文或文档 ID 搜索"
     >
       <CommandInput
         placeholder="搜索文档…"
@@ -107,14 +111,23 @@ export function DocumentSearchDialog({
           {results.map((item) => (
             <CommandItem
               key={item.id}
-              value={`${item.title} ${item.id}`}
+              value={`${item.title} ${item.id} ${item.matchExcerpt ?? ""}`}
               onSelect={() => {
                 onSelect(item.id)
                 onOpenChange(false)
               }}
             >
-              <FileTextIcon className="size-4 text-[#78746C]" />
-              <span className="truncate">{item.title || "未命名文档"}</span>
+              <FileTextIcon className="size-4 shrink-0 text-[#78746C]" />
+              <div className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {item.title || "未命名文档"}
+                </span>
+                {item.matchIn === "body" && item.matchExcerpt ? (
+                  <span className="mt-0.5 block truncate text-xs text-[#78746C]">
+                    {item.matchExcerpt}
+                  </span>
+                ) : null}
+              </div>
             </CommandItem>
           ))}
         </CommandGroup>
