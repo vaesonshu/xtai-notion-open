@@ -439,4 +439,56 @@ describe("DocumentsService", () => {
       { id: "doc-3", title: "Private", links: [] },
     ])
   })
+
+  it("searchDocuments matches title without loading Yjs", async () => {
+    const repo = createRepo({
+      listForUser: vi.fn().mockResolvedValue([
+        {
+          id: "doc-1",
+          workspace_id: "ws-1",
+          title: "产品规划",
+          role: "owner",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ]),
+    })
+    const persistence = { loadDocument: vi.fn() }
+    const service = new DocumentsService(repo, undefined, persistence as never)
+
+    const results = await service.searchDocuments("user-1", "产品")
+    expect(results).toHaveLength(1)
+    expect(results[0]?.matchIn).toBe("title")
+    expect(persistence.loadDocument).not.toHaveBeenCalled()
+  })
+
+  it("searchDocuments matches body text via Yjs plain text", async () => {
+    const yDoc = new Y.Doc()
+    const repo = createRepo({
+      listForUser: vi.fn().mockResolvedValue([
+        {
+          id: "doc-1",
+          workspace_id: "ws-1",
+          title: "未命名",
+          role: "owner",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ]),
+    })
+    const persistence = {
+      loadDocument: vi.fn().mockResolvedValue(yDoc),
+    }
+    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue([])
+    vi.spyOn(editorCore, "documentToPlainText").mockReturnValue(
+      "这是一段关于协作编辑器的说明"
+    )
+    const service = new DocumentsService(repo, undefined, persistence as never)
+
+    const results = await service.searchDocuments("user-1", "协作")
+    expect(results).toHaveLength(1)
+    expect(results[0]?.matchIn).toBe("body")
+    expect(results[0]?.matchExcerpt).toContain("协作")
+    expect(persistence.loadDocument).toHaveBeenCalledWith("doc-1")
+  })
 })

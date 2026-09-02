@@ -16,6 +16,7 @@ import type { DevUser } from "../auth/dev-user"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import type {
   DocumentMetadata,
+  DocumentSearchResult,
   PublishedArticle,
   PublishedArticleDetail,
   DocumentGraphNode,
@@ -63,7 +64,7 @@ export class DocumentsController {
   searchDocuments(
     @CurrentUser() user: DevUser,
     @Query("q") query = ""
-  ): Promise<DocumentMetadata[]> {
+  ): Promise<DocumentSearchResult[]> {
     return this.documents.searchDocuments(user.id, query)
   }
 

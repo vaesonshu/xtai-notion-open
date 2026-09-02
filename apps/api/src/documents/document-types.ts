@@ -92,3 +92,12 @@ export interface DocumentVersionSummary {
   createdAt: Date
   excerpt: string
 }
+
+/** 搜索命中来源：标题、正文或文档 ID */
+export type DocumentSearchMatchIn = "title" | "body" | "id"
+
+/** 文档搜索结果，在元数据基础上附带命中摘要 */
+export interface DocumentSearchResult extends DocumentMetadata {
+  matchIn: DocumentSearchMatchIn
+  matchExcerpt?: string
+}

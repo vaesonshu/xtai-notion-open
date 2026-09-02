@@ -20,6 +20,7 @@ import type {
   DocumentRole,
   DocumentRow,
   DocumentGraphNode,
+  DocumentSearchResult,
   DocumentVersionSummary,
   PublishedArticle,
   PublishedArticleDetail,
@@ -103,16 +104,51 @@ export class DocumentsService {
   async searchDocuments(
     userId: string,
     query: string
-  ): Promise<DocumentMetadata[]> {
+  ): Promise<DocumentSearchResult[]> {
     const trimmed = query.trim().toLowerCase()
     const rows = await this.documents.listForUser(userId)
-    const filtered = trimmed
-      ? rows.filter((row) => {
-          const haystack = `${row.title} ${row.id}`.toLowerCase()
-          return haystack.includes(trimmed)
+    if (!trimmed) {
+      return rows.map((row) => ({
+        ...this.toMetadata(row, row.role),
+        matchIn: "title" as const,
+      }))
+    }
+
+    const results: DocumentSearchResult[] = []
+    for (const row of rows) {
+      const titleMatch = row.title.toLowerCase().includes(trimmed)
+      const idMatch = row.id.toLowerCase().includes(trimmed)
+      if (titleMatch) {
+        results.push({
+          ...this.toMetadata(row, row.role),
+          matchIn: "title",
         })
-      : rows
-    return filtered.map((row) => this.toMetadata(row, row.role))
+        continue
+      }
+      if (idMatch) {
+        results.push({
+          ...this.toMetadata(row, row.role),
+          matchIn: "id",
+        })
+        continue
+      }
+
+      // 标题/ID 未命中时再加载 Yjs 正文做全文检索
+      if (!this.yjsPersistence) continue
+      const yDoc = await this.yjsPersistence.loadDocument(row.id)
+      try {
+        const plainText = documentToPlainText(documentFromYjs(yDoc))
+        if (!plainText.toLowerCase().includes(trimmed)) continue
+        results.push({
+          ...this.toMetadata(row, row.role),
+          matchIn: "body",
+          matchExcerpt: buildSearchExcerpt(plainText, trimmed),
+        })
+      } finally {
+        yDoc.destroy()
+      }
+    }
+    return results
   }
 
   async updateDocumentPref(
@@ -416,4 +452,17 @@ export class DocumentsService {
       deletedAt: row.deleted_at ?? null,
     }
   }
+}
+
+/** 截取关键词附近的正文片段，供搜索结果预览 */
+function buildSearchExcerpt(text: string, query: string, radius = 48): string {
+  const normalized = text.trim()
+  if (!normalized) return ""
+  const index = normalized.toLowerCase().indexOf(query.toLowerCase())
+  if (index < 0) return normalized.slice(0, radius * 2)
+  const start = Math.max(0, index - radius)
+  const end = Math.min(normalized.length, index + query.length + radius)
+  const prefix = start > 0 ? "…" : ""
+  const suffix = end < normalized.length ? "…" : ""
+  return `${prefix}${normalized.slice(start, end)}${suffix}`
 }
