@@ -1,0 +1,103 @@
+import { afterEach, describe, expect, it } from "vitest"
+import { BlockEditor } from "@core/block-editor"
+import { handleMarkdownPaste } from "@core/markdown/paste"
+
+const EMPTY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+const CODE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+
+const editors: BlockEditor[] = []
+
+function track(editor: BlockEditor) {
+  editors.push(editor)
+  return editor
+}
+
+afterEach(() => {
+  for (const editor of editors) editor.destroy()
+  editors.length = 0
+})
+
+function pasteEvent(plain: string, html = ""): ClipboardEvent {
+  return {
+    clipboardData: {
+      getData: (type: string) => {
+        if (type === "text/plain") return plain
+        if (type === "text/html") return html
+        return ""
+      },
+    },
+  } as ClipboardEvent
+}
+
+describe("handleMarkdownPaste", () => {
+  it("converts markdown plain text on an empty paragraph", () => {
+    const editor = track(
+      new BlockEditor({
+        initialContent: [
+          {
+            id: EMPTY_ID,
+            type: "paragraph",
+            props: {},
+            content: [],
+            children: [],
+          },
+        ],
+      })
+    )
+
+    const handled = handleMarkdownPaste(
+      editor,
+      pasteEvent("# Hello\n\n- item one")
+    )
+    expect(handled).toBe(true)
+    expect(editor.document[0]).toMatchObject({
+      id: EMPTY_ID,
+      type: "heading",
+    })
+    expect(editor.document[1]?.type).toBe("bulletListItem")
+  })
+
+  it("does not convert when html has list structure", () => {
+    const editor = track(
+      new BlockEditor({
+        initialContent: [
+          {
+            id: EMPTY_ID,
+            type: "paragraph",
+            props: {},
+            content: [],
+            children: [],
+          },
+        ],
+      })
+    )
+
+    const handled = handleMarkdownPaste(
+      editor,
+      pasteEvent("- item one", "<ul><li>item one</li></ul>")
+    )
+    expect(handled).toBe(false)
+    expect(editor.document[0]?.type).toBe("paragraph")
+  })
+
+  it("does not convert inside a code block", () => {
+    const editor = track(
+      new BlockEditor({
+        initialContent: [
+          {
+            id: CODE_ID,
+            type: "codeBlock",
+            props: { language: "" },
+            content: [{ type: "text", text: "const x = 1", styles: {} }],
+            children: [],
+          },
+        ],
+      })
+    )
+
+    editor.tiptap.commands.focus("end")
+    const handled = handleMarkdownPaste(editor, pasteEvent("# Hello"))
+    expect(handled).toBe(false)
+    expect(editor.document[0]?.type).toBe("codeBlock")
+  })
+})

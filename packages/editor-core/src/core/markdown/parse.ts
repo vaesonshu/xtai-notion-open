@@ -23,11 +23,39 @@ function createBlock(
   }
 }
 
-/** 解析行内 **bold** *italic* `code` 为 InlineContent */
+/** 解析行内 ***bold italic*** **bold** *italic* `code` 为带样式的片段 */
 function parseInline(text: string): InlineContent[] {
   if (!text) return []
-  // 简化实现：暂不拆分混排样式，整段作为纯文本
-  return textContent(text)
+
+  const pieces: InlineContent[] = []
+  // 长分隔符优先，避免 **bold** 被拆成斜体星号
+  const pattern = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      pieces.push(...textContent(text.slice(lastIndex, match.index)))
+    }
+
+    if (match[1] !== undefined) {
+      pieces.push(...textContent(match[1], { bold: true, italic: true }))
+    } else if (match[2] !== undefined) {
+      pieces.push(...textContent(match[2], { bold: true }))
+    } else if (match[3] !== undefined) {
+      pieces.push(...textContent(match[3], { italic: true }))
+    } else if (match[4] !== undefined) {
+      pieces.push(...textContent(match[4], { code: true }))
+    }
+
+    lastIndex = match.index + match[0].length
+  }
+
+  if (lastIndex < text.length) {
+    pieces.push(...textContent(text.slice(lastIndex)))
+  }
+
+  return pieces.length > 0 ? pieces : textContent(text)
 }
 
 /** 将 Markdown 文本解析为 Block[]（覆盖常见块类型，复杂表格/嵌套后续扩展） */

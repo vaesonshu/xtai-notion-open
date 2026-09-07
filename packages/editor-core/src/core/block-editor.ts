@@ -6,6 +6,7 @@ import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
 import { createEmptyBlocks } from "./block-schema/documents"
 import { generateBlockId, MAX_NEST_DEPTH } from "./block-schema/ids"
 import { handleTableBlockPaste } from "./block-schema/table-paste"
+import { handleMarkdownPaste } from "./markdown/paste"
 import type { Block, PartialBlock } from "./block-schema/types"
 import {
   BLOCK_SIDE_MENU_PLUGIN_KEY,
@@ -305,9 +306,9 @@ export class BlockEditor {
     this.editor = new Editor({
       extensions: options.editorSchema
         ? createBlockSchemaExtensionsFromRegistry(
-          extensionOptions,
-          options.editorSchema.registry
-        )
+            extensionOptions,
+            options.editorSchema.registry
+          )
         : createBlockSchemaExtensions(extensionOptions),
       editable: options.editable ?? true,
       editorProps: {
@@ -343,7 +344,12 @@ export class BlockEditor {
           return false
         },
         // 表格单元格内粘贴块 JSON 时压成纯文本，避免嵌套块结构
-        handlePaste: (view, event) => handleTableBlockPaste(view, event),
+        handlePaste: (view, event) => {
+          if (handleTableBlockPaste(view, event)) {
+            return true
+          }
+          return handleMarkdownPaste(this, event)
+        },
       },
       // Next.js 需显式关闭首帧渲染，避免 SSR/水合与软导航后正文空白
       immediatelyRender: false,

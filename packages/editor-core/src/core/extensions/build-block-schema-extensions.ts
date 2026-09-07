@@ -15,6 +15,7 @@ import type { Extension, Extensions, Node } from "@tiptap/core"
 import { BlockContainer, BlockDoc, BlockGroup } from "../block-schema/pm-nodes"
 import type { EditorExtensionOptions } from "../types"
 import { BlockKeymap } from "./block-keymap"
+import { MarkdownInputRules } from "./markdown-input-rules"
 import { CheckListItemClick } from "./check-list-item-click"
 import { MentionNode } from "./mention-node"
 import type { BlockSchemaRegistry } from "../schema/registry"
@@ -71,6 +72,7 @@ export function buildBlockSchemaExtensions(
     BlockGroup,
     BlockContainer,
     ...resolveBlockContentExtensions(registry, options),
+    MarkdownInputRules,
     BlockKeymap,
     CheckListItemClick,
     TableRow,

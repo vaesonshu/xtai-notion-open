@@ -32,6 +32,7 @@ describe("editor core", () => {
         "paragraph",
         "heading",
         "blockKeymap",
+        "markdownInputRules",
         "placeholder",
         "mention",
         "textStyle",
