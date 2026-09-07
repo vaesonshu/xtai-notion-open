@@ -213,6 +213,8 @@ export function BubbleToolbar() {
     <BubbleMenu
       editor={editor}
       updateDelay={0}
+      // z-index 挂在 TipTap 外壳上，才能压过侧栏拖拽钮
+      className="editor-bubble-toolbar"
       shouldShow={({ editor: activeEditor, state, from, to }) =>
         shouldShowBubbleToolbar({
           editor: activeEditor,

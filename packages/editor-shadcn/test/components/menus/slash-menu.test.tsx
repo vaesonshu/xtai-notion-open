@@ -295,7 +295,7 @@ describe("SlashMenu", () => {
     async (label, blockType) => {
       renderEditableSurface()
       await waitForEditor()
-    const editor = latestEditor
+      const editor = latestEditor
       expect(editor).not.toBeNull()
 
       await act(async () => {
@@ -385,6 +385,7 @@ describe("SlashMenu", () => {
     })
 
     expect(await screen.findByTestId("slash-menu")).toBeInTheDocument()
+    expect(screen.getByTestId("slash-menu")).toHaveClass("editor-slash-menu")
     expect(screen.getByTestId("slash-menu")).toHaveClass("bg-white")
     expect(screen.getByTestId("slash-menu")).toHaveClass("text-[#242321]")
     expect(screen.getByTestId("slash-menu").firstElementChild).toHaveClass(
@@ -452,9 +453,7 @@ describe("SlashMenu", () => {
     const openSlash = vi.fn()
     render(
       <TestEditorProvider initialContent={emptyParagraph}>
-        <AiWriteHostContext
-          value={{ openSlash, openSelection: vi.fn() }}
-        >
+        <AiWriteHostContext value={{ openSlash, openSelection: vi.fn() }}>
           <ImageUpload>
             <EditorSurface />
             <EditorProbe />

@@ -67,7 +67,9 @@
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked > h1,
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked > h2,
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked > h3,
-.ProseMirror [data-node-type="blockContainer"].document-comment-marked > blockquote,
+.ProseMirror
+  [data-node-type="blockContainer"].document-comment-marked
+  > blockquote,
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked > li {
   text-decoration: underline;
   text-decoration-color: rgba(234, 179, 8, 0.55);
@@ -602,7 +604,8 @@
   /* 高度由 block-handle 按块内容动态设置；此处仅保证空块可点 */
   min-height: 1.375rem;
   justify-content: center;
-  z-index: 20;
+  /* 低于选中文字/slash 浮层，避免与段落左侧把手视觉重叠时盖住菜单 */
+  z-index: 1;
 }
 
 .editor-block-side-menu__add,
@@ -674,7 +677,17 @@
   align-items: center;
   display: flex;
   justify-content: flex-start;
-  z-index: 20;
+  z-index: 1;
+}
+
+/* 与 style.css 同文件保证层级生效，避免仅 Tailwind 任意值被裁掉 */
+.editor-slash-menu,
+.editor-bubble-toolbar {
+  z-index: 50;
+}
+
+.editor-slash-submenu {
+  z-index: 51;
 }
 
 .editor-block-handle__grip {

@@ -3,12 +3,7 @@
 import type { Editor } from "@tiptap/core"
 import { BubbleMenu } from "@tiptap/react/menus"
 import { useEditorState } from "@tiptap/react"
-import {
-  Columns2Icon,
-  Rows2Icon,
-  TableIcon,
-  XIcon,
-} from "../../icons"
+import { Columns2Icon, Rows2Icon, TableIcon, XIcon } from "../../icons"
 import { Button } from "../../ui/button"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 
@@ -35,7 +30,10 @@ const TABLE_ACTIONS: TableAction[] = [
     label: "在右侧插入列",
     run: (editor) => editor.chain().focus().addColumnAfter().run(),
   },
-  { label: "删除行", run: (editor) => editor.chain().focus().deleteRow().run() },
+  {
+    label: "删除行",
+    run: (editor) => editor.chain().focus().deleteRow().run(),
+  },
   {
     label: "删除列",
     run: (editor) => editor.chain().focus().deleteColumn().run(),
@@ -65,6 +63,8 @@ export function TableMenu() {
     <BubbleMenu
       editor={editor}
       updateDelay={0}
+      className="editor-bubble-toolbar"
+      // 与选中文字工具栏共用层，避免表格工具条被侧栏把手盖住
       shouldShow={({ editor: active }) => active.isActive("table")}
     >
       <div

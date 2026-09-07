@@ -23,7 +23,10 @@ import {
   getSlashCommands,
   type SlashCommand,
 } from "@xtai-notion/editor-core/slash-commands"
-import type { Block, TableContent } from "@xtai-notion/editor-core/block-schema/types"
+import type {
+  Block,
+  TableContent,
+} from "@xtai-notion/editor-core/block-schema/types"
 import { generateBlockId } from "@xtai-notion/editor-core/block-schema/ids"
 import type { BlockEditor } from "@xtai-notion/editor-core"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
@@ -68,7 +71,11 @@ function createTableBlock(rows: number, cols: number): Block {
   }
 }
 
-function insertTableBlock(blockEditor: BlockEditor, rows: number, cols: number) {
+function insertTableBlock(
+  blockEditor: BlockEditor,
+  rows: number,
+  cols: number
+) {
   const tableBlock = createTableBlock(rows, cols)
   const selected = blockEditor.getSelectedBlocks()[0]
   if (selected && !blockHasVisibleContent(selected)) {
@@ -360,7 +367,8 @@ export function SlashMenu() {
       <div
         ref={slashRefs.setFloating}
         style={slashFloatingStyles}
-        className="z-[10050] w-72 rounded-lg border border-[#E8E4DC] bg-white p-1 text-[#242321] shadow-[0_8px_24px_rgba(36,35,33,0.12)]"
+        className="editor-slash-menu w-72 rounded-lg border border-[#E8E4DC] bg-white p-1 text-[#242321] shadow-[0_8px_24px_rgba(36,35,33,0.12)]"
+        // z-index 走 style.css，避免 Tailwind 任意值未产出时被侧栏把手盖住
         data-testid="slash-menu"
         role="listbox"
       >
@@ -428,7 +436,7 @@ export function SlashMenu() {
         <div
           ref={tableRefs.setFloating}
           style={tableFloatingStyles}
-          className="z-[10060] rounded-lg border border-[#E8E4DC] bg-white text-[#242321] shadow-[0_8px_24px_rgba(36,35,33,0.12)]"
+          className="editor-slash-submenu rounded-lg border border-[#E8E4DC] bg-white text-[#242321] shadow-[0_8px_24px_rgba(36,35,33,0.12)]"
           onMouseEnter={() => {
             if (tableCloseTimer.current) clearTimeout(tableCloseTimer.current)
           }}

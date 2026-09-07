@@ -91,7 +91,9 @@ function renderEditableSurface(
   return render(
     <EditorProvider initialContent={content} editable={editable}>
       {aiWriteHandlers ? (
-        <AiWriteHostContext value={aiWriteHandlers}>{surface}</AiWriteHostContext>
+        <AiWriteHostContext value={aiWriteHandlers}>
+          {surface}
+        </AiWriteHostContext>
       ) : (
         surface
       )}
@@ -101,7 +103,10 @@ function renderEditableSurface(
 
 async function selectFormattableRange(editor: Editor) {
   await act(async () => {
-    const textStart = editor.state.doc.textBetween(0, editor.state.doc.content.size).length
+    const textStart = editor.state.doc.textBetween(
+      0,
+      editor.state.doc.content.size
+    ).length
       ? 3
       : 1
     editor
@@ -173,6 +178,7 @@ describe("BubbleToolbar", () => {
 
     const toolbar = await screen.findByTestId("bubble-toolbar")
     expect(toolbar).toBeInTheDocument()
+    expect(toolbar.closest(".editor-bubble-toolbar")).not.toBeNull()
     expect(toolbar).toHaveClass("bg-white")
     expect(toolbar).toHaveClass("text-[#242321]")
     const bold = screen.getByRole("button", { name: "粗体" })
