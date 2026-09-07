@@ -266,7 +266,7 @@ describe("DocumentWorkspace", () => {
     await screen.findByRole("button", { name: "AI 协作助手" })
     fireEvent.click(screen.getByRole("button", { name: "AI 协作助手" }))
 
-    const layout = screen.getByTestId("document-workspace-layout")
+    const layout = screen.getByTestId("editor-body-row")
     expect(layout).toHaveClass("flex-row")
     expect(screen.getByTestId("editor-workspace")).toBeInTheDocument()
     expect(

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
@@ -38,8 +39,24 @@ export class DocumentCommentsController {
   createComment(
     @Param("documentId") documentId: string,
     @CurrentUser() user: DevUser,
-    @Body() body: { body?: string; blockId?: string; parentId?: string }
+    @Body()
+    body: {
+      body?: string
+      blockId?: string
+      anchorFrom?: number
+      anchorTo?: number
+      parentId?: string
+    }
   ): Promise<DocumentCommentRecord> {
     return this.comments.createComment(documentId, user.id, body)
+  }
+
+  @Delete(":documentId/comments/:commentId")
+  deleteComment(
+    @Param("documentId") documentId: string,
+    @Param("commentId") commentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<void> {
+    return this.comments.deleteComment(documentId, commentId, user.id)
   }
 }

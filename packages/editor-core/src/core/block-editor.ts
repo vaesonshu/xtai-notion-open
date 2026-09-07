@@ -18,6 +18,8 @@ import {
 import { handleBackspace } from "./extensions/block-keymap"
 import type { EditorSchema } from "./schema/create-editor-schema"
 import type { EditorExtensionOptions } from "./types"
+import { getCommentTextSelection as resolveCommentTextSelection } from "./document-comment-anchor"
+import type { CommentTextAnchor } from "./document-comment-anchor"
 
 type BlockEditorOptions = {
   initialContent?: Block[]
@@ -604,6 +606,11 @@ export class BlockEditor {
       }
     }
     return null
+  }
+
+  /** 非空文本选区且落在单块内时返回评论锚点 */
+  getCommentTextSelection(): CommentTextAnchor | null {
+    return resolveCommentTextSelection(this)
   }
 
   onChange(listener: (blocks: Block[]) => void): () => void {

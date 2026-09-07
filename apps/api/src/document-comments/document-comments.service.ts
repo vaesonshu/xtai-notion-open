@@ -1,7 +1,9 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
+  NotFoundException,
 } from "@nestjs/common"
 import { DocumentsService } from "../documents/documents.service"
 import {
@@ -33,7 +35,13 @@ export class DocumentCommentsService {
   async createComment(
     documentId: string,
     userId: string,
-    input: { body?: string; blockId?: string; parentId?: string }
+    input: {
+      body?: string
+      blockId?: string
+      anchorFrom?: number
+      anchorTo?: number
+      parentId?: string
+    }
   ): Promise<DocumentCommentRecord> {
     await this.documents.assertCanRead(documentId, userId)
 
@@ -55,6 +63,8 @@ export class DocumentCommentsService {
     let parentId: string | null = null
     let depth = 0
     let anchorBlockId = blockId
+    let anchorFrom: number | null = input.anchorFrom ?? null
+    let anchorTo: number | null = input.anchorTo ?? null
 
     if (input.parentId) {
       const parent = await this.comments.findById(input.parentId)
@@ -67,16 +77,44 @@ export class DocumentCommentsService {
       parentId = parent.id
       depth = parent.depth + 1
       anchorBlockId = parent.blockId
+      anchorFrom = parent.anchorFrom
+      anchorTo = parent.anchorTo
+    } else if (
+      anchorFrom == null ||
+      anchorTo == null ||
+      anchorFrom >= anchorTo
+    ) {
+      throw new BadRequestException("请选中要评论的文字")
     }
 
     return this.comments.create({
       documentId,
       blockId: anchorBlockId,
+      anchorFrom,
+      anchorTo,
       userId,
       parentId,
       depth,
       body,
     })
+  }
+
+  async deleteComment(
+    documentId: string,
+    commentId: string,
+    userId: string
+  ): Promise<void> {
+    await this.documents.assertCanRead(documentId, userId)
+
+    const comment = await this.comments.findById(commentId)
+    if (!comment || comment.documentId !== documentId) {
+      throw new NotFoundException("评论不存在")
+    }
+    if (comment.authorId !== userId) {
+      throw new ForbiddenException("只能删除自己的评论")
+    }
+
+    await this.comments.deleteById(commentId)
   }
 }
 

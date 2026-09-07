@@ -14,6 +14,7 @@ function createRepo(
     listForDocument: vi.fn().mockResolvedValue([]),
     findById: vi.fn(),
     create: vi.fn(),
+    deleteById: vi.fn(),
     ...overrides,
   } as unknown as DocumentCommentsRepository
 }
@@ -37,14 +38,17 @@ describe("DocumentCommentsService", () => {
     ).rejects.toBeInstanceOf(ForbiddenException)
   })
 
-  it("createComment requires blockId for root comments", async () => {
+  it("createComment requires text selection anchor for root comments", async () => {
     const service = new DocumentCommentsService(
       createRepo(),
       createDocuments()
     )
 
     await expect(
-      service.createComment("doc-1", "user-1", { body: "hi" })
+      service.createComment("doc-1", "user-1", {
+        blockId: "block-1",
+        body: "hi",
+      })
     ).rejects.toBeInstanceOf(BadRequestException)
   })
 
@@ -54,6 +58,8 @@ describe("DocumentCommentsService", () => {
         id: "c-1",
         documentId: "doc-1",
         blockId: "block-1",
+        anchorFrom: 0,
+        anchorTo: 4,
         parentId: null,
         depth: 0,
         body: "note",
@@ -67,6 +73,8 @@ describe("DocumentCommentsService", () => {
 
     const created = await service.createComment("doc-1", "user-1", {
       blockId: "block-1",
+      anchorFrom: 0,
+      anchorTo: 4,
       body: "note",
     })
 
@@ -75,8 +83,59 @@ describe("DocumentCommentsService", () => {
       expect.objectContaining({
         documentId: "doc-1",
         blockId: "block-1",
+        anchorFrom: 0,
+        anchorTo: 4,
         body: "note",
       })
     )
+  })
+
+  it("deleteComment allows authors to remove their own comment", async () => {
+    const repo = createRepo({
+      findById: vi.fn().mockResolvedValue({
+        id: "c-1",
+        documentId: "doc-1",
+        blockId: "block-1",
+        anchorFrom: 0,
+        anchorTo: 4,
+        parentId: null,
+        depth: 0,
+        body: "note",
+        authorId: "user-1",
+        authorName: "Alice",
+        authorColor: "#000",
+        createdAt: new Date(),
+      }),
+      deleteById: vi.fn().mockResolvedValue(undefined),
+    })
+    const service = new DocumentCommentsService(repo, createDocuments())
+
+    await service.deleteComment("doc-1", "c-1", "user-1")
+
+    expect(repo.deleteById).toHaveBeenCalledWith("c-1")
+  })
+
+  it("deleteComment rejects non-authors", async () => {
+    const repo = createRepo({
+      findById: vi.fn().mockResolvedValue({
+        id: "c-1",
+        documentId: "doc-1",
+        blockId: "block-1",
+        anchorFrom: 0,
+        anchorTo: 4,
+        parentId: null,
+        depth: 0,
+        body: "note",
+        authorId: "user-1",
+        authorName: "Alice",
+        authorColor: "#000",
+        createdAt: new Date(),
+      }),
+    })
+    const service = new DocumentCommentsService(repo, createDocuments())
+
+    await expect(
+      service.deleteComment("doc-1", "c-1", "user-2")
+    ).rejects.toBeInstanceOf(ForbiddenException)
   })
 })

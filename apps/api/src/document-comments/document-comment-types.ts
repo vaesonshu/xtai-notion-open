@@ -1,8 +1,10 @@
-/** 文档内块级评论的扁平记录（含作者展示字段）。 */
+/** 文档内选区评论的扁平记录（含作者展示字段）。 */
 export interface DocumentCommentRecord {
   id: string
   documentId: string
   blockId: string
+  anchorFrom: number | null
+  anchorTo: number | null
   parentId: string | null
   depth: number
   body: string
@@ -17,6 +19,8 @@ export interface DocumentCommentNode {
   id: string
   documentId: string
   blockId: string
+  anchorFrom: number | null
+  anchorTo: number | null
   parentId: string | null
   depth: number
   body: string

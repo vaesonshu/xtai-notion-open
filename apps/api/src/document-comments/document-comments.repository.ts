@@ -6,6 +6,8 @@ type CommentWithUser = {
   id: string
   documentId: string
   blockId: string
+  anchorFrom: number | null
+  anchorTo: number | null
   parentId: string | null
   depth: number
   body: string
@@ -23,6 +25,8 @@ export class DocumentCommentsRepository {
       id: comment.id,
       documentId: comment.documentId,
       blockId: comment.blockId,
+      anchorFrom: comment.anchorFrom,
+      anchorTo: comment.anchorTo,
       parentId: comment.parentId,
       depth: comment.depth,
       body: comment.body,
@@ -59,6 +63,8 @@ export class DocumentCommentsRepository {
   async create(input: {
     documentId: string
     blockId: string
+    anchorFrom?: number | null
+    anchorTo?: number | null
     userId: string
     parentId: string | null
     depth: number
@@ -68,6 +74,8 @@ export class DocumentCommentsRepository {
       data: {
         documentId: input.documentId,
         blockId: input.blockId,
+        anchorFrom: input.anchorFrom ?? null,
+        anchorTo: input.anchorTo ?? null,
         userId: input.userId,
         parentId: input.parentId,
         depth: input.depth,
@@ -76,5 +84,11 @@ export class DocumentCommentsRepository {
       include: { user: { select: { displayName: true, color: true } } },
     })
     return this.toRecord(comment)
+  }
+
+  async deleteById(commentId: string): Promise<void> {
+    await this.prisma.client.documentComment.delete({
+      where: { id: commentId },
+    })
   }
 }

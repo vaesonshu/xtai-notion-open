@@ -25,6 +25,8 @@ type DocumentEditorSharedProps = {
   children?: ReactNode
   renderToolbar?: () => ReactNode
   renderSurface?: (surface: ReactNode) => ReactNode
+  /** 与正文区并列的侧栏（评论、AI 等），不占用顶栏高度 */
+  renderSidePanel?: () => ReactNode
   imageUpload?: ImageUploadHandler
   canvasImageFetch?: CanvasImageFetchHandler
   /** 提供 @ 提及的候选文档；省略时提及菜单不显示任何结果。 */
@@ -86,6 +88,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
     children,
     renderToolbar,
     renderSurface,
+    renderSidePanel,
     mentionProvider,
     mentionNavigate,
   } = props
@@ -106,9 +109,15 @@ export function DocumentEditor(props: DocumentEditorProps) {
             {children ? (
               <div className="shrink-0">{children}</div>
             ) : null}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <EditorReadyToolbar renderToolbar={renderToolbar} />
-              {framedSurface}
+            <div
+              className="flex min-h-0 flex-1 flex-row overflow-hidden"
+              data-testid="editor-body-row"
+            >
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <EditorReadyToolbar renderToolbar={renderToolbar} />
+                {framedSurface}
+              </div>
+              {renderSidePanel?.()}
             </div>
           </div>
         </ImageUpload>

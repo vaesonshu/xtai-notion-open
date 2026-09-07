@@ -50,6 +50,16 @@ export {
   propsToAttributes,
 } from "./schema"
 export { setAiWriteDraftIds } from "./extensions/ai-write-draft-extension"
+export {
+  setDocumentCommentMarkIds,
+  setDocumentCommentMarks,
+} from "./extensions/document-comment-mark-extension"
+export {
+  type CommentTextAnchor,
+  type DocumentCommentMarkEntry,
+  findCommentMarkAtPos,
+  getCommentTextSelection,
+} from "./document-comment-anchor"
 export { setAiWriteAgentCursor } from "./extensions/ai-write-agent-cursor-extension"
 export { ImageUploadNode } from "./extensions/image-upload-node"
 export type { BlockCommandMode, SlashCommand } from "./slash-commands"

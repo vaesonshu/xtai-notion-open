@@ -126,11 +126,13 @@ model ArticleComment {
   @@map("article_comment")
 }
 
-// 协作文档内块级评论；与广场 article_comment 分离，按 block_id 锚定。
+// 协作文档内选区评论；anchor_from/to 为块内 plain text 偏移。
 model DocumentComment {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   documentId String   @map("document_id") @db.Uuid
   blockId    String   @map("block_id")
+  anchorFrom Int?     @map("anchor_from")
+  anchorTo   Int?     @map("anchor_to")
   userId     String   @map("user_id") @db.Uuid
   parentId   String?  @map("parent_id") @db.Uuid
   depth      Int      @default(0)

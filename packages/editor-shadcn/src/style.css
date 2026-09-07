@@ -40,10 +40,27 @@
   border-radius: 0.25rem;
 }
 
-/* 文档评论锚点：块级高亮 + 正文下划线（当前按整块锚定，非选区精确标注） */
+/* 文档评论锚点：选区 inline 高亮 + 下划线 */
+.ProseMirror .document-comment-inline-mark {
+  background: rgba(255, 212, 0, 0.28);
+  border-radius: 0.125rem;
+  text-decoration: underline;
+  text-decoration-color: rgba(234, 179, 8, 0.65);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ProseMirror .document-comment-inline-mark.document-comment-inline-mark-active {
+  background: rgba(255, 212, 0, 0.45);
+  outline: 1px solid rgba(234, 179, 8, 0.45);
+}
+
+/* 旧数据块级评论回退样式 */
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked {
   background: rgba(255, 212, 0, 0.12);
   border-radius: 0.25rem;
+  cursor: pointer;
 }
 
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked > p,

@@ -1,6 +1,10 @@
 "use client"
 
-import type { CollaborationUser } from "@xtai-notion/editor-core"
+import type {
+  CollaborationUser,
+  CommentTextAnchor,
+  DocumentCommentMarkEntry,
+} from "@xtai-notion/editor-core"
 import { useEditorText } from "@xtai-notion/editor-react"
 import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import { DocumentEditor } from "@xtai-notion/editor-shadcn"
@@ -159,8 +163,13 @@ export function DocumentWorkspace({
   const [loadError, setLoadError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
   const [commentsOpen, setCommentsOpen] = useState(false)
-  const [activeBlockId, setActiveBlockId] = useState<string | null>(null)
-  const [commentedBlockIds, setCommentedBlockIds] = useState<string[]>([])
+  const [commentAnchor, setCommentAnchor] = useState<CommentTextAnchor | null>(
+    null
+  )
+  const [activeCommentId, setActiveCommentId] = useState<string | null>(null)
+  const [commentMarks, setCommentMarks] = useState<DocumentCommentMarkEntry[]>(
+    []
+  )
   const [getDocumentText, setGetDocumentText] = useState<() => string>(
     () => () => ""
   )
@@ -168,8 +177,24 @@ export function DocumentWorkspace({
     (reader: () => string) => setGetDocumentText(() => reader),
     []
   )
-  const handleActiveBlockIdChange = useCallback((blockId: string | null) => {
-    setActiveBlockId(blockId)
+  const handleSelectionAnchorChange = useCallback(
+    (anchor: CommentTextAnchor | null) => {
+      if (anchor) {
+        setCommentAnchor(anchor)
+        setActiveCommentId(null)
+      }
+    },
+    []
+  )
+  const handleCommentAnchorClear = useCallback(() => {
+    setCommentAnchor(null)
+  }, [])
+  const handleCommentMarkClick = useCallback((commentId: string) => {
+    setActiveCommentId(commentId)
+    setCommentsOpen(true)
+  }, [])
+  const handleCommentDeleted = useCallback((commentId: string) => {
+    setActiveCommentId((current) => (current === commentId ? null : current))
   }, [])
 
   const configured = isConfigured(apiUrl, collaborationUrl)
@@ -316,7 +341,7 @@ export function DocumentWorkspace({
 
   return (
     <div
-      className="flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden"
+      className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       data-testid="document-workspace-layout"
     >
       <div
@@ -340,7 +365,33 @@ export function DocumentWorkspace({
             <>
               <WorkspaceToolbarBridge onTextReady={handleTextReady} />
               <DocumentCommentBridge
-                onActiveBlockIdChange={handleActiveBlockIdChange}
+                commentMarks={commentMarks}
+                onSelectionAnchorChange={handleSelectionAnchorChange}
+                onCommentMarkClick={handleCommentMarkClick}
+              />
+            </>
+          )}
+          renderSidePanel={() => (
+            <>
+              <DocumentCommentsPanel
+                open={commentsOpen}
+                onOpenChange={setCommentsOpen}
+                apiUrl={apiUrl}
+                documentId={documentId}
+                userId={user.id}
+                commentAnchor={commentAnchor}
+                onCommentAnchorClear={handleCommentAnchorClear}
+                activeCommentId={activeCommentId}
+                onCommentMarksChange={setCommentMarks}
+                onCommentDeleted={handleCommentDeleted}
+              />
+              <AiAssistantPanel
+                open={aiOpen}
+                onClose={() => setAiOpen(false)}
+                apiUrl={apiUrl}
+                documentId={documentId}
+                userId={user.id}
+                getDocumentText={getDocumentText}
               />
             </>
           )}
@@ -356,8 +407,8 @@ export function DocumentWorkspace({
             >
               <DocumentPane>
                 <DocumentCommentMarkers
-                  commentedBlockIds={commentedBlockIds}
-                  activeBlockId={activeBlockId}
+                  commentMarks={commentMarks}
+                  activeCommentId={activeCommentId}
                 />
                 {surface}
               </DocumentPane>
@@ -380,26 +431,9 @@ export function DocumentWorkspace({
             onCommentsToggle={() => setCommentsOpen((open) => !open)}
             onVersionRestored={() => window.location.reload()}
           />
-          <DocumentCommentsPanel
-            open={commentsOpen}
-            onOpenChange={setCommentsOpen}
-            apiUrl={apiUrl}
-            documentId={documentId}
-            userId={user.id}
-            activeBlockId={activeBlockId}
-            onCommentedBlockIdsChange={setCommentedBlockIds}
-          />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>
       </div>
-      <AiAssistantPanel
-        open={aiOpen}
-        onClose={() => setAiOpen(false)}
-        apiUrl={apiUrl}
-        documentId={documentId}
-        userId={user.id}
-        getDocumentText={getDocumentText}
-      />
     </div>
   )
 }

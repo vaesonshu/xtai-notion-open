@@ -1,19 +1,29 @@
 "use client"
 
 import { MessageSquareIcon } from "@workspace/icons"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@workspace/ui/components/alert-dialog"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@workspace/ui/components/sheet"
 import { Textarea } from "@workspace/ui/components/textarea"
+import { cn } from "@workspace/ui/lib/utils"
 import { useBlockEditor } from "@xtai-notion/editor-react"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
-import { use, useCallback, useEffect, useMemo, useState } from "react"
+import {
+  type CommentTextAnchor,
+  type DocumentCommentMarkEntry,
+  findCommentMarkAtPos,
+  setDocumentCommentMarks,
+} from "@xtai-notion/editor-core"
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
 import { PencilIcon } from "./icon"
 
@@ -21,6 +31,8 @@ export type DocumentCommentNode = {
   id: string
   documentId: string
   blockId: string
+  anchorFrom: number | null
+  anchorTo: number | null
   parentId: string | null
   depth: number
   body: string
@@ -31,19 +43,24 @@ export type DocumentCommentNode = {
   replies: DocumentCommentNode[]
 }
 
-/** 从评论树收集所有被标注的块 id */
-export function collectCommentedBlockIds(
+/** 从评论树收集 PM 装饰所需的锚点条目 */
+export function collectCommentMarks(
   comments: readonly DocumentCommentNode[]
-): string[] {
-  const ids = new Set<string>()
+): DocumentCommentMarkEntry[] {
+  const marks: DocumentCommentMarkEntry[] = []
   const walk = (nodes: readonly DocumentCommentNode[]) => {
     for (const node of nodes) {
-      ids.add(node.blockId)
+      marks.push({
+        id: node.id,
+        blockId: node.blockId,
+        anchorFrom: node.anchorFrom,
+        anchorTo: node.anchorTo,
+      })
       walk(node.replies)
     }
   }
   walk(comments)
-  return [...ids]
+  return marks
 }
 
 type DocumentCommentsPanelProps = {
@@ -52,8 +69,11 @@ type DocumentCommentsPanelProps = {
   apiUrl: string
   documentId: string
   userId: string
-  activeBlockId: string | null
-  onCommentedBlockIdsChange?: (blockIds: string[]) => void
+  commentAnchor: CommentTextAnchor | null
+  onCommentAnchorClear: () => void
+  activeCommentId: string | null
+  onCommentMarksChange?: (marks: DocumentCommentMarkEntry[]) => void
+  onCommentDeleted?: (commentId: string) => void
 }
 
 const DEFAULT_AUTHOR_COLOR = "#242321"
@@ -78,6 +98,11 @@ function getAuthorInitials(name: string): string {
     .toUpperCase()
 }
 
+function truncatePreview(text: string, max = 48): string {
+  if (text.length <= max) return text
+  return `${text.slice(0, max)}…`
+}
+
 /** 滚动到评论锚定的块容器 */
 function scrollToBlock(blockId: string): void {
   const element = document.querySelector(`[data-id="${blockId}"]`)
@@ -98,17 +123,43 @@ function CommentAuthorAvatar({ name, color }: { name: string; color: string }) {
   )
 }
 
+function countReplies(comment: DocumentCommentNode): number {
+  return comment.replies.reduce(
+    (total, reply) => total + 1 + countReplies(reply),
+    0
+  )
+}
+
 function CommentThread({
   comment,
+  userId,
+  activeCommentId,
   onReply,
   onJumpToBlock,
+  onDelete,
+  deletingCommentId,
 }: {
   comment: DocumentCommentNode
+  userId: string
+  activeCommentId: string | null
   onReply: (parentId: string) => void
   onJumpToBlock: (blockId: string) => void
+  onDelete: (comment: DocumentCommentNode) => void
+  deletingCommentId: string | null
 }) {
+  const canDelete = comment.authorId === userId
+  const isActive = activeCommentId === comment.id
+
   return (
-    <li className="flex flex-col gap-2">
+    <li
+      className={cn(
+        "flex flex-col gap-2 rounded-lg p-2 transition-colors",
+        isActive &&
+          "bg-[rgba(255,212,0,0.18)] ring-1 ring-[rgba(234,179,8,0.35)]"
+      )}
+      data-comment-id={comment.id}
+      data-active={isActive ? "true" : undefined}
+    >
       <div className="flex gap-2.5">
         <CommentAuthorAvatar
           name={comment.authorName}
@@ -140,8 +191,18 @@ function CommentThread({
               className="cursor-pointer text-xs text-[#78746C] hover:text-[#242321]"
               onClick={() => onJumpToBlock(comment.blockId)}
             >
-              定位到块
+              定位到正文
             </button>
+            {canDelete ? (
+              <button
+                type="button"
+                className="cursor-pointer text-xs text-[#78746C] hover:text-[#E64B3C] disabled:opacity-50"
+                disabled={deletingCommentId === comment.id}
+                onClick={() => onDelete(comment)}
+              >
+                {deletingCommentId === comment.id ? "删除中…" : "删除"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -151,8 +212,12 @@ function CommentThread({
             <CommentThread
               key={reply.id}
               comment={reply}
+              userId={userId}
+              activeCommentId={activeCommentId}
               onReply={onReply}
               onJumpToBlock={onJumpToBlock}
+              onDelete={onDelete}
+              deletingCommentId={deletingCommentId}
             />
           ))}
         </ul>
@@ -161,21 +226,31 @@ function CommentThread({
   )
 }
 
-/** 文档内评论侧栏：按块锚定，支持回复与跳转到对应块 */
+/** 文档内评论侧栏：按选区锚定，支持回复与跳转到对应正文 */
 export function DocumentCommentsPanel({
   open,
   onOpenChange,
   apiUrl,
   documentId,
   userId,
-  activeBlockId,
-  onCommentedBlockIdsChange,
+  commentAnchor,
+  onCommentAnchorClear,
+  activeCommentId,
+  onCommentMarksChange,
+  onCommentDeleted,
 }: DocumentCommentsPanelProps) {
   const [comments, setComments] = useState<DocumentCommentNode[]>([])
   const [loading, setLoading] = useState(false)
   const [body, setBody] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(
+    null
+  )
+  const [deleteTarget, setDeleteTarget] = useState<DocumentCommentNode | null>(
+    null
+  )
   const [replyParentId, setReplyParentId] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const baseUrl = `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/comments`
 
@@ -187,17 +262,19 @@ export function DocumentCommentsPanel({
         headers: { "x-dev-user-id": userId },
       })
       if (!response.ok) throw new Error("加载评论失败")
-      const items = (await response.json()) as DocumentCommentNode[]
+      const payload = await response.json()
+      const items = Array.isArray(payload)
+        ? (payload as DocumentCommentNode[])
+        : []
       setComments(items)
-      onCommentedBlockIdsChange?.(collectCommentedBlockIds(items))
+      onCommentMarksChange?.(collectCommentMarks(items))
     } catch (error) {
       toastError(error, "加载评论失败")
     } finally {
       setLoading(false)
     }
-  }, [baseUrl, userId, onCommentedBlockIdsChange])
+  }, [baseUrl, userId, onCommentMarksChange])
 
-  // 打开文档即加载评论，以便正文显示批注标记（不仅限侧栏打开时）
   useEffect(() => {
     void loadComments()
   }, [loadComments])
@@ -206,15 +283,52 @@ export function DocumentCommentsPanel({
     if (open) void loadComments()
   }, [loadComments, open])
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, DocumentCommentNode[]>()
-    for (const comment of comments) {
-      const list = map.get(comment.blockId) ?? []
-      list.push(comment)
-      map.set(comment.blockId, list)
+  useEffect(() => {
+    if (!open || !activeCommentId || loading || !scrollRef.current) return
+
+    const frame = requestAnimationFrame(() => {
+      const item = scrollRef.current?.querySelector(
+        `[data-comment-id="${activeCommentId}"]`
+      )
+      item?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [activeCommentId, open, loading, comments])
+
+  const threads = useMemo(() => comments, [comments])
+
+  const deleteReplyCount = deleteTarget ? countReplies(deleteTarget) : 0
+
+  async function confirmDelete() {
+    if (!deleteTarget || deletingCommentId) return
+
+    const comment = deleteTarget
+    setDeletingCommentId(comment.id)
+    try {
+      const response = await fetch(`${baseUrl}/${comment.id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "x-dev-user-id": userId },
+      })
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          message?: string
+        } | null
+        throw new Error(payload?.message || "删除评论失败")
+      }
+      if (replyParentId === comment.id) {
+        setReplyParentId(null)
+      }
+      onCommentDeleted?.(comment.id)
+      setDeleteTarget(null)
+      toast.success("评论已删除")
+      await loadComments()
+    } catch (error) {
+      toastError(error, "删除评论失败")
+    } finally {
+      setDeletingCommentId(null)
     }
-    return [...map.entries()]
-  }, [comments])
+  }
 
   async function submitComment() {
     const trimmed = body.trim()
@@ -222,8 +336,8 @@ export function DocumentCommentsPanel({
       toast.error("请输入评论内容")
       return
     }
-    if (!replyParentId && !activeBlockId) {
-      toast.error("请先将光标放在要评论的段落上")
+    if (!replyParentId && !commentAnchor) {
+      toast.error("请先在正文中选中要评论的文字")
       return
     }
 
@@ -238,7 +352,9 @@ export function DocumentCommentsPanel({
         },
         body: JSON.stringify({
           body: trimmed,
-          blockId: activeBlockId ?? undefined,
+          blockId: commentAnchor?.blockId,
+          anchorFrom: commentAnchor?.anchorFrom,
+          anchorTo: commentAnchor?.anchorTo,
           parentId: replyParentId ?? undefined,
         }),
       })
@@ -250,6 +366,7 @@ export function DocumentCommentsPanel({
       }
       setBody("")
       setReplyParentId(null)
+      onCommentAnchorClear()
       toast.success(replyParentId ? "回复已发布" : "评论已发布")
       await loadComments()
     } catch (error) {
@@ -260,97 +377,157 @@ export function DocumentCommentsPanel({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[380px] sm:max-w-[380px]">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+    <>
+      {open ? (
+        <aside
+          className="flex h-full min-h-0 w-[min(280px,100vw)] min-w-0 shrink-0 flex-col border-l border-[#E8E6E1] bg-white"
+          aria-label="文档评论"
+        >
+      <div className="flex items-start justify-between gap-2 border-b border-[#E8E6E1] p-4">
+        <div className="min-w-0 flex-1">
+          <h2 className="flex items-center gap-2 font-semibold text-[#242321]">
             <PencilIcon icon={MessageSquareIcon} size={18} />
             文档评论
-          </SheetTitle>
-          <SheetDescription>
-            将光标放在段落上即可评论该块；评论后正文会以高亮与下划线标识，点击「定位到块」可跳转。
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4 px-4 pb-6">
-          <div className="rounded-lg border border-[#E8E6E1] p-3">
-            {replyParentId ? (
-              <p className="mb-2 text-xs text-[#78746C]">
-                正在回复评论…
-                <button
-                  type="button"
-                  className="ml-2 cursor-pointer text-[#242321] underline"
-                  onClick={() => setReplyParentId(null)}
-                >
-                  取消
-                </button>
-              </p>
-            ) : activeBlockId ? (
-              <p className="mb-2 text-xs text-[#78746C]">
-                将评论添加到当前块
-              </p>
-            ) : (
-              <p className="mb-2 text-xs text-[#9A6700]">
-                请先在正文中点击要评论的段落
-              </p>
-            )}
-            <Textarea
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              placeholder="写下你的评论…"
-              rows={3}
-              className="resize-none"
-            />
-            <Button
-              type="button"
-              size="sm"
-              className="mt-2"
-              disabled={submitting}
-              onClick={() => void submitComment()}
-            >
-              {submitting ? "发送中…" : replyParentId ? "回复" : "发表评论"}
-            </Button>
-          </div>
-
-          {loading ? (
-            <p className="text-sm text-[#78746C]">加载中…</p>
-          ) : grouped.length === 0 ? (
-            <p className="text-sm text-[#78746C]">暂无评论</p>
-          ) : (
-            grouped.map(([blockId, threads]) => (
-              <section key={blockId} className="flex flex-col gap-3">
-                <button
-                  type="button"
-                  className="cursor-pointer text-left text-xs font-medium text-[#78746C] hover:text-[#242321]"
-                  onClick={() => scrollToBlock(blockId)}
-                >
-                  块 {blockId.slice(0, 8)}…
-                </button>
-                <ul className="flex flex-col gap-3">
-                  {threads.map((comment) => (
-                    <CommentThread
-                      key={comment.id}
-                      comment={comment}
-                      onReply={setReplyParentId}
-                      onJumpToBlock={scrollToBlock}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))
-          )}
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-[#78746C]">
+            选中正文文字后即可评论；点击划线内容可定位到对应评论。
+          </p>
         </div>
-      </SheetContent>
-    </Sheet>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="shrink-0"
+          onClick={() => {
+            setDeleteTarget(null)
+            onOpenChange(false)
+          }}
+          aria-label="关闭评论侧栏"
+        >
+          关闭
+        </Button>
+      </div>
+      <div
+        ref={scrollRef}
+        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
+      >
+        <div className="rounded-lg border border-[#E8E6E1] p-3">
+          {replyParentId ? (
+            <p className="mb-2 text-xs text-[#78746C]">
+              正在回复评论…
+              <button
+                type="button"
+                className="ml-2 cursor-pointer text-[#242321] underline"
+                onClick={() => setReplyParentId(null)}
+              >
+                取消
+              </button>
+            </p>
+          ) : commentAnchor ? (
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <p className="text-xs text-[#78746C]">
+                评论选中：
+                <span className="font-medium text-[#242321]">
+                  「{truncatePreview(commentAnchor.preview)}」
+                </span>
+              </p>
+              <button
+                type="button"
+                className="shrink-0 cursor-pointer text-xs text-[#78746C] underline hover:text-[#242321]"
+                onClick={onCommentAnchorClear}
+              >
+                重选
+              </button>
+            </div>
+          ) : (
+            <p className="mb-2 text-xs text-[#9A6700]">
+              请先在正文中选中要评论的文字
+            </p>
+          )}
+          <Textarea
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            placeholder="写下你的评论…"
+            rows={3}
+            className="resize-none"
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="mt-2"
+            disabled={submitting}
+            onClick={() => void submitComment()}
+          >
+            {submitting ? "发送中…" : replyParentId ? "回复" : "发表评论"}
+          </Button>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-[#78746C]">加载中…</p>
+        ) : threads.length === 0 ? (
+          <p className="text-sm text-[#78746C]">暂无评论</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {threads.map((comment) => (
+              <CommentThread
+                key={comment.id}
+                comment={comment}
+                userId={userId}
+                activeCommentId={activeCommentId}
+                onReply={setReplyParentId}
+                onJumpToBlock={scrollToBlock}
+                onDelete={setDeleteTarget}
+                deletingCommentId={deletingCommentId}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+        </aside>
+      ) : null}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(next) => {
+          if (!next && !deletingCommentId) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除这条评论？</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteReplyCount > 0
+                ? `确定删除这条评论吗？其下的 ${deleteReplyCount} 条回复也会一并删除，此操作无法撤销。`
+                : "确定删除这条评论吗？此操作无法撤销。"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="cursor-pointer"
+              disabled={deletingCommentId !== null}
+            >
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="cursor-pointer"
+              disabled={deletingCommentId !== null}
+              onClick={() => void confirmDelete()}
+            >
+              {deletingCommentId ? "删除中…" : "确认删除"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
-/** 在编辑器 DOM 上同步评论锚点样式（块级高亮 + 下划线） */
+/** 通过 PM 装饰同步评论锚点样式 */
 export function DocumentCommentMarkers({
-  commentedBlockIds,
-  activeBlockId,
+  commentMarks,
+  activeCommentId,
 }: {
-  commentedBlockIds: readonly string[]
-  activeBlockId?: string | null
+  commentMarks: readonly DocumentCommentMarkEntry[]
+  activeCommentId?: string | null
 }) {
   const context = use(EditorContext)
   if (!context?.blockEditor) {
@@ -358,66 +535,87 @@ export function DocumentCommentMarkers({
   }
   return (
     <DocumentCommentMarkersReady
-      commentedBlockIds={commentedBlockIds}
-      activeBlockId={activeBlockId}
+      commentMarks={commentMarks}
+      activeCommentId={activeCommentId}
     />
   )
 }
 
 function DocumentCommentMarkersReady({
-  commentedBlockIds,
-  activeBlockId,
+  commentMarks,
+  activeCommentId,
 }: {
-  commentedBlockIds: readonly string[]
-  activeBlockId?: string | null
+  commentMarks: readonly DocumentCommentMarkEntry[]
+  activeCommentId?: string | null
 }) {
   const blockEditor = useBlockEditor()
 
-  const applyMarks = useCallback(() => {
-    const marked = new Set(commentedBlockIds)
-    document
-      .querySelectorAll('[data-node-type="blockContainer"]')
-      .forEach((element) => {
-        const blockId = element.getAttribute("data-id")
-        element.classList.remove(
-          "document-comment-marked",
-          "document-comment-marked-active"
-        )
-        if (!blockId || !marked.has(blockId)) return
-        element.classList.add("document-comment-marked")
-        if (blockId === activeBlockId) {
-          element.classList.add("document-comment-marked-active")
-        }
-      })
-  }, [activeBlockId, commentedBlockIds])
-
   useEffect(() => {
-    applyMarks()
-    return blockEditor.onChange(() => applyMarks())
-  }, [applyMarks, blockEditor])
+    setDocumentCommentMarks(
+      blockEditor,
+      commentMarks,
+      activeCommentId ?? null
+    )
+  }, [activeCommentId, blockEditor, commentMarks])
 
   return null
 }
 
-/** 订阅选区变化，向工作区报告当前块 id 供评论锚定 */
+/** 订阅选区变化，向工作区报告当前选区锚点 */
 export function DocumentCommentBridge({
-  onActiveBlockIdChange,
+  commentMarks,
+  onSelectionAnchorChange,
+  onCommentMarkClick,
 }: {
-  onActiveBlockIdChange: (blockId: string | null) => void
+  commentMarks: readonly DocumentCommentMarkEntry[]
+  onSelectionAnchorChange: (anchor: CommentTextAnchor | null) => void
+  onCommentMarkClick?: (commentId: string) => void
 }) {
   const blockEditor = useBlockEditor()
 
   useEffect(() => {
-    const syncActiveBlock = () => {
-      const blocks = blockEditor.getSelectedBlocks()
-      onActiveBlockIdChange(blocks[0]?.id ?? null)
+    const syncSelectionAnchor = () => {
+      const anchor = blockEditor.getCommentTextSelection()
+      if (anchor) {
+        onSelectionAnchorChange(anchor)
+      }
     }
-    syncActiveBlock()
-    blockEditor.tiptap.on("selectionUpdate", syncActiveBlock)
+    syncSelectionAnchor()
+    blockEditor.tiptap.on("selectionUpdate", syncSelectionAnchor)
     return () => {
-      blockEditor.tiptap.off("selectionUpdate", syncActiveBlock)
+      blockEditor.tiptap.off("selectionUpdate", syncSelectionAnchor)
     }
-  }, [blockEditor, onActiveBlockIdChange])
+  }, [blockEditor, onSelectionAnchorChange])
+
+  useEffect(() => {
+    if (!onCommentMarkClick || commentMarks.length === 0) {
+      return
+    }
+
+    const view = blockEditor.tiptap.view
+
+    const handleClick = (event: MouseEvent) => {
+      const coords = view.posAtCoords({
+        left: event.clientX,
+        top: event.clientY,
+      })
+      if (!coords) return
+
+      const mark = findCommentMarkAtPos(
+        view.state.doc,
+        commentMarks,
+        coords.pos
+      )
+      if (mark) {
+        onCommentMarkClick(mark.id)
+      }
+    }
+
+    view.dom.addEventListener("click", handleClick)
+    return () => {
+      view.dom.removeEventListener("click", handleClick)
+    }
+  }, [blockEditor, commentMarks, onCommentMarkClick])
 
   return null
 }
