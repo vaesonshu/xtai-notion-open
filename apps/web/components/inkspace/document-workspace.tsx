@@ -49,6 +49,8 @@ export type DocumentWorkspaceProps = {
   parentTitle?: string
   /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
   mentionNavigate?: MentionNavigate
+  /** 打开 Markdown 文件选择器，由 WorkspaceShell 注入 */
+  onImportMarkdown?: () => void
 }
 
 type DocumentRole = "owner" | "editor" | "viewer"
@@ -148,6 +150,7 @@ export function DocumentWorkspace({
   title,
   parentTitle,
   mentionNavigate,
+  onImportMarkdown,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
   const [publicationStatus, setPublicationStatus] = useState<
@@ -417,6 +420,7 @@ export function DocumentWorkspace({
             commentsOpen={commentsOpen}
             onCommentsToggle={() => setCommentsOpen((open) => !open)}
             onVersionRestored={() => window.location.reload()}
+            onImportMarkdown={onImportMarkdown}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>

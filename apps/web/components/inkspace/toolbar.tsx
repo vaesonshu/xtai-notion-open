@@ -60,6 +60,8 @@ export type EditorToolbarProps = {
   publicationStatus?: "draft" | "pending" | "published"
   onPublish?: () => void
   onVersionRestored?: () => void
+  /** 触发 Markdown 文件选择（由 WorkspaceShell 提供 hidden input） */
+  onImportMarkdown?: () => void
 }
 
 // 发布按钮用背景色区分草稿、待审批与已上线三种状态。
@@ -228,6 +230,7 @@ export function EditorToolbar({
   publicationStatus = "draft",
   onPublish,
   onVersionRestored,
+  onImportMarkdown,
 }: EditorToolbarProps) {
   const [versionOpen, setVersionOpen] = useState(false)
   const publicationLabel =
@@ -309,6 +312,17 @@ export function EditorToolbar({
             canWrite={canWrite}
             onRestored={onVersionRestored}
           />
+        ) : null}
+        {onImportMarkdown ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onImportMarkdown}
+            className="!text-[#373532] hover:!border-[#CFCBC4] hover:!bg-[#F3F2EF] hover:!text-[#373532]"
+          >
+            <PencilIcon icon={FileTextIcon} color="#4F4C47" />
+            导入
+          </Button>
         ) : null}
         {apiUrl && documentId ? (
           <ShareDialog

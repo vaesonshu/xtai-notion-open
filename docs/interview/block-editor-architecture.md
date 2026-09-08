@@ -345,5 +345,6 @@ stateDiagram-v2
 
 ## 10. 相关文档
 
+- [编辑器核心设计（面试总结）](./editor-core-design.md)
 - [块文档架构设计（详细规格）](./superpowers/specs/2026-08-28-block-document-architecture-design.md)
 - [块文档架构实施计划](./superpowers/plans/2026-08-28-block-document-architecture.md)

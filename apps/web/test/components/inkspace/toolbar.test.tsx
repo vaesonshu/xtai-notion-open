@@ -55,4 +55,18 @@ describe("EditorToolbar", () => {
     fireEvent.click(getByRole("button", { name: "发布" }))
     expect(onPublish).toHaveBeenCalledOnce()
   })
+
+  it("renders import next to share when onImportMarkdown is provided", () => {
+    const onImportMarkdown = vi.fn()
+    const { getByRole } = render(
+      <EditorToolbar
+        apiUrl="http://127.0.0.1:3100"
+        documentId="doc-1"
+        onImportMarkdown={onImportMarkdown}
+      />
+    )
+
+    fireEvent.click(getByRole("button", { name: "导入" }))
+    expect(onImportMarkdown).toHaveBeenCalledOnce()
+  })
 })

@@ -84,7 +84,6 @@ export function WorkspaceSidebar({
   creatingDocument = false,
   documents = [],
   collaborativeDocuments = [],
-  recentDocuments = [],
   trashedDocuments = [],
   showFavorites = false,
   showTrash = false,
@@ -98,7 +97,6 @@ export function WorkspaceSidebar({
   onOpenSearch,
   onToggleFavorites,
   onToggleTrash,
-  onImportMarkdown,
   onToggleFavorite,
   onRestoreDocument,
   onPurgeDocument,
@@ -109,7 +107,6 @@ export function WorkspaceSidebar({
   creatingDocument?: boolean
   documents?: SidebarDocument[]
   collaborativeDocuments?: SidebarDocument[]
-  recentDocuments?: SidebarDocument[]
   trashedDocuments?: SidebarDocument[]
   showFavorites?: boolean
   showTrash?: boolean
@@ -123,7 +120,6 @@ export function WorkspaceSidebar({
   onOpenSearch?: () => void
   onToggleFavorites?: () => void
   onToggleTrash?: () => void
-  onImportMarkdown?: () => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
   onRestoreDocument?: (id: string) => void
   onPurgeDocument?: (id: string) => void
@@ -142,7 +138,7 @@ export function WorkspaceSidebar({
       className="hidden h-full shrink-0 flex-col gap-[18px] overflow-hidden border-r bg-white px-3 py-4 lg:flex"
       style={{ width: 280 }}
     >
-      <div className="flex h-[246px] flex-col gap-[10px] rounded-xl bg-[#FCFCFB] px-2 pt-2 pb-3">
+      <div className="flex shrink-0 flex-col gap-[10px] rounded-xl bg-[#FCFCFB] px-2 pt-2 pb-3">
         <div className="flex h-[60px] items-center gap-[10px] px-1 py-2">
           <Avatar className="size-[34px] rounded-[10px] bg-[#242321]">
             <AvatarFallback className="rounded-[10px] bg-[#242321] text-white">
@@ -178,14 +174,6 @@ export function WorkspaceSidebar({
             disabled={creatingDocument}
           />
           <SideAction
-            itemKey="import-markdown"
-            selectedKey={selectedKey}
-            onSelect={select}
-            icon={FileTextIcon}
-            label="导入 Markdown"
-            onClick={onImportMarkdown}
-          />
-          <SideAction
             itemKey="square"
             selectedKey={activeNav === "square" ? "square" : selectedKey}
             onSelect={select}
@@ -201,26 +189,24 @@ export function WorkspaceSidebar({
             label="文档图谱"
             onClick={onOpenGraph}
           />
+          <SideAction
+            itemKey="trash"
+            selectedKey={showTrash ? "trash" : selectedKey}
+            onSelect={select}
+            icon={RotateCcwIcon}
+            label={showTrash ? "全部文档" : "回收站"}
+            onClick={onToggleTrash}
+          />
+          <SideAction
+            itemKey="favorites"
+            selectedKey={showFavorites ? "favorites" : selectedKey}
+            onSelect={select}
+            icon={StarIcon}
+            label={showFavorites ? "全部文档" : "收藏"}
+            shortcut="3"
+            onClick={onToggleFavorites}
+          />
         </div>
-        <SideAction
-          itemKey="favorites"
-          selectedKey={showFavorites ? "favorites" : selectedKey}
-          onSelect={select}
-          icon={StarIcon}
-          label={showFavorites ? "全部文档" : "收藏"}
-          shortcut="3"
-          className="-mt-[6px]"
-          onClick={onToggleFavorites}
-        />
-        <SideAction
-          itemKey="trash"
-          selectedKey={showTrash ? "trash" : selectedKey}
-          onSelect={select}
-          icon={RotateCcwIcon}
-          label={showTrash ? "全部文档" : "回收站"}
-          className="-mt-[3px]"
-          onClick={onToggleTrash}
-        />
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-white">
         {showTrash ? (
@@ -231,16 +217,6 @@ export function WorkspaceSidebar({
           />
         ) : (
           <>
-            {recentDocuments.length > 0 && !showFavorites ? (
-              <SideSection
-                title="最近"
-                count={String(recentDocuments.length)}
-                items={recentDocuments}
-                selectedDocumentId={selectedDocumentId}
-                onSelect={selectDocument}
-                onToggleFavorite={onToggleFavorite}
-              />
-            ) : null}
             {!showFavorites && collaborativeDocuments.length > 0 ? (
               <SideSection
                 title="协作文档"
@@ -261,11 +237,6 @@ export function WorkspaceSidebar({
               onDelete={onDeleteDocument}
               onCreateChild={onCreateChildDocument}
               onToggleFavorite={onToggleFavorite}
-            />
-            <TrashSection
-              items={trashedDocuments}
-              onRestore={onRestoreDocument}
-              onPurge={onPurgeDocument}
             />
           </>
         )}

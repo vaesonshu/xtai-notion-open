@@ -19,7 +19,6 @@ type SidebarDocument = DocumentListItem & {
   parentId: string | null
   depth: number
   isFavorite?: boolean
-  lastOpenedAt?: string | null
 }
 
 function normalizeDocumentHierarchy(
@@ -43,8 +42,6 @@ function normalizeDocumentHierarchy(
     parentId: item.parentId ?? null,
     depth: depthOf(item),
     isFavorite: item.isFavorite ?? false,
-    lastOpenedAt:
-      typeof item.lastOpenedAt === "string" ? item.lastOpenedAt : null,
   }))
 }
 
@@ -125,14 +122,6 @@ export function WorkspaceShell({
     (item) => item.role !== "owner"
   )
   const favoriteDocuments = documents.filter((item) => item.isFavorite)
-  const recentDocuments = [...documents]
-    .filter((item) => item.lastOpenedAt)
-    .sort(
-      (a, b) =>
-        new Date(b.lastOpenedAt ?? 0).getTime() -
-        new Date(a.lastOpenedAt ?? 0).getTime()
-    )
-    .slice(0, 8)
 
   const refreshDocuments = useCallback(async () => {
     if (!apiUrl) return
@@ -374,7 +363,6 @@ export function WorkspaceShell({
       <WorkspaceSidebar
         documents={showFavorites ? favoriteDocuments : personalDocuments}
         collaborativeDocuments={collaborativeDocuments}
-        recentDocuments={recentDocuments}
         trashedDocuments={trashedDocuments}
         showFavorites={showFavorites}
         showTrash={showTrash}
@@ -407,7 +395,6 @@ export function WorkspaceShell({
           setShowTrash((current) => !current)
           setShowFavorites(false)
         }}
-        onImportMarkdown={() => importInputRef.current?.click()}
         onToggleFavorite={toggleFavorite}
         onRestoreDocument={restoreDocument}
         onPurgeDocument={purgeDocument}
@@ -430,6 +417,7 @@ export function WorkspaceShell({
                       ?.title
                   : undefined
               })()}
+              onImportMarkdown={() => importInputRef.current?.click()}
             />
           ) : null)}
       </main>

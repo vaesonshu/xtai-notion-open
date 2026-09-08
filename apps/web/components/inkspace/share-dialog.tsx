@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { UsersIcon } from "@workspace/icons"
 import { toast, toastError } from "@/lib/toast"
 import { apiRequest } from "@/lib/api-client"
 import { Button } from "@workspace/ui/components/button"
@@ -14,6 +15,7 @@ import {
   DialogTrigger,
 } from "@workspace/ui/components/dialog"
 import { Input } from "@workspace/ui/components/input"
+import { PencilIcon } from "./icon"
 
 export type ShareDialogProps = {
   apiUrl?: string
@@ -68,8 +70,16 @@ export function ShareDialog({
       }}
     >
       <DialogTrigger
-        render={<Button variant="outline" size="sm" disabled={disabled} />}
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            className="!text-[#373532] hover:!border-[#CFCBC4] hover:!bg-[#F3F2EF] hover:!text-[#373532]"
+          />
+        }
       >
+        <PencilIcon icon={UsersIcon} color="#4F4C47" />
         分享
       </DialogTrigger>
       <DialogContent>
