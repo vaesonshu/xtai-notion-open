@@ -2,7 +2,11 @@
 
 import Link from "next/link"
 import { useAuthOptional } from "./auth-provider"
-import { LogOutIcon, UserRoundIcon } from "@workspace/icons"
+import {
+  LayoutDashboardIcon,
+  LogOutIcon,
+  UserRoundIcon,
+} from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -97,7 +101,17 @@ export function AuthMenu() {
           <UserRoundIcon />
           <span>{user.name}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy} onClick={() => void logout()}>
+        {user.role === "admin" ? (
+          <DropdownMenuItem render={<Link href="/admin/users" />}>
+            <LayoutDashboardIcon />
+            <span>控制台</span>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem
+          disabled={busy}
+          onClick={() => void logout()}
+          className="mt-1 text-destructive hover:bg-destructive/35 hover:text-destructive focus:bg-destructive/35 focus:text-destructive [&_svg]:text-destructive hover:[&_svg]:text-destructive focus:[&_svg]:text-destructive"
+        >
           <LogOutIcon />
           <span>{busy ? "注销中..." : "注销"}</span>
         </DropdownMenuItem>

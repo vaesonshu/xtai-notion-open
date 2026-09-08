@@ -5,18 +5,52 @@ import { AuthMenu } from "@/components/auth-menu"
 
 const refresh = vi.fn()
 
+const mockAuth = {
+  user: {
+    id: "member-1",
+    name: "Member",
+    color: "#24866B",
+    role: "user" as const,
+  },
+  loading: false,
+  refresh,
+}
+
 vi.mock("@/components/auth-provider", () => ({
-  useAuthOptional: () => ({
-    user: { id: "member-1", name: "Member", color: "#24866B" },
-    loading: false,
-    refresh,
-  }),
+  useAuthOptional: () => mockAuth,
 }))
 
 describe("AuthMenu", () => {
   afterEach(() => {
     vi.restoreAllMocks()
     refresh.mockReset()
+    mockAuth.user = {
+      id: "member-1",
+      name: "Member",
+      color: "#24866B",
+      role: "user",
+    }
+  })
+
+  it("hides the admin console link for regular users", () => {
+    render(<AuthMenu />)
+    fireEvent.click(screen.getByRole("button"))
+    expect(screen.queryByText("控制台")).not.toBeInTheDocument()
+  })
+
+  it("shows the admin console link for administrators", () => {
+    mockAuth.user = {
+      id: "admin-1",
+      name: "Admin",
+      color: "#24866B",
+      role: "admin",
+    }
+
+    render(<AuthMenu />)
+    fireEvent.click(screen.getByRole("button"))
+
+    const consoleLink = screen.getByRole("menuitem", { name: "控制台" })
+    expect(consoleLink).toHaveAttribute("href", "/admin/users")
   })
 
   it("replaces the current page with login after logout", async () => {
