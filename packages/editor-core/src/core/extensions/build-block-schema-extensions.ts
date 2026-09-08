@@ -17,6 +17,7 @@ import type { EditorExtensionOptions } from "../types"
 import { BlockKeymap } from "./block-keymap"
 import { MarkdownInputRules } from "./markdown-input-rules"
 import { CheckListItemClick } from "./check-list-item-click"
+import { EditorLink, EditorStrike } from "./inline-mark-extensions"
 import { MentionNode } from "./mention-node"
 import type { BlockSchemaRegistry } from "../schema/registry"
 
@@ -62,9 +63,21 @@ export function buildBlockSchemaExtensions(
       codeBlock: false,
       horizontalRule: false,
       dropcursor: false,
-      link: { openOnClick: false, autolink: true },
+      // 使用 non-inclusive 的 link/strike，避免在 mark 末尾继续输入时延续样式
+      link: false,
+      strike: false,
+      // 点击跳转由 EditorSurface 统一处理，以便 SPA 路由与外链新标签分流
       undoRedo: bindsCollaborationDocument ? false : {},
     }),
+    EditorLink.configure({
+      openOnClick: false,
+      autolink: true,
+      HTMLAttributes: {
+        class: "editor-inline-link",
+        rel: "noopener noreferrer",
+      },
+    }),
+    EditorStrike,
     // 文字颜色依赖 TextStyle mark 承载 color 属性
     TextStyle,
     Color.configure({ types: ["textStyle"] }),

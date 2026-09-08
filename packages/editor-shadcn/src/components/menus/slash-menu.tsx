@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import type { Editor, Range } from "@tiptap/core"
-import { PluginKey } from "@tiptap/pm/state"
 import Suggestion, {
   exitSuggestion,
   type SuggestionKeyDownProps,
@@ -34,8 +33,7 @@ import { use } from "react"
 import { useImageUpload } from "../nodes/image-upload"
 import { AiWriteHostContext } from "../ai/ai-write-context"
 import { TableGridPicker } from "./table-grid-picker"
-
-const slashMenuPluginKey = new PluginKey("slashMenu")
+import { slashMenuPluginKey } from "./slash-menu-plugin-key"
 
 type SlashSuggestionState = {
   query: string

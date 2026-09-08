@@ -6,9 +6,32 @@ export function toggleInlineMark(editor: Editor, mark: InlineMark): boolean {
   return editor.chain().focus().toggleMark(mark).run()
 }
 
+/** 补全常见省略协议的链接地址，便于 autolink 与手动输入一致 */
+export function normalizeLinkHref(href: string): string {
+  const trimmed = href.trim()
+  if (!trimmed) {
+    return ""
+  }
+
+  if (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(trimmed)) {
+    return trimmed
+  }
+
+  return `https://${trimmed}`
+}
+
 export function setEditorLink(editor: Editor, href: string): boolean {
-  const chain = editor.chain().focus()
-  return href.trim() ? chain.setLink({ href }).run() : chain.unsetLink().run()
+  const normalized = normalizeLinkHref(href)
+  if (!normalized) {
+    return editor.chain().focus().unsetLink().run()
+  }
+
+  return editor
+    .chain()
+    .focus()
+    .setLink({ href: normalized })
+    .setMeta("preventAutolink", true)
+    .run()
 }
 
 /** 将用户输入规范化为 #RRGGBB，无法解析时返回 null */

@@ -492,6 +492,25 @@
   text-decoration-color: #24866b;
 }
 
+/* 行内链接：蓝色下划线，与绿色提及区分；点击由 EditorSurface 负责跳转 */
+.ProseMirror a.editor-inline-link {
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(37, 99, 235, 0.45);
+  text-underline-offset: 2px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    text-decoration-color 120ms ease;
+}
+
+.ProseMirror a.editor-inline-link:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  text-decoration-color: #1d4ed8;
+}
+
 .ProseMirror code {
   background: #f3f1eb;
   border-radius: 0.25rem;

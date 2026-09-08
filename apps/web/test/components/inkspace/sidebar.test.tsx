@@ -95,6 +95,20 @@ describe("WorkspaceSidebar selection states", () => {
     expect(screen.getByRole("button", { name: "文档图谱" })).toBeInTheDocument()
   })
 
+  it("collapses the sidebar to an icon rail and hides document lists", () => {
+    render(<WorkspaceSidebar documents={[{ id: "doc-a", title: "Doc A" }]} />)
+
+    expect(screen.getByText("Doc A")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "收起侧边栏" }))
+    expect(screen.queryByText("Doc A")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "展开侧边栏" })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "展开侧边栏" }))
+    expect(screen.getByText("Doc A")).toBeInTheDocument()
+  })
+
   it("starts without a highlighted shortcut and selects one on click", () => {
     render(<WorkspaceSidebar />)
 

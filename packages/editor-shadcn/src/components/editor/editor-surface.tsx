@@ -1,14 +1,25 @@
 "use client"
 
-import { use, type MouseEvent } from "react"
+import { use, useState, type MouseEvent } from "react"
 import { EditorContent } from "@xtai-notion/editor-react/editor-content"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 import { useMentionNavigate } from "@xtai-notion/editor-react/providers/mention-provider"
 import { BlockHandle } from "../handles/block-handle"
+import {
+  LinkClickMenu,
+  type LinkClickMenuState,
+} from "../menus/link-click-menu"
 import { BubbleToolbar } from "../menus/bubble-toolbar"
 import { MentionMenu } from "../menus/mention-menu"
 import { SlashMenu } from "../menus/slash-menu"
 import { TableMenu } from "../menus/table-menu"
+import { captureLinkMarkRange } from "./capture-link-range"
+import {
+  isInlineEditorLink,
+  openEditorHref,
+  resolveProseMirrorLink,
+} from "./open-editor-href"
+import { dismissSlashMenu } from "../menus/dismiss-slash-menu"
 
 export type EditorSurfaceProps = {
   className?: string
@@ -17,6 +28,7 @@ export type EditorSurfaceProps = {
 export function EditorSurface({ className }: EditorSurfaceProps) {
   const context = use(EditorContext)
   const navigate = useMentionNavigate()
+  const [linkMenu, setLinkMenu] = useState<LinkClickMenuState | null>(null)
 
   if (!context?.blockEditor) {
     return (
@@ -36,34 +48,62 @@ export function EditorSurface({ className }: EditorSurfaceProps) {
     )
   }
 
-  // 在编辑器容器上统一处理提及节点的点击：定位到最近的
-  // [data-mention="true"] 元素，阻止默认跳转并交由宿主注入的导航回调处理
-  // （SPA 路由跳转）。
+  const editor = context.blockEditor.tiptap
+  const isEditable = editor.isEditable
+  const mentionNavigate = navigate ?? undefined
+
+  // 编辑态：行内链接弹出「编辑/打开」；查看态与提及节点：直接跳转
   function handleClick(event: MouseEvent<HTMLDivElement>) {
-    const target = event.target as HTMLElement | null
-    const link = target?.closest<HTMLAnchorElement>('[data-mention="true"]')
+    const link = resolveProseMirrorLink(event.target)
     if (!link) {
       return
     }
-    event.preventDefault()
+
     const href = link.getAttribute("href")
-    if (navigate && href) {
-      navigate(href)
-    } else if (href) {
-      window.location.href = href
+    if (!href) {
+      return
     }
+
+    event.preventDefault()
+
+    if (isEditable && isInlineEditorLink(link)) {
+      const linkRange = captureLinkMarkRange(editor, link)
+      if (!linkRange) {
+        return
+      }
+
+      dismissSlashMenu(editor)
+      editor.commands.blur()
+
+      setLinkMenu({
+        href,
+        anchorRect: link.getBoundingClientRect(),
+        linkRange,
+      })
+      return
+    }
+
+    openEditorHref(href, mentionNavigate)
   }
 
   return (
     <div onClick={handleClick}>
       <EditorContent className={className} />
-      {context.blockEditor.tiptap.isEditable ? (
+      {isEditable ? (
         <>
           <SlashMenu />
           <MentionMenu />
           <BubbleToolbar />
           <TableMenu />
           <BlockHandle />
+          {linkMenu ? (
+            <LinkClickMenu
+              editor={editor}
+              state={linkMenu}
+              navigate={mentionNavigate}
+              onClose={() => setLinkMenu(null)}
+            />
+          ) : null}
         </>
       ) : null}
     </div>

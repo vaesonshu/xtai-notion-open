@@ -63,6 +63,8 @@ export {
   Unlink as UnlinkIcon,
   Maximize2 as Maximize2Icon,
   Minimize2 as Minimize2Icon,
+  PanelLeft as PanelLeftIcon,
+  PanelLeftClose as PanelLeftCloseIcon,
   Download as DownloadIcon,
   UserRound as UserRoundIcon,
   UserRoundPlus as UserRoundPlusIcon,

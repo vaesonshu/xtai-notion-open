@@ -13,6 +13,8 @@ import {
   StarIcon,
   WaypointsIcon,
   RotateCcwIcon,
+  PanelLeftCloseIcon,
+  PanelLeftIcon,
 } from "@workspace/icons"
 import { Avatar, AvatarFallback } from "@workspace/ui/components/avatar"
 import {
@@ -32,9 +34,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@workspace/ui/components/tooltip"
 import { Separator } from "@workspace/ui/components/separator"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { PencilIcon } from "./icon"
+
+const SIDEBAR_WIDTH_EXPANDED = 280
+const SIDEBAR_WIDTH_COLLAPSED = 56
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "inkspace:sidebar-collapsed:v1"
+
+function readSidebarCollapsedPreference(): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true"
+  } catch {
+    return false
+  }
+}
 
 type SidebarDocument = {
   id: string
@@ -118,7 +139,31 @@ export function WorkspaceSidebar({
   onToggleTrash?: () => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
 }) {
+  const [collapsed, setCollapsed] = useState(readSidebarCollapsedPreference)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [collapseTooltipOpen, setCollapseTooltipOpen] = useState(false)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed))
+    } catch {
+      // 隐私模式或禁用 storage 时忽略
+    }
+  }, [collapsed])
+
+  // 宽度切换后关闭 tooltip 并失焦，避免 click/focus 触发的浮层卡在旧位置
+  useEffect(() => {
+    setCollapseTooltipOpen(false)
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+  }, [collapsed])
+
+  const toggleCollapsed = () => {
+    setCollapseTooltipOpen(false)
+    setCollapsed((current) => !current)
+  }
+
   const select = (key: string, action?: () => void) => {
     setSelectedKey(key)
     action?.()
@@ -128,121 +173,181 @@ export function WorkspaceSidebar({
     onSelectDocument?.(id)
   }
   return (
-    <aside
-      className="hidden h-full shrink-0 flex-col gap-[18px] overflow-hidden border-r bg-white px-3 py-4 lg:flex"
-      style={{ width: 280 }}
-    >
-      <div className="flex shrink-0 flex-col gap-[10px] rounded-xl bg-[#FCFCFB] px-2 pt-2 pb-3">
-        <div className="flex h-[60px] items-center gap-[10px] px-1 py-2">
-          <Avatar className="size-[34px] rounded-[10px] bg-[#242321]">
-            <AvatarFallback className="rounded-[10px] bg-[#242321] text-white">
-              L
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-sm font-semibold">栖木工作室</span>
-            <span className="text-[10px] font-semibold tracking-[0.4px] text-[#78746C]">
-              PRO · 6 位成员
-            </span>
+    <TooltipProvider delay={0}>
+      <aside
+        aria-expanded={!collapsed}
+        className="hidden h-full shrink-0 flex-col overflow-hidden border-r bg-white transition-[width] duration-200 ease-out lg:flex"
+        style={{
+          width: collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED,
+        }}
+      >
+        <div
+          className={`flex shrink-0 flex-col gap-[10px] rounded-xl bg-[#FCFCFB] px-2 pt-2 ${collapsed ? "pb-2" : "pb-3"}`}
+        >
+          <div
+            className={`flex shrink-0 items-center ${collapsed ? "justify-center px-0 py-2" : "h-[60px] gap-[10px] px-1 py-2"}`}
+          >
+            <Avatar className="size-[34px] rounded-[10px] bg-[#242321]">
+              <AvatarFallback className="rounded-[10px] bg-[#242321] text-white">
+                L
+              </AvatarFallback>
+            </Avatar>
+            {collapsed ? null : (
+              <>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-sm font-semibold">栖木工作室</span>
+                  <span className="text-[10px] font-semibold tracking-[0.4px] text-[#78746C]">
+                    PRO · 6 位成员
+                  </span>
+                </div>
+                <PencilIcon icon={ChevronsUpDownIcon} />
+              </>
+            )}
           </div>
-          <PencilIcon icon={ChevronsUpDownIcon} />
-        </div>
-        <div className="flex flex-col gap-[3px]">
-          <SideAction
-            itemKey="search"
-            selectedKey={selectedKey}
-            onSelect={select}
-            icon={SearchIcon}
-            label="搜索"
-            shortcut="⌘ K"
-            onClick={onOpenSearch}
-          />
-          <SideAction
-            itemKey="new-document"
-            selectedKey={selectedKey}
-            onSelect={select}
-            icon={PlusIcon}
-            label={creatingDocument ? "新建中" : "新建文档"}
-            shortcut="N"
-            onClick={onCreateDocument}
-            disabled={creatingDocument}
-          />
-          <SideAction
-            itemKey="square"
-            selectedKey={activeNav === "square" ? "square" : selectedKey}
-            onSelect={select}
-            icon={SquarePenIcon}
-            label="写作广场"
-            onClick={onOpenSquare}
-          />
-          <SideAction
-            itemKey="graph"
-            selectedKey={activeNav === "graph" ? "graph" : selectedKey}
-            onSelect={select}
-            icon={WaypointsIcon}
-            label="文档图谱"
-            onClick={onOpenGraph}
-          />
-          <SideAction
-            itemKey="trash"
-            selectedKey={showTrash ? "trash" : selectedKey}
-            onSelect={select}
-            icon={RotateCcwIcon}
-            label="回收站"
-            onClick={onToggleTrash}
-          />
-          <SideAction
-            itemKey="favorites"
-            selectedKey={showFavorites ? "favorites" : selectedKey}
-            onSelect={select}
-            icon={StarIcon}
-            label="收藏"
-            onClick={onToggleFavorites}
-          />
-        </div>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-white">
-        {collaborativeDocuments.length > 0 ? (
-          <SideSection
-            title="协作文档"
-            count={String(collaborativeDocuments.length)}
-            items={collaborativeDocuments}
-            selectedDocumentId={selectedDocumentId}
-            onSelect={selectDocument}
-            onToggleFavorite={onToggleFavorite}
-          />
-        ) : null}
-        <SideSection
-          title="个人文档"
-          count={String(documents.length)}
-          items={documents}
-          selectedDocumentId={selectedDocumentId}
-          onSelect={selectDocument}
-          onRename={onRenameDocument}
-          onDelete={onDeleteDocument}
-          onCreateChild={onCreateChildDocument}
-          onToggleFavorite={onToggleFavorite}
-        />
-      </div>
-      <Separator />
-      <div className="flex flex-col gap-[10px] px-1 pt-[10px]">
-        <div className="flex items-center gap-2 text-[11px] text-[#78746C]">
-          <span className="size-[7px] rounded-full bg-[#22C55E]" />
-          所有更改已同步
-          <span className="flex-1" />
-          <PencilIcon icon={InfoIcon} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <div className="flex justify-between text-[10px] font-semibold text-[#78746C]">
-            <span>知识容量</span>
-            <span className="text-[#24866B]">62%</span>
-          </div>
-          <div className="h-1 rounded bg-[#DFE1DC]">
-            <div className="h-1 w-[62%] rounded bg-[#24866B]" />
+          <div className="flex flex-col gap-[3px]">
+            <SideAction
+              itemKey="search"
+              selectedKey={selectedKey}
+              onSelect={select}
+              icon={SearchIcon}
+              label="搜索"
+              shortcut="⌘ K"
+              onClick={onOpenSearch}
+              compact={collapsed}
+            />
+            <SideAction
+              itemKey="new-document"
+              selectedKey={selectedKey}
+              onSelect={select}
+              icon={PlusIcon}
+              label={creatingDocument ? "新建中" : "新建文档"}
+              shortcut="N"
+              onClick={onCreateDocument}
+              disabled={creatingDocument}
+              compact={collapsed}
+            />
+            <SideAction
+              itemKey="square"
+              selectedKey={activeNav === "square" ? "square" : selectedKey}
+              onSelect={select}
+              icon={SquarePenIcon}
+              label="写作广场"
+              onClick={onOpenSquare}
+              compact={collapsed}
+            />
+            <SideAction
+              itemKey="graph"
+              selectedKey={activeNav === "graph" ? "graph" : selectedKey}
+              onSelect={select}
+              icon={WaypointsIcon}
+              label="文档图谱"
+              onClick={onOpenGraph}
+              compact={collapsed}
+            />
+            <SideAction
+              itemKey="trash"
+              selectedKey={showTrash ? "trash" : selectedKey}
+              onSelect={select}
+              icon={RotateCcwIcon}
+              label="回收站"
+              onClick={onToggleTrash}
+              compact={collapsed}
+            />
+            <SideAction
+              itemKey="favorites"
+              selectedKey={showFavorites ? "favorites" : selectedKey}
+              onSelect={select}
+              icon={StarIcon}
+              label="收藏"
+              onClick={onToggleFavorites}
+              compact={collapsed}
+            />
           </div>
         </div>
-      </div>
-    </aside>
+        {collapsed ? null : (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-white px-3">
+            {collaborativeDocuments.length > 0 ? (
+              <SideSection
+                title="协作文档"
+                count={String(collaborativeDocuments.length)}
+                items={collaborativeDocuments}
+                selectedDocumentId={selectedDocumentId}
+                onSelect={selectDocument}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ) : null}
+            <SideSection
+              title="个人文档"
+              count={String(documents.length)}
+              items={documents}
+              selectedDocumentId={selectedDocumentId}
+              onSelect={selectDocument}
+              onRename={onRenameDocument}
+              onDelete={onDeleteDocument}
+              onCreateChild={onCreateChildDocument}
+              onToggleFavorite={onToggleFavorite}
+            />
+          </div>
+        )}
+        {collapsed ? <div className="min-h-0 flex-1" /> : null}
+        <Separator />
+        <div
+          className={`flex shrink-0 flex-col gap-[10px] px-2 pt-[10px] pb-4 ${collapsed ? "items-center" : "px-3"}`}
+        >
+          {collapsed ? null : (
+            <>
+              <div className="flex items-center gap-2 px-1 text-[11px] text-[#78746C]">
+                <span className="size-[7px] rounded-full bg-[#22C55E]" />
+                所有更改已同步
+                <span className="flex-1" />
+                <PencilIcon icon={InfoIcon} />
+              </div>
+              <div className="flex flex-col gap-1.5 px-1">
+                <div className="flex justify-between text-[10px] font-semibold text-[#78746C]">
+                  <span>知识容量</span>
+                  <span className="text-[#24866B]">62%</span>
+                </div>
+                <div className="h-1 rounded bg-[#DFE1DC]">
+                  <div className="h-1 w-[62%] rounded bg-[#24866B]" />
+                </div>
+              </div>
+            </>
+          )}
+          {collapsed ? (
+            <Tooltip
+              open={collapseTooltipOpen}
+              onOpenChange={setCollapseTooltipOpen}
+            >
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="展开侧边栏"
+                    onClick={toggleCollapsed}
+                    className="size-9 rounded-[7px] !text-[#78746C] hover:!bg-[#F3F2EF]"
+                  />
+                }
+              >
+                <PencilIcon icon={PanelLeftIcon} color="#78746C" />
+              </TooltipTrigger>
+              <TooltipContent side="right">展开侧边栏</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="收起侧边栏"
+              onClick={toggleCollapsed}
+              className="h-[34px] w-full !justify-start gap-2.5 rounded-[7px] px-[9px] !text-[#78746C] hover:!bg-[#F3F2EF]"
+            >
+              <PencilIcon icon={PanelLeftCloseIcon} color="#78746C" />
+              <span className="text-[13px] font-medium">收起侧边栏</span>
+            </Button>
+          )}
+        </div>
+      </aside>
+    </TooltipProvider>
   )
 }
 
@@ -256,6 +361,7 @@ function SideAction({
   onClick,
   disabled,
   className,
+  compact = false,
 }: {
   itemKey: string
   selectedKey: string | null
@@ -266,23 +372,41 @@ function SideAction({
   onClick?: () => void
   disabled?: boolean
   className?: string
+  /** 折叠态仅显示图标，并通过 Tooltip 展示文案 */
+  compact?: boolean
 }) {
   const selected = selectedKey === itemKey
-  return (
+  const button = (
     <Button
       variant="ghost"
       aria-current={selected ? "page" : undefined}
+      aria-label={compact ? label : undefined}
       onClick={() => onSelect(itemKey, onClick)}
       disabled={disabled}
-      className={`h-[34px] !justify-start gap-2.5 rounded-[7px] px-[9px] ${className ?? ""} ${selected ? "!bg-[#E6F3EC] !text-[#24866B] hover:!bg-[#DDEFE5]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
+      className={`${compact ? "size-9 !justify-center px-0" : "h-[34px] !justify-start gap-2.5 px-[9px]"} rounded-[7px] ${className ?? ""} ${selected ? "!bg-[#E6F3EC] !text-[#24866B] hover:!bg-[#DDEFE5]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
     >
       <PencilIcon icon={icon} color={selected ? "#24866B" : "#78746C"} />
-      <span className="text-[13px] font-medium">{label}</span>
-      <span className="flex-1" />
-      {shortcut && (
-        <span className="text-[10px] text-[#78746C]">{shortcut}</span>
+      {compact ? null : (
+        <>
+          <span className="text-[13px] font-medium">{label}</span>
+          <span className="flex-1" />
+          {shortcut ? (
+            <span className="text-[10px] text-[#78746C]">{shortcut}</span>
+          ) : null}
+        </>
       )}
     </Button>
+  )
+
+  if (!compact) {
+    return button
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
   )
 }
 

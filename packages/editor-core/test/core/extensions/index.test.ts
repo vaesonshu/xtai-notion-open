@@ -40,11 +40,9 @@ describe("editor core", () => {
     )
   })
 
-  it("configures Link through StarterKit without duplicate extension names", () => {
+  it("registers non-inclusive link and strike extensions", () => {
     const extensions = createEditorExtensions()
-    const starterKit = extensions.find(
-      (extension) => extension.name === "starterKit"
-    )
+    const editorLink = extensions.find((extension) => extension.name === "link")
     const editor = new Editor({
       extensions,
       content: blocksToPmDoc(
@@ -56,10 +54,16 @@ describe("editor core", () => {
       (extension) => extension.name
     )
 
-    expect(starterKit?.options.link).toMatchObject({
+    expect(editorLink?.options).toMatchObject({
       openOnClick: false,
       autolink: true,
+      HTMLAttributes: {
+        class: "editor-inline-link",
+        rel: "noopener noreferrer",
+      },
     })
+    expect(editor.schema.marks.link.spec.inclusive).toBe(false)
+    expect(editor.schema.marks.strike.spec.inclusive).toBe(false)
     expect(new Set(names)).toHaveLength(names.length)
 
     editor.destroy()

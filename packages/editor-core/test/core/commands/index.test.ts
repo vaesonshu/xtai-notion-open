@@ -4,7 +4,7 @@ import type { JSONContent } from "@tiptap/core"
 import { blocksToPmDoc } from "@core/block-schema/convert"
 import { createEmptyBlocks } from "@core/block-schema/documents"
 import { createEditorExtensions } from "@core/extensions"
-import { setEditorLink, toggleInlineMark } from "@core/commands/index"
+import { setEditorLink, toggleInlineMark, normalizeLinkHref } from "@core/commands/index"
 
 const editors: Editor[] = []
 
@@ -54,9 +54,30 @@ describe("toggleInlineMark", () => {
     expect(toggleInlineMark(editor, "bold")).toBe(true)
     expect(editor.isActive("bold")).toBe(false)
   })
+
+  it("does not extend strike to text typed after the formatted range", () => {
+    const editor = createTestEditor()
+
+    expect(toggleInlineMark(editor, "strike")).toBe(true)
+
+    const insertAt = editor.state.selection.to
+    editor.commands.setTextSelection(insertAt)
+    editor.chain().focus().insertContent("!").run()
+    const marks = editor.state.doc.resolve(insertAt).marks()
+    expect(marks.some((mark) => mark.type.name === "strike")).toBe(false)
+  })
 })
 
 describe("setEditorLink", () => {
+  it("normalizes href without protocol before applying the link mark", () => {
+    const editor = createTestEditor()
+
+    expect(setEditorLink(editor, "example.com/docs")).toBe(true)
+    expect(editor.isActive("link", { href: "https://example.com/docs" })).toBe(
+      true
+    )
+  })
+
   it("sets the href on the current text selection through Tiptap's link command", () => {
     const editor = createTestEditor()
 
@@ -74,12 +95,40 @@ describe("setEditorLink", () => {
     })
   })
 
+  it("does not extend the link mark to text typed after the formatted range", () => {
+    const editor = createTestEditor()
+
+    expect(setEditorLink(editor, "https://example.com/docs")).toBe(true)
+
+    const insertAt = editor.state.selection.to
+    editor.commands.setTextSelection(insertAt)
+    editor.chain().focus().insertContent("!").run()
+    expect(
+      editor.state.doc
+        .resolve(insertAt)
+        .marks()
+        .some((mark) => mark.type.name === "link")
+    ).toBe(false)
+  })
+
   it("removes the link when href is empty", () => {
     const editor = createTestEditor()
     setEditorLink(editor, "https://example.com/docs")
 
     expect(setEditorLink(editor, "")).toBe(true)
     expect(editor.isActive("link")).toBe(false)
+  })
+})
+
+describe("normalizeLinkHref", () => {
+  it("preserves absolute and relative URLs", () => {
+    expect(normalizeLinkHref("https://example.com")).toBe("https://example.com")
+    expect(normalizeLinkHref("/documents/doc-1")).toBe("/documents/doc-1")
+    expect(normalizeLinkHref("#section")).toBe("#section")
+  })
+
+  it("adds https protocol to bare domains", () => {
+    expect(normalizeLinkHref("example.com")).toBe("https://example.com")
   })
 })
 
