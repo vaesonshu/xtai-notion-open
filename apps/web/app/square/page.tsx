@@ -2,17 +2,16 @@ import {
   PublishedArticleList,
   type PublishedArticle,
 } from "../../components/square/published-article-list"
+import { apiRequestJson, getClientApiBase } from "@/lib/api-client"
 
 async function getPublishedArticles(): Promise<PublishedArticle[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL
-  if (!apiUrl) return []
+  if (!getClientApiBase()) return []
 
-  const response = await fetch(`${apiUrl.replace(/\/$/, "")}/square/articles`, {
+  return apiRequestJson<PublishedArticle[]>({
+    path: "/square/articles",
     // Public content must not be cached as an authenticated user response.
     cache: "no-store",
   })
-  if (!response.ok) throw new Error("Unable to load published articles")
-  return response.json() as Promise<PublishedArticle[]>
 }
 
 export default async function SquarePage() {

@@ -7,6 +7,7 @@ import {
   resetDocumentsCacheForTests,
   WorkspaceShell,
 } from "@/components/inkspace/workspace-shell"
+import { buildClientApiUrl } from "@/lib/api-client"
 
 const { push, replace } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -33,10 +34,14 @@ const props = {
 afterEach(() => {
   vi.clearAllMocks()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   resetDocumentsCacheForTests()
 })
 
 describe("WorkspaceShell", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://127.0.0.1:3100")
+  })
   it("opens the first personal document on the app root", async () => {
     vi.stubGlobal(
       "fetch",
@@ -106,20 +111,22 @@ describe("WorkspaceShell", () => {
     // objectContaining to avoid brittle exact-object matching while still
     // verifying the important request parts (method and headers).
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "http://127.0.0.1:3100/documents",
-        expect.objectContaining({
-          method: "POST",
-          headers: { "x-dev-user-id": "demo-owner" },
-        })
+      const postCall = fetchMock.mock.calls.find(
+        ([, options]) => (options as RequestInit | undefined)?.method === "POST"
       )
+      expect(postCall?.[0]).toBe(buildClientApiUrl("/documents"))
+      expect(
+        new Headers((postCall?.[1] as RequestInit | undefined)?.headers).get(
+          "x-dev-user-id"
+        )
+      ).toBe("demo-owner")
     })
     await waitFor(() => {
       expect(push).toHaveBeenCalledWith("/documents/new-document")
     })
   })
 
-  it("reuses the cached document list when the shell remounts", async () => {
+  it("shows cached documents immediately when the shell remounts", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [{ id: "first", title: "First", role: "owner" }],
@@ -127,13 +134,15 @@ describe("WorkspaceShell", () => {
     vi.stubGlobal("fetch", fetchMock)
 
     const { unmount } = render(<WorkspaceShell {...props} />)
-    await waitFor(() => expect(screen.getByText("First")).toBeInTheDocument())
-    expect(fetchMock).toHaveBeenCalledOnce()
+    await waitFor(() =>
+      expect(screen.getAllByText("First").length).toBeGreaterThan(0)
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(2)
 
     unmount()
     render(<WorkspaceShell {...props} documentId="another-document" />)
-    await waitFor(() => expect(screen.getByText("First")).toBeInTheDocument())
-    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(screen.getAllByText("First").length).toBeGreaterThan(0)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
   })
 
   it("shows a clear error when document creation fails", async () => {

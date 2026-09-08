@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react"
+import { apiRequest } from "@/lib/api-client"
 
 type PublicUser = {
   id: string
@@ -44,9 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Authentication stays on the web origin; Next rewrites it to the API so
       // the browser stores and sends the session cookie for one hostname.
-      const res = await fetch("/auth/me", {
-        credentials: "include",
-      })
+      const res = await apiRequest({ path: "/auth/me" })
       const body = (res.ok ? await res.json() : null) as AuthMeResponse
       // The initial probe can finish after login-triggered refresh; only the
       // newest request may commit state or it can log the user back out.

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import {
   DocumentWorkspace,
   type DocumentWorkspaceProps,
@@ -133,25 +134,11 @@ export function WorkspaceShell({
     )
     .slice(0, 8)
 
-  const apiHeaders = useCallback(
-    () => ({
-      "content-type": "application/json",
-      "x-dev-user-id": user.id,
-    }),
-    [user.id]
-  )
-
   const refreshDocuments = useCallback(async () => {
     if (!apiUrl) return
     const [activeResponse, trashResponse] = await Promise.all([
-      fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
-        credentials: "include",
-        headers: { "x-dev-user-id": user.id },
-      }),
-      fetch(`${apiUrl.replace(/\/$/, "")}/documents/trash`, {
-        credentials: "include",
-        headers: { "x-dev-user-id": user.id },
-      }),
+      apiRequest({ path: "/documents", userId: user.id }),
+      apiRequest({ path: "/documents/trash", userId: user.id }),
     ])
     const activeItems = activeResponse.ok
       ? ((await activeResponse.json()) as Array<
@@ -178,15 +165,12 @@ export function WorkspaceShell({
   }, [apiUrl, user.id])
   async function toggleFavorite(id: string, isFavorite: boolean) {
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${id}/pref`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: apiHeaders(),
-          body: JSON.stringify({ isFavorite }),
-        }
-      )
+      const response = await apiRequest({
+        path: `/documents/${id}/pref`,
+        method: "PATCH",
+        userId: user.id,
+        json: { isFavorite },
+      })
       if (!response.ok) {
         const detail = await response.text().catch(() => "")
         throw new Error(detail || "更新收藏失败")
@@ -206,14 +190,11 @@ export function WorkspaceShell({
 
   async function restoreDocument(id: string) {
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${id}/restore`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "x-dev-user-id": user.id },
-        }
-      )
+      const response = await apiRequest({
+        path: `/documents/${id}/restore`,
+        method: "POST",
+        userId: user.id,
+      })
       if (!response.ok) throw new Error("恢复失败")
       await refreshDocuments()
       router.push(`/documents/${id}`)
@@ -224,14 +205,11 @@ export function WorkspaceShell({
 
   async function purgeDocument(id: string) {
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${id}/permanent`,
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: { "x-dev-user-id": user.id },
-        }
-      )
+      const response = await apiRequest({
+        path: `/documents/${id}/permanent`,
+        method: "DELETE",
+        userId: user.id,
+      })
       if (!response.ok) throw new Error("永久删除失败")
       setTrashedDocuments((current) => current.filter((item) => item.id !== id))
     } catch (error) {
@@ -243,15 +221,12 @@ export function WorkspaceShell({
     try {
       const markdown = await file.text()
       const title = file.name.replace(/\.md$/i, "") || "导入的文档"
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/import`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: apiHeaders(),
-          body: JSON.stringify({ title, markdown }),
-        }
-      )
+      const response = await apiRequest({
+        path: "/documents/import",
+        method: "POST",
+        userId: user.id,
+        json: { title, markdown },
+      })
       if (!response.ok) throw new Error("导入失败")
       const document = (await response.json()) as CreatedDocumentResponse
       await refreshDocuments()
@@ -264,19 +239,12 @@ export function WorkspaceShell({
 
   async function renameDocument(id: string, title: string) {
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
-        {
-          method: "PATCH",
-          // Include credentials so session cookie is sent in production.
-          credentials: "include",
-          headers: {
-            "content-type": "application/json",
-            "x-dev-user-id": user.id,
-          },
-          body: JSON.stringify({ title }),
-        }
-      )
+      const response = await apiRequest({
+        path: `/documents/${id}`,
+        method: "PATCH",
+        userId: user.id,
+        json: { title },
+      })
       if (!response.ok) throw new Error("重命名失败")
       const updated = (await response.json()) as { id: string; title: string }
       syncDocuments((current) =>
@@ -290,14 +258,11 @@ export function WorkspaceShell({
   }
   async function deleteDocument(id: string) {
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-          headers: { "x-dev-user-id": user.id },
-        }
-      )
+      const response = await apiRequest({
+        path: `/documents/${id}`,
+        method: "DELETE",
+        userId: user.id,
+      })
       if (!response.ok) throw new Error("删除失败")
       syncDocuments((current) => current.filter((item) => item.id !== id))
       void refreshDocuments()
@@ -338,10 +303,10 @@ export function WorkspaceShell({
   async function createDocument() {
     setCreating(true)
     try {
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+      const response = await apiRequest({
+        path: "/documents",
         method: "POST",
-        credentials: "include",
-        headers: { "x-dev-user-id": user.id },
+        userId: user.id,
       })
       if (!response.ok) {
         throw new Error(`新建文档失败 (${response.status})`)
@@ -370,14 +335,11 @@ export function WorkspaceShell({
 
   async function createChildDocument(parentId: string) {
     try {
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+      const response = await apiRequest({
+        path: "/documents",
         method: "POST",
-        credentials: "include",
-        headers: {
-          "x-dev-user-id": user.id,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ parentId }),
+        userId: user.id,
+        json: { parentId },
       })
       if (!response.ok) throw new Error("创建子文档失败")
       const document = (await response.json()) as SidebarDocument

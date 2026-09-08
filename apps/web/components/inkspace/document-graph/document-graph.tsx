@@ -19,6 +19,7 @@ import { LoaderCircleIcon } from "@workspace/icons"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import { DocumentGraphEdge } from "./graph-edge"
 import { DocumentGraphNode } from "./graph-node"
 
@@ -53,9 +54,9 @@ export function DocumentGraph({
     simulationDone.current = false
     setLoading(true)
 
-    void fetch(`${apiUrl.replace(/\/$/, "")}/documents/graph`, {
-      credentials: "include",
-      headers: { "x-dev-user-id": userId },
+    void apiRequest({
+      path: "/documents/graph",
+      userId,
     })
       .then((response) => {
         if (!response.ok) throw new Error(`加载图谱失败 (${response.status})`)

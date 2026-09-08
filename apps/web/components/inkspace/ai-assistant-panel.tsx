@@ -8,6 +8,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 
 type Message = { role: "user" | "assistant"; content: string }
 
@@ -111,22 +112,17 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     abortRef.current = controller
     let answer = ""
     try {
-      const response = await fetch(
-        `${props.apiUrl.replace(/\/$/, "")}/ai/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-dev-user-id": props.userId,
-          },
-          body: JSON.stringify({
-            documentId: props.documentId,
-            documentText: props.getDocumentText(),
-            messages: [...history, { role: "user", content }],
-          }),
-          signal: controller.signal,
-        }
-      )
+      const response = await apiRequest({
+        path: "/ai/chat",
+        method: "POST",
+        userId: props.userId,
+        json: {
+          documentId: props.documentId,
+          documentText: props.getDocumentText(),
+          messages: [...history, { role: "user", content }],
+        },
+        signal: controller.signal,
+      })
       if (!response.ok || !response.body) throw new Error("AI 服务暂不可用")
       const reader = response.body.getReader()
       const decoder = new TextDecoder()

@@ -5,6 +5,7 @@ import { useAuth } from "../../../components/auth-provider"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 
 function getToken(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
@@ -35,13 +36,10 @@ export default function ShareAcceptancePage() {
     let cancelled = false
     async function acceptShare() {
       try {
-        const response = await fetch(
-          `/share/${encodeURIComponent(shareToken)}/accept`,
-          {
-            method: "POST",
-            credentials: "include",
-          }
-        )
+        const response = await apiRequest({
+          path: `/share/${encodeURIComponent(shareToken)}/accept`,
+          method: "POST",
+        })
         const body = (await response.json().catch(() => null)) as {
           documentId?: string
           message?: string

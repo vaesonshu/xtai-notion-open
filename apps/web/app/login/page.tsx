@@ -1,10 +1,6 @@
 "use client"
 
-import {
-  ArrowLeftIcon,
-  LockKeyholeIcon,
-  MailIcon,
-} from "@workspace/icons"
+import { ArrowLeftIcon, LockKeyholeIcon, MailIcon } from "@workspace/icons"
 import { Button } from "@workspace/ui/components/button"
 import {
   Card,
@@ -22,6 +18,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest, readApiErrorMessage } from "@/lib/api-client"
 
 function getSafeReturnTo(value: string | null) {
   // Authentication redirects stay inside this application even if the query
@@ -48,18 +45,16 @@ function LoginForm() {
     try {
       // Use the same-origin auth proxy so the login response and `/auth/me`
       // share one browser cookie even when the API uses 127.0.0.1 locally.
-      const response = await fetch("/auth/login", {
+      const response = await apiRequest({
+        path: "/auth/login",
         method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
+        json: { email, password },
       })
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          message?: string
-        } | null
-        throw new Error(body?.message || `登录失败 (${response.status})`)
+        throw new Error(
+          await readApiErrorMessage(response, `登录失败 (${response.status})`)
+        )
       }
 
       // Refresh the shared auth state before navigation so the destination

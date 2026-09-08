@@ -27,6 +27,7 @@ import {
   type ReactNode,
 } from "react"
 import { toast } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import type { Doc as YDoc } from "yjs"
 
 export type AiWritingHostProps = {
@@ -276,25 +277,20 @@ function AiWritingHostReady({
 
         // fetch / SSE 流程独立 try/catch：abort 与服务端错误走原有错误态，不再触发清理回滚
         try {
-          const response = await fetch(
-            `${apiUrl.replace(/\/$/, "")}/ai/write`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-dev-user-id": userId,
-              },
-              body: JSON.stringify({
-                documentId,
-                mode: session.mode,
-                prompt,
-                cursorBlockId: requestContext.cursorBlockId,
-                selectedIds: requestContext.selectedIds,
-                blocks: blocksPayload,
-              }),
-              signal: controller.signal,
-            }
-          )
+          const response = await apiRequest({
+            path: "/ai/write",
+            method: "POST",
+            userId,
+            json: {
+              documentId,
+              mode: session.mode,
+              prompt,
+              cursorBlockId: requestContext.cursorBlockId,
+              selectedIds: requestContext.selectedIds,
+              blocks: blocksPayload,
+            },
+            signal: controller.signal,
+          })
 
           if (!response.ok) {
             throw new Error("AI 写作服务暂不可用")

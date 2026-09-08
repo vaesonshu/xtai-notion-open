@@ -3,17 +3,17 @@ import {
   ArticleReader,
   type ArticleReaderArticle,
 } from "../../../components/square/article-reader"
+import { apiRequest, getClientApiBase } from "@/lib/api-client"
 
 async function getPublishedArticle(
   articleId: string
 ): Promise<ArticleReaderArticle | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL
-  if (!apiUrl) return null
+  if (!getClientApiBase()) return null
 
-  const response = await fetch(
-    `${apiUrl.replace(/\/$/, "")}/square/articles/${articleId}`,
-    { cache: "no-store" }
-  )
+  const response = await apiRequest({
+    path: `/square/articles/${articleId}`,
+    cache: "no-store",
+  })
   if (response.status === 404) return null
   if (!response.ok) throw new Error("Unable to load published article")
 

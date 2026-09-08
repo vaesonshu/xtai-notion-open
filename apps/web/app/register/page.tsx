@@ -28,6 +28,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest, readApiErrorMessage } from "@/lib/api-client"
 
 function getSafeReturnTo(value: string | null) {
   // Keep the eventual post-login destination internal when registration was
@@ -70,22 +71,20 @@ function RegisterForm() {
     try {
       // Registration uses the same auth proxy as login to keep all account
       // requests independent of the API server's local hostname.
-      const response = await fetch("/auth/register", {
+      const response = await apiRequest({
+        path: "/auth/register",
         method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
+        json: {
           email,
           password,
           displayName: displayName.trim(),
-        }),
+        },
       })
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          message?: string
-        } | null
-        throw new Error(body?.message || `注册失败 (${response.status})`)
+        throw new Error(
+          await readApiErrorMessage(response, `注册失败 (${response.status})`)
+        )
       }
 
       // Registration does not create a session. Toast here (not on /login) so
@@ -176,9 +175,7 @@ function RegisterForm() {
                   <FieldDescription>至少 8 个字符</FieldDescription>
                 </Field>
 
-                <Field
-                  data-invalid={password !== passwordConfirmation}
-                >
+                <Field data-invalid={password !== passwordConfirmation}>
                   <FieldLabel htmlFor="password-confirmation">
                     <LockKeyholeIcon className="size-4" />
                     确认密码

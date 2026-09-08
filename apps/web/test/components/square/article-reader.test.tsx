@@ -56,15 +56,16 @@ describe("ArticleReader", () => {
       />
     )
 
-    expect(screen.getByRole("heading", { name: "Published guide" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Published guide" })
+    ).toBeInTheDocument()
     expect(screen.getByText("Ada")).toBeInTheDocument()
     expect(screen.getByText("A")).toBeInTheDocument()
     expect(screen.getByText("个人空间")).toBeInTheDocument()
     expect(screen.getByText("公开阅读正文")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "← 返回写作广场" })).toHaveAttribute(
-      "href",
-      "/square"
-    )
+    expect(
+      screen.getByRole("link", { name: "← 返回写作广场" })
+    ).toHaveAttribute("href", "/square")
   })
 
   it("opens a lightbox when an inline image is clicked", () => {
@@ -82,7 +83,7 @@ describe("ArticleReader", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("img"))
+    fireEvent.click(document.querySelector(".editor-image-block__img")!)
 
     expect(screen.getByRole("dialog", { name: "图片预览" })).toBeInTheDocument()
     expect(screen.getByRole("img", { name: "放大预览" })).toHaveAttribute(

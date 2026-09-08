@@ -25,6 +25,7 @@ import {
 } from "@xtai-notion/editor-core"
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest, readApiErrorMessage } from "@/lib/api-client"
 import { PencilIcon } from "./icon"
 
 export type DocumentCommentNode = {
@@ -252,14 +253,14 @@ export function DocumentCommentsPanel({
   const [replyParentId, setReplyParentId] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const baseUrl = `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/comments`
+  const commentsPath = `/documents/${documentId}/comments`
 
   const loadComments = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(baseUrl, {
-        credentials: "include",
-        headers: { "x-dev-user-id": userId },
+      const response = await apiRequest({
+        path: commentsPath,
+        userId,
       })
       if (!response.ok) throw new Error("加载评论失败")
       const payload = await response.json()
@@ -273,7 +274,7 @@ export function DocumentCommentsPanel({
     } finally {
       setLoading(false)
     }
-  }, [baseUrl, userId, onCommentMarksChange])
+  }, [commentsPath, userId, onCommentMarksChange])
 
   useEffect(() => {
     void loadComments()
@@ -305,16 +306,13 @@ export function DocumentCommentsPanel({
     const comment = deleteTarget
     setDeletingCommentId(comment.id)
     try {
-      const response = await fetch(`${baseUrl}/${comment.id}`, {
+      const response = await apiRequest({
+        path: `${commentsPath}/${comment.id}`,
         method: "DELETE",
-        credentials: "include",
-        headers: { "x-dev-user-id": userId },
+        userId,
       })
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as {
-          message?: string
-        } | null
-        throw new Error(payload?.message || "删除评论失败")
+        throw new Error(await readApiErrorMessage(response, "删除评论失败"))
       }
       if (replyParentId === comment.id) {
         setReplyParentId(null)
@@ -343,20 +341,17 @@ export function DocumentCommentsPanel({
 
     setSubmitting(true)
     try {
-      const response = await fetch(baseUrl, {
+      const response = await apiRequest({
+        path: commentsPath,
         method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          "x-dev-user-id": userId,
-        },
-        body: JSON.stringify({
+        userId,
+        json: {
           body: trimmed,
           blockId: commentAnchor?.blockId,
           anchorFrom: commentAnchor?.anchorFrom,
           anchorTo: commentAnchor?.anchorTo,
           parentId: replyParentId ?? undefined,
-        }),
+        },
       })
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as {
@@ -383,105 +378,105 @@ export function DocumentCommentsPanel({
           className="flex h-full min-h-0 w-[min(280px,100vw)] min-w-0 shrink-0 flex-col border-l border-[#E8E6E1] bg-white"
           aria-label="文档评论"
         >
-      <div className="flex items-start justify-between gap-2 border-b border-[#E8E6E1] p-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="flex items-center gap-2 font-semibold text-[#242321]">
-            <PencilIcon icon={MessageSquareIcon} size={18} />
-            文档评论
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed text-[#78746C]">
-            选中正文文字后即可评论；点击划线内容可定位到对应评论。
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="shrink-0"
-          onClick={() => {
-            setDeleteTarget(null)
-            onOpenChange(false)
-          }}
-          aria-label="关闭评论侧栏"
-        >
-          关闭
-        </Button>
-      </div>
-      <div
-        ref={scrollRef}
-        className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
-      >
-        <div className="rounded-lg border border-[#E8E6E1] p-3">
-          {replyParentId ? (
-            <p className="mb-2 text-xs text-[#78746C]">
-              正在回复评论…
-              <button
-                type="button"
-                className="ml-2 cursor-pointer text-[#242321] underline"
-                onClick={() => setReplyParentId(null)}
-              >
-                取消
-              </button>
-            </p>
-          ) : commentAnchor ? (
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <p className="text-xs text-[#78746C]">
-                评论选中：
-                <span className="font-medium text-[#242321]">
-                  「{truncatePreview(commentAnchor.preview)}」
-                </span>
+          <div className="flex items-start justify-between gap-2 border-b border-[#E8E6E1] p-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="flex items-center gap-2 font-semibold text-[#242321]">
+                <PencilIcon icon={MessageSquareIcon} size={18} />
+                文档评论
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-[#78746C]">
+                选中正文文字后即可评论；点击划线内容可定位到对应评论。
               </p>
-              <button
-                type="button"
-                className="shrink-0 cursor-pointer text-xs text-[#78746C] underline hover:text-[#242321]"
-                onClick={onCommentAnchorClear}
-              >
-                重选
-              </button>
             </div>
-          ) : (
-            <p className="mb-2 text-xs text-[#9A6700]">
-              请先在正文中选中要评论的文字
-            </p>
-          )}
-          <Textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            placeholder="写下你的评论…"
-            rows={3}
-            className="resize-none"
-          />
-          <Button
-            type="button"
-            size="sm"
-            className="mt-2"
-            disabled={submitting}
-            onClick={() => void submitComment()}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => {
+                setDeleteTarget(null)
+                onOpenChange(false)
+              }}
+              aria-label="关闭评论侧栏"
+            >
+              关闭
+            </Button>
+          </div>
+          <div
+            ref={scrollRef}
+            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
           >
-            {submitting ? "发送中…" : replyParentId ? "回复" : "发表评论"}
-          </Button>
-        </div>
-
-        {loading ? (
-          <p className="text-sm text-[#78746C]">加载中…</p>
-        ) : threads.length === 0 ? (
-          <p className="text-sm text-[#78746C]">暂无评论</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {threads.map((comment) => (
-              <CommentThread
-                key={comment.id}
-                comment={comment}
-                userId={userId}
-                activeCommentId={activeCommentId}
-                onReply={setReplyParentId}
-                onJumpToBlock={scrollToBlock}
-                onDelete={setDeleteTarget}
-                deletingCommentId={deletingCommentId}
+            <div className="rounded-lg border border-[#E8E6E1] p-3">
+              {replyParentId ? (
+                <p className="mb-2 text-xs text-[#78746C]">
+                  正在回复评论…
+                  <button
+                    type="button"
+                    className="ml-2 cursor-pointer text-[#242321] underline"
+                    onClick={() => setReplyParentId(null)}
+                  >
+                    取消
+                  </button>
+                </p>
+              ) : commentAnchor ? (
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <p className="text-xs text-[#78746C]">
+                    评论选中：
+                    <span className="font-medium text-[#242321]">
+                      「{truncatePreview(commentAnchor.preview)}」
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    className="shrink-0 cursor-pointer text-xs text-[#78746C] underline hover:text-[#242321]"
+                    onClick={onCommentAnchorClear}
+                  >
+                    重选
+                  </button>
+                </div>
+              ) : (
+                <p className="mb-2 text-xs text-[#9A6700]">
+                  请先在正文中选中要评论的文字
+                </p>
+              )}
+              <Textarea
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                placeholder="写下你的评论…"
+                rows={3}
+                className="resize-none"
               />
-            ))}
-          </ul>
-        )}
-      </div>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-2"
+                disabled={submitting}
+                onClick={() => void submitComment()}
+              >
+                {submitting ? "发送中…" : replyParentId ? "回复" : "发表评论"}
+              </Button>
+            </div>
+
+            {loading ? (
+              <p className="text-sm text-[#78746C]">加载中…</p>
+            ) : threads.length === 0 ? (
+              <p className="text-sm text-[#78746C]">暂无评论</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {threads.map((comment) => (
+                  <CommentThread
+                    key={comment.id}
+                    comment={comment}
+                    userId={userId}
+                    activeCommentId={activeCommentId}
+                    onReply={setReplyParentId}
+                    onJumpToBlock={scrollToBlock}
+                    onDelete={setDeleteTarget}
+                    deletingCommentId={deletingCommentId}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
         </aside>
       ) : null}
       <AlertDialog
@@ -551,11 +546,7 @@ function DocumentCommentMarkersReady({
   const blockEditor = useBlockEditor()
 
   useEffect(() => {
-    setDocumentCommentMarks(
-      blockEditor,
-      commentMarks,
-      activeCommentId ?? null
-    )
+    setDocumentCommentMarks(blockEditor, commentMarks, activeCommentId ?? null)
   }, [activeCommentId, blockEditor, commentMarks])
 
   return null

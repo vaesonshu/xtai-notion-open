@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
@@ -32,10 +33,10 @@ export function ShareDialog({
   async function createLink() {
     setLoading(true)
     try {
-      const response = await fetch(
-        `/api/documents/${encodeURIComponent(documentId)}/share-link`,
-        { method: "POST", credentials: "include" }
-      )
+      const response = await apiRequest({
+        path: `/api/documents/${encodeURIComponent(documentId)}/share-link`,
+        method: "POST",
+      })
       if (!response.ok) {
         throw new Error("无法生成分享链接，请稍后重试")
       }

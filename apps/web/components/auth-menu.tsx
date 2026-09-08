@@ -13,6 +13,7 @@ import {
 } from "@workspace/ui/components/dropdown-menu"
 import { useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 
 function getInitials(name: string) {
   const trimmed = name.trim()
@@ -41,10 +42,7 @@ export function AuthMenu() {
     setBusy(true)
     try {
       // Logout must clear the cookie on the same origin that created it.
-      const res = await fetch("/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      })
+      const res = await apiRequest({ path: "/auth/logout", method: "POST" })
       if (!res.ok) throw new Error(`Logout failed (${res.status})`)
       await refresh()
       // Use a hard navigation to discard the protected route in both the app
@@ -76,34 +74,34 @@ export function AuthMenu() {
 
   return (
     <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="rounded-full border border-border bg-white shadow-sm hover:bg-muted"
-            />
-          }
-        >
-          <Avatar className="size-8">
-            <AvatarFallback
-              className="text-white"
-              style={{ backgroundColor: user.color ?? "#242321" }}
-            >
-              {getInitials(user.name)}
-            </AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={8}>
-          <DropdownMenuItem className="pointer-events-none opacity-100 focus:bg-transparent">
-            <UserRoundIcon />
-            <span>{user.name}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onClick={() => void logout()}>
-            <LogOutIcon />
-            <span>{busy ? "注销中..." : "注销"}</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full border border-border bg-white shadow-sm hover:bg-muted"
+          />
+        }
+      >
+        <Avatar className="size-8">
+          <AvatarFallback
+            className="text-white"
+            style={{ backgroundColor: user.color ?? "#242321" }}
+          >
+            {getInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8}>
+        <DropdownMenuItem className="pointer-events-none opacity-100 focus:bg-transparent">
+          <UserRoundIcon />
+          <span>{user.name}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy} onClick={() => void logout()}>
+          <LogOutIcon />
+          <span>{busy ? "注销中..." : "注销"}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
     </DropdownMenu>
   )
 }

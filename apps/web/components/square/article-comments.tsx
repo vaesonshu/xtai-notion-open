@@ -14,6 +14,7 @@ import Link from "next/link"
 import { loadEmojiMart, preloadEmojiMart } from "../../lib/emoji-mart-loader"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 
 export type ArticleCommentNode = {
   id: string
@@ -146,18 +147,15 @@ function CommentComposer({
 
     setSubmitting(true)
     try {
-      const response = await fetch(
-        `/square/articles/${encodeURIComponent(articleId)}/comments`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            body: trimmed,
-            parentId: parentId ?? undefined,
-          }),
-        }
-      )
+      const response = await apiRequest({
+        path: `/square/articles/${encodeURIComponent(articleId)}/comments`,
+        method: "POST",
+        sameOrigin: true,
+        json: {
+          body: trimmed,
+          parentId: parentId ?? undefined,
+        },
+      })
       const payload = (await response.json().catch(() => null)) as {
         message?: string
       } | null
@@ -327,17 +325,17 @@ export function ArticleComments({ articleId }: { articleId: string }) {
   const loadComments = useCallback(async () => {
     setError(null)
     try {
-      const response = await fetch(
-        `/square/articles/${encodeURIComponent(articleId)}/comments`
-      )
+      const response = await apiRequest({
+        path: `/square/articles/${encodeURIComponent(articleId)}/comments`,
+        sameOrigin: true,
+      })
       if (!response.ok) {
         throw new Error("加载评论失败")
       }
       const body = (await response.json()) as ArticleCommentNode[]
       setComments(body)
     } catch (caught) {
-      const message =
-        caught instanceof Error ? caught.message : "加载评论失败"
+      const message = caught instanceof Error ? caught.message : "加载评论失败"
       toastError(caught, "加载评论失败")
       setError(message)
     } finally {

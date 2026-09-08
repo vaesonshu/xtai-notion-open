@@ -10,6 +10,7 @@ import {
   CommandList,
 } from "@workspace/ui/components/command"
 import { useEffect, useState } from "react"
+import { apiRequest } from "@/lib/api-client"
 
 export type SearchDocument = {
   id: string
@@ -56,25 +57,28 @@ export function DocumentSearchDialog({
 
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      void fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/search?q=${encodeURIComponent(trimmed)}`,
-        {
-          credentials: "include",
-          headers: { "x-dev-user-id": userId },
-          signal: controller.signal,
-        }
-      )
+      void apiRequest({
+        path: `/documents/search?q=${encodeURIComponent(trimmed)}`,
+        userId,
+        signal: controller.signal,
+      })
         .then((response) => (response.ok ? response.json() : []))
-        .then((items: Array<SearchDocument & { matchIn?: string; matchExcerpt?: string }>) => {
-          setRemote(
-            items.map((item) => ({
-              id: item.id,
-              title: item.title || "未命名文档",
-              matchIn: item.matchIn as SearchDocument["matchIn"],
-              matchExcerpt: item.matchExcerpt,
-            }))
-          )
-        })
+        .then(
+          (
+            items: Array<
+              SearchDocument & { matchIn?: string; matchExcerpt?: string }
+            >
+          ) => {
+            setRemote(
+              items.map((item) => ({
+                id: item.id,
+                title: item.title || "未命名文档",
+                matchIn: item.matchIn as SearchDocument["matchIn"],
+                matchExcerpt: item.matchExcerpt,
+              }))
+            )
+          }
+        )
         .catch(() => undefined)
     }, 200)
 

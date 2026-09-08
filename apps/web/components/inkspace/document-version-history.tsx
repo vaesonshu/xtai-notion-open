@@ -21,6 +21,7 @@ import {
 } from "@workspace/ui/components/alert-dialog"
 import { useCallback, useEffect, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import { PencilIcon } from "./icon"
 
 type DocumentVersion = {
@@ -68,14 +69,14 @@ export function DocumentVersionHistory({
     null
   )
 
-  const baseUrl = `${apiUrl.replace(/\/$/, "")}/documents/${documentId}`
+  const versionsPath = `/documents/${documentId}/versions`
 
   const loadVersions = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${baseUrl}/versions`, {
-        credentials: "include",
-        headers: { "x-dev-user-id": userId },
+      const response = await apiRequest({
+        path: versionsPath,
+        userId,
       })
       if (!response.ok) throw new Error("加载版本历史失败")
       const items = (await response.json()) as DocumentVersion[]
@@ -85,7 +86,7 @@ export function DocumentVersionHistory({
     } finally {
       setLoading(false)
     }
-  }, [baseUrl, userId])
+  }, [userId, versionsPath])
 
   useEffect(() => {
     if (open) void loadVersions()
@@ -94,10 +95,10 @@ export function DocumentVersionHistory({
   async function saveVersion() {
     setSaving(true)
     try {
-      const response = await fetch(`${baseUrl}/versions`, {
+      const response = await apiRequest({
+        path: versionsPath,
         method: "POST",
-        credentials: "include",
-        headers: { "x-dev-user-id": userId },
+        userId,
       })
       if (!response.ok) throw new Error("保存版本失败")
       toast.success("已保存当前版本")
@@ -112,14 +113,11 @@ export function DocumentVersionHistory({
   async function confirmRestore() {
     if (!restoreTarget) return
     try {
-      const response = await fetch(
-        `${baseUrl}/versions/${restoreTarget.id}/restore`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "x-dev-user-id": userId },
-        }
-      )
+      const response = await apiRequest({
+        path: `${versionsPath}/${restoreTarget.id}/restore`,
+        method: "POST",
+        userId,
+      })
       if (!response.ok) throw new Error("恢复版本失败")
       toast.success("已恢复到选定版本，请刷新页面以同步内容")
       setRestoreTarget(null)

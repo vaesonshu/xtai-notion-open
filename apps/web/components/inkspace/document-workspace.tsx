@@ -17,6 +17,7 @@ import {
 } from "@workspace/ui/components/alert"
 import { useCallback, useEffect, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
@@ -75,18 +76,13 @@ function getLoadErrorMessage(error: unknown): string {
 }
 
 async function fetchDocumentRole(
-  apiUrl: string,
   documentId: string,
   userId: string
 ): Promise<DocumentMetadataResponse> {
-  const response = await fetch(
-    `${apiUrl.replace(/\/$/, "")}/documents/${documentId}`,
-    {
-      headers: {
-        "x-dev-user-id": userId,
-      },
-    }
-  )
+  const response = await apiRequest({
+    path: `/documents/${documentId}`,
+    userId,
+  })
 
   if (!response.ok) {
     throw new Error(`Failed to load document metadata (${response.status})`)
@@ -115,10 +111,7 @@ function useMentionProvider(
   useEffect(() => {
     if (!apiUrl) return
     let cancelled = false
-    void fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
-      credentials: "include",
-      headers: { "x-dev-user-id": userId },
-    })
+    void apiRequest({ path: "/documents", userId })
       .then((response) => (response.ok ? response.json() : []))
       .then((items: Array<{ id: string; title?: string }>) => {
         if (cancelled) return
@@ -201,14 +194,11 @@ export function DocumentWorkspace({
   const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
   const submitPublication = useCallback(async () => {
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/submit-publication`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "x-dev-user-id": user.id },
-        }
-      )
+      const response = await apiRequest({
+        path: `/documents/${documentId}/submit-publication`,
+        method: "POST",
+        userId: user.id,
+      })
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as {
           message?: string
@@ -233,14 +223,11 @@ export function DocumentWorkspace({
 
   useEffect(() => {
     if (!configured || !documentId) return
-    void fetch(`${apiUrl.replace(/\/$/, "")}/documents/${documentId}/pref`, {
+    void apiRequest({
+      path: `/documents/${documentId}/pref`,
       method: "PATCH",
-      credentials: "include",
-      headers: {
-        "content-type": "application/json",
-        "x-dev-user-id": user.id,
-      },
-      body: JSON.stringify({ recordOpened: true }),
+      userId: user.id,
+      json: { recordOpened: true },
     }).catch(() => undefined)
   }, [apiUrl, configured, documentId, user.id])
 
@@ -251,7 +238,7 @@ export function DocumentWorkspace({
 
     let cancelled = false
 
-    void fetchDocumentRole(apiUrl, documentId, user.id)
+    void fetchDocumentRole(documentId, user.id)
       .then((metadata) => {
         if (!cancelled) {
           setRole(metadata.role)

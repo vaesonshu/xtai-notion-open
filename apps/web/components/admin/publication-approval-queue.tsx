@@ -11,6 +11,7 @@ import {
 import { Textarea } from "@workspace/ui/components/textarea"
 import { useEffect, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest } from "@/lib/api-client"
 import { useAuthOptional } from "../auth-provider"
 
 type PendingPublication = {
@@ -36,9 +37,9 @@ export function PublicationApprovalQueue({
   useEffect(() => {
     if (!apiUrl || !userId) return
     let cancelled = false
-    void fetch(`${apiUrl.replace(/\/$/, "")}/admin/publications`, {
-      credentials: "include",
-      headers: { "x-dev-user-id": userId },
+    void apiRequest({
+      path: "/admin/publications",
+      userId,
     })
       .then(async (response) => {
         if (!response.ok)
@@ -66,21 +67,12 @@ export function PublicationApprovalQueue({
     }
     setBusyId(id)
     try {
-      const response = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/admin/publications/${id}/${decision}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "content-type": "application/json",
-            "x-dev-user-id": userId,
-          },
-          body:
-            decision === "reject"
-              ? JSON.stringify({ reason: reason.trim() })
-              : undefined,
-        }
-      )
+      const response = await apiRequest({
+        path: `/admin/publications/${id}/${decision}`,
+        method: "POST",
+        userId,
+        json: decision === "reject" ? { reason: reason.trim() } : undefined,
+      })
       if (!response.ok) throw new Error(`审批失败 (${response.status})`)
       // Remove only after the server accepts the transition, preserving failed rows.
       setItems((current) => current.filter((item) => item.id !== id))

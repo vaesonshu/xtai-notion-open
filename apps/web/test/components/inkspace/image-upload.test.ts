@@ -1,10 +1,20 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import {
   createDocumentCanvasImageFetcher,
   createDocumentImageUploader,
 } from "@/components/inkspace/image-upload"
+import { buildClientApiUrl } from "@/lib/api-client"
 
 const file = new File(["image"], "image.png", { type: "image/png" })
+
+beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.test")
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+})
 
 describe("createDocumentImageUploader", () => {
   it("uploads the original file to the API without contacting COS from the browser", async () => {
@@ -30,13 +40,11 @@ describe("createDocumentImageUploader", () => {
 
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.test/documents/document-1/images",
+      buildClientApiUrl("/documents/document-1/images"),
       expect.objectContaining({ method: "POST", body: expect.any(FormData) })
     )
     const [requestUrl, requestOptions] = fetchMock.mock.calls[0]!
-    expect(requestUrl).toBe(
-      "https://api.example.test/documents/document-1/images"
-    )
+    expect(requestUrl).toBe(buildClientApiUrl("/documents/document-1/images"))
     const formData = (requestOptions as RequestInit).body as FormData
     expect(formData.get("file")).toBe(file)
   })
@@ -86,12 +94,18 @@ describe("createDocumentCanvasImageFetcher", () => {
     })("https://cdn.example.test/documents/document-1/image.png")
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.example.test/documents/document-1/images/proxy?url=https%3A%2F%2Fcdn.example.test%2Fdocuments%2Fdocument-1%2Fimage.png",
+      buildClientApiUrl(
+        "/documents/document-1/images/proxy?url=https%3A%2F%2Fcdn.example.test%2Fdocuments%2Fdocument-1%2Fimage.png"
+      ),
       expect.objectContaining({
         credentials: "include",
-        headers: { "x-dev-user-id": "user-1" },
       })
     )
+    expect(
+      new Headers(
+        (fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.headers
+      ).get("x-dev-user-id")
+    ).toBe("user-1")
     expect(await blob.text()).toBe("image-bytes")
   })
 })

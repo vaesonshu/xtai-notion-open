@@ -6,6 +6,7 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
+import { apiRequest, apiRequestJson } from "@/lib/api-client"
 
 type DocumentListItem = {
   id: string
@@ -16,44 +17,23 @@ type DocumentListItem = {
 // user so an empty account does not POST two default documents.
 const bootstrapDocumentByUser = new Map<string, Promise<string>>()
 
-function documentsApiBase() {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
-}
-
-function documentsApiHeaders(userId: string) {
-  return { "x-dev-user-id": userId }
-}
-
 /** 打开首篇文档；若无任何文档则为新用户创建默认工作区文档。 */
 export async function resolveDocumentsEntryTarget(
   userId: string
 ): Promise<string> {
-  const base = documentsApiBase()
-  const headers = documentsApiHeaders(userId)
-
-  const listResponse = await fetch(`${base}/documents`, {
-    credentials: "include",
-    headers,
+  const documents = await apiRequestJson<DocumentListItem[]>({
+    path: "/documents",
+    userId,
   })
-  if (!listResponse.ok) {
-    throw new Error(`Failed to load documents (${listResponse.status})`)
-  }
-
-  const documents = (await listResponse.json()) as DocumentListItem[]
   const firstDocument =
     documents.find((item) => item.role === "owner") ?? documents[0]
   if (firstDocument?.id) return firstDocument.id
 
-  const createResponse = await fetch(`${base}/documents`, {
+  const document = await apiRequestJson<{ id?: string }>({
+    path: "/documents",
     method: "POST",
-    credentials: "include",
-    headers,
+    userId,
   })
-  if (!createResponse.ok) {
-    throw new Error(`新建文档失败 (${createResponse.status})`)
-  }
-
-  const document = (await createResponse.json()) as { id?: string }
   if (!document.id) {
     throw new Error("新建文档响应无效")
   }
@@ -117,16 +97,11 @@ export default function DocumentsIndexPage() {
     if (!user) return
     setLoading(true)
     try {
-      const base = documentsApiBase()
-      const response = await fetch(`${base}/documents`, {
+      const document = await apiRequestJson<{ id?: string }>({
+        path: "/documents",
         method: "POST",
-        credentials: "include",
-        headers: documentsApiHeaders(user.id),
+        userId: user.id,
       })
-      if (!response.ok) {
-        throw new Error(`新建文档失败 (${response.status})`)
-      }
-      const document = (await response.json()) as { id?: string }
       if (!document.id) {
         throw new Error("新建文档响应无效")
       }

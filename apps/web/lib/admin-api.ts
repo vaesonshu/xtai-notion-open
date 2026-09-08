@@ -1,17 +1,6 @@
-/** 管理后台 API 客户端：与现有文档页一致，开发环境用 x-dev-user-id，生产走 cookie。 */
-function apiBase(): string {
-  return (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
-}
+import { apiRequest, apiRequestJson } from "./api-client"
 
-function adminHeaders(
-  userId: string,
-  init?: RequestInit
-): HeadersInit {
-  return {
-    ...(init?.headers ?? {}),
-    "x-dev-user-id": userId,
-  }
-}
+/** 管理后台 API 客户端：与现有文档页一致，开发环境用 x-dev-user-id，生产走 cookie。 */
 
 export type AdminDashboardStats = {
   publishedCount: number
@@ -40,22 +29,13 @@ export type AdminUserRecord = {
   updatedAt: string
 }
 
-async function parseJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `请求失败 (${response.status})`)
-  }
-  return response.json() as Promise<T>
-}
-
 export async function fetchAdminStats(
   userId: string
 ): Promise<AdminDashboardStats> {
-  const response = await fetch(`${apiBase()}/admin/dashboard/stats`, {
-    credentials: "include",
-    headers: adminHeaders(userId),
+  return apiRequestJson({
+    path: "/admin/dashboard/stats",
+    userId,
   })
-  return parseJson(response)
 }
 
 export async function fetchAdminArticles(
@@ -67,31 +47,26 @@ export async function fetchAdminArticles(
   if (params.category) search.set("category", params.category)
   if (params.query) search.set("query", params.query)
   const suffix = search.toString() ? `?${search.toString()}` : ""
-  const response = await fetch(`${apiBase()}/admin/articles${suffix}`, {
-    credentials: "include",
-    headers: adminHeaders(userId),
+  return apiRequestJson({
+    path: `/admin/articles${suffix}`,
+    userId,
   })
-  return parseJson(response)
 }
 
-export async function fetchAdminCategories(
-  userId: string
-): Promise<string[]> {
-  const response = await fetch(`${apiBase()}/admin/articles/categories`, {
-    credentials: "include",
-    headers: adminHeaders(userId),
+export async function fetchAdminCategories(userId: string): Promise<string[]> {
+  return apiRequestJson({
+    path: "/admin/articles/categories",
+    userId,
   })
-  return parseJson(response)
 }
 
 export async function fetchAdminUsers(
   userId: string
 ): Promise<AdminUserRecord[]> {
-  const response = await fetch(`${apiBase()}/admin/users`, {
-    credentials: "include",
-    headers: adminHeaders(userId),
+  return apiRequestJson({
+    path: "/admin/users",
+    userId,
   })
-  return parseJson(response)
 }
 
 export async function createAdminUser(
@@ -103,16 +78,12 @@ export async function createAdminUser(
     role?: "user" | "admin"
   }
 ): Promise<AdminUserRecord> {
-  const response = await fetch(`${apiBase()}/admin/users`, {
+  return apiRequestJson({
+    path: "/admin/users",
     method: "POST",
-    credentials: "include",
-    headers: {
-      ...adminHeaders(userId),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
+    userId,
+    json: body,
   })
-  return parseJson(response)
 }
 
 export async function updateAdminUser(
@@ -125,26 +96,22 @@ export async function updateAdminUser(
     role?: "user" | "admin"
   }
 ): Promise<AdminUserRecord> {
-  const response = await fetch(`${apiBase()}/admin/users/${targetUserId}`, {
+  return apiRequestJson({
+    path: `/admin/users/${targetUserId}`,
     method: "PATCH",
-    credentials: "include",
-    headers: {
-      ...adminHeaders(userId),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
+    userId,
+    json: body,
   })
-  return parseJson(response)
 }
 
 export async function deleteAdminUser(
   userId: string,
   targetUserId: string
 ): Promise<void> {
-  const response = await fetch(`${apiBase()}/admin/users/${targetUserId}`, {
+  const response = await apiRequest({
+    path: `/admin/users/${targetUserId}`,
     method: "DELETE",
-    credentials: "include",
-    headers: adminHeaders(userId),
+    userId,
   })
   if (!response.ok) {
     const message = await response.text()

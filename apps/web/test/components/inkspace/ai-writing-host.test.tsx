@@ -13,11 +13,20 @@ import {
   ImageUpload,
   ShadcnEditorProvider,
 } from "@xtai-notion/editor-shadcn"
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 import * as Y from "yjs"
 import { use, useEffect } from "react"
 import { toast } from "@/lib/toast"
 import { AiWritingHost } from "@/components/inkspace/ai-writing-host"
+import { buildClientApiUrl } from "@/lib/api-client"
 
 const PARA_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 const DOCUMENT_ID = "11111111-1111-4111-8111-111111111111"
@@ -310,7 +319,12 @@ beforeAll(() => {
 })
 
 describe("AiWritingHost", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://127.0.0.1:3100")
+  })
+
   afterEach(() => {
+    vi.unstubAllEnvs()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     // setup.ts 中 sonner toast 为共享 vi.fn()，restoreAllMocks 不会清其调用记录，
@@ -370,7 +384,7 @@ describe("AiWritingHost", () => {
     })
     expect(latestBlockCount).toBe(2)
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://127.0.0.1:3100/ai/write",
+      buildClientApiUrl("/ai/write"),
       expect.objectContaining({
         method: "POST",
       })

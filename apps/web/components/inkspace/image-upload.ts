@@ -1,4 +1,8 @@
-import type { ImageUploadHandler, ImageUploadResult } from "@xtai-notion/editor-core"
+import type {
+  ImageUploadHandler,
+  ImageUploadResult,
+} from "@xtai-notion/editor-core"
+import { apiRequest } from "@/lib/api-client"
 
 export type CreateDocumentImageUploaderOptions = {
   apiUrl: string
@@ -47,19 +51,13 @@ export function createDocumentImageUploader({
 
     let uploadResponse: Response
     try {
-      uploadResponse = await fetch(
-        `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/images`,
-        {
-          method: "POST",
-          credentials: "include",
-          signal,
-          headers: {
-            // keep x-dev-user-id for development; production will use cookie
-            "x-dev-user-id": userId,
-          },
-          body: formData,
-        }
-      )
+      uploadResponse = await apiRequest({
+        path: `/documents/${documentId}/images`,
+        method: "POST",
+        userId,
+        body: formData,
+        signal,
+      })
     } catch (error) {
       throw getUploadError(error)
     }
@@ -80,15 +78,13 @@ export function createDocumentCanvasImageFetcher({
   userId,
 }: CreateDocumentCanvasImageFetcherOptions) {
   return async (url: string, signal?: AbortSignal): Promise<Blob> => {
-    const proxyUrl = `${apiUrl.replace(/\/$/, "")}/documents/${documentId}/images/proxy?url=${encodeURIComponent(url)}`
+    const proxyPath = `/documents/${documentId}/images/proxy?url=${encodeURIComponent(url)}`
     let response: Response
     try {
-      response = await fetch(proxyUrl, {
-        credentials: "include",
+      response = await apiRequest({
+        path: proxyPath,
+        userId,
         signal,
-        headers: {
-          "x-dev-user-id": userId,
-        },
       })
     } catch (error) {
       throw getUploadError(error)
