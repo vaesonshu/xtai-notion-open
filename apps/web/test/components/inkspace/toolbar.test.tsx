@@ -9,7 +9,9 @@ vi.mock("@xtai-notion/editor-react", () => ({
 }))
 
 vi.mock("@/components/auth-menu", () => ({ AuthMenu: () => null }))
-vi.mock("@/components/inkspace/share-dialog", () => ({ ShareDialog: () => null }))
+vi.mock("@/components/inkspace/share-dialog", () => ({
+  ShareDialog: () => null,
+}))
 
 describe("EditorToolbar", () => {
   it("shows a clearly labeled AI assistant button", () => {

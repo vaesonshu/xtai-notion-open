@@ -49,9 +49,7 @@ describe("RegisterPage", () => {
         }),
       })
     )
-    expect(push).toHaveBeenCalledWith(
-      "/login?returnTo=%2Fdocuments%2Fdemo"
-    )
+    expect(push).toHaveBeenCalledWith("/login?returnTo=%2Fdocuments%2Fdemo")
     expect(toast.success).toHaveBeenCalledWith(
       "账号创建成功，请使用新账号登录。"
     )

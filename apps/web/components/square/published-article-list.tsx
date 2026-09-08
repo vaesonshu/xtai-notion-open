@@ -36,9 +36,9 @@ export function PublishedArticleList({
                 {article.category}
               </span>
               <time dateTime={article.publishedAt}>
-                {new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(
-                  new Date(article.publishedAt)
-                )}
+                {new Intl.DateTimeFormat("zh-CN", {
+                  dateStyle: "medium",
+                }).format(new Date(article.publishedAt))}
               </time>
             </div>
             <h2 className="mt-3 text-base font-semibold text-foreground">

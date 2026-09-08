@@ -160,116 +160,119 @@ export function UserManagementPage() {
   return (
     <AdminShell>
       <header className="flex shrink-0 items-center justify-between">
-            <div>
-              <h1 className="text-[26px] font-bold text-[#183e31]">用户管理</h1>
-              <p className="mt-[5px] text-[13px] text-[#718179]">
-                管理平台用户账号与权限
-              </p>
-            </div>
-            <Button
-              type="button"
-              className="h-auto gap-[7px] rounded-[7px] bg-[#167251] px-[14px] py-[10px] text-[13px] font-semibold text-white hover:bg-[#167251]"
-              onClick={openCreate}
-            >
-              <PlusIcon className="size-[15px]" />
-              新建用户
-            </Button>
-          </header>
+        <div>
+          <h1 className="text-[26px] font-bold text-[#183e31]">用户管理</h1>
+          <p className="mt-[5px] text-[13px] text-[#718179]">
+            管理平台用户账号与权限
+          </p>
+        </div>
+        <Button
+          type="button"
+          className="h-auto gap-[7px] rounded-[7px] bg-[#167251] px-[14px] py-[10px] text-[13px] font-semibold text-white hover:bg-[#167251]"
+          onClick={openCreate}
+        >
+          <PlusIcon className="size-[15px]" />
+          新建用户
+        </Button>
+      </header>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <label className="flex h-11 w-[320px] items-center gap-2 rounded-[7px] bg-white px-[11px] outline outline-[#e1e8e4]">
-              <SearchIcon className="size-[15px] text-[#7e9087]" />
-              <Input
-                aria-label="搜索用户"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜索邮箱、昵称或 ID"
-                className="h-auto w-full border-0 bg-transparent p-0 text-[12px] text-[#53665c] shadow-none outline-none placeholder:text-[#9aa7a1] focus-visible:border-0 focus-visible:ring-0"
-              />
-            </label>
-            <span className="ml-auto text-[12px] text-[#74857c]">
-              共 {filtered.length} 位用户
-            </span>
-          </div>
+      <div className="flex shrink-0 items-center gap-3">
+        <label className="flex h-11 w-[320px] items-center gap-2 rounded-[7px] bg-white px-[11px] outline outline-[#e1e8e4]">
+          <SearchIcon className="size-[15px] text-[#7e9087]" />
+          <Input
+            aria-label="搜索用户"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="搜索邮箱、昵称或 ID"
+            className="h-auto w-full border-0 bg-transparent p-0 text-[12px] text-[#53665c] shadow-none outline-none placeholder:text-[#9aa7a1] focus-visible:border-0 focus-visible:ring-0"
+          />
+        </label>
+        <span className="ml-auto text-[12px] text-[#74857c]">
+          共 {filtered.length} 位用户
+        </span>
+      </div>
 
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] bg-white outline outline-[#e6ebe8]">
-            <div className="grid shrink-0 grid-cols-[minmax(180px,1.6fr)_minmax(120px,1fr)_90px_160px_160px_120px] items-center border-b border-[#e6ebe8] bg-[#f7faf8] px-4 py-3 text-[12px] font-semibold text-[#52645b]">
-              <div>邮箱</div>
-              <div>显示名称</div>
-              <div>角色</div>
-              <div>创建时间</div>
-              <div>更新时间</div>
-              <div>操作</div>
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] bg-white outline outline-[#e6ebe8]">
+        <div className="grid shrink-0 grid-cols-[minmax(180px,1.6fr)_minmax(120px,1fr)_90px_160px_160px_120px] items-center border-b border-[#e6ebe8] bg-[#f7faf8] px-4 py-3 text-[12px] font-semibold text-[#52645b]">
+          <div>邮箱</div>
+          <div>显示名称</div>
+          <div>角色</div>
+          <div>创建时间</div>
+          <div>更新时间</div>
+          <div>操作</div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex flex-1 items-center justify-center text-[12px] text-[#74857c]">
+              加载中…
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-            {loading ? (
-              <div className="flex flex-1 items-center justify-center text-[12px] text-[#74857c]">
-                加载中…
-              </div>
-            ) : !filtered.length ? (
-              <div className="flex flex-1 items-center justify-center text-[12px] text-[#74857c]">
-                暂无用户
-              </div>
-            ) : (
-              filtered.map((user) => (
-                <div
-                  key={user.id}
-                  className="grid grid-cols-[minmax(180px,1.6fr)_minmax(120px,1fr)_90px_160px_160px_120px] items-center border-b border-[#edf0ee] px-4 py-3 last:border-0"
-                >
-                  <div className="truncate text-[12px] text-[#29463a]">
-                    {user.email}
-                  </div>
-                  <div className="flex min-w-0 items-center gap-2 text-[12px] text-[#52645b]">
-                    <span
-                      className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold"
-                      style={{ backgroundColor: `${user.color}22`, color: user.color }}
-                    >
-                      {user.displayName.slice(0, 1)}
-                    </span>
-                    {user.displayName}
-                  </div>
-                  <div>
-                    <span
-                      className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                        user.role === "admin"
-                          ? "bg-[#e8f5ee] text-[#17724f]"
-                          : "bg-[#f3f4f3] text-[#5f6d66]"
-                      }`}
-                    >
-                      {user.role === "admin" ? "管理员" : "用户"}
-                    </span>
-                  </div>
-                  <div className="text-[12px] text-[#52645b]">
-                    {formatAdminDateTime(user.createdAt)}
-                  </div>
-                  <div className="text-[12px] text-[#52645b]">
-                    {formatAdminDateTime(user.updatedAt)}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => openEdit(user)}
-                    >
-                      编辑
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busy || user.id === userId}
-                      onClick={() => void removeUser(user)}
-                    >
-                      删除
-                    </Button>
-                  </div>
+          ) : !filtered.length ? (
+            <div className="flex flex-1 items-center justify-center text-[12px] text-[#74857c]">
+              暂无用户
+            </div>
+          ) : (
+            filtered.map((user) => (
+              <div
+                key={user.id}
+                className="grid grid-cols-[minmax(180px,1.6fr)_minmax(120px,1fr)_90px_160px_160px_120px] items-center border-b border-[#edf0ee] px-4 py-3 last:border-0"
+              >
+                <div className="truncate text-[12px] text-[#29463a]">
+                  {user.email}
                 </div>
-              ))
-            )}
-            </div>
-          </section>
+                <div className="flex min-w-0 items-center gap-2 text-[12px] text-[#52645b]">
+                  <span
+                    className="flex size-6 items-center justify-center rounded-full text-[10px] font-bold"
+                    style={{
+                      backgroundColor: `${user.color}22`,
+                      color: user.color,
+                    }}
+                  >
+                    {user.displayName.slice(0, 1)}
+                  </span>
+                  {user.displayName}
+                </div>
+                <div>
+                  <span
+                    className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+                      user.role === "admin"
+                        ? "bg-[#e8f5ee] text-[#17724f]"
+                        : "bg-[#f3f4f3] text-[#5f6d66]"
+                    }`}
+                  >
+                    {user.role === "admin" ? "管理员" : "用户"}
+                  </span>
+                </div>
+                <div className="text-[12px] text-[#52645b]">
+                  {formatAdminDateTime(user.createdAt)}
+                </div>
+                <div className="text-[12px] text-[#52645b]">
+                  {formatAdminDateTime(user.updatedAt)}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => openEdit(user)}
+                  >
+                    编辑
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy || user.id === userId}
+                    onClick={() => void removeUser(user)}
+                  >
+                    删除
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

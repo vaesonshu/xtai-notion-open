@@ -44,7 +44,7 @@ function BlockStructureDebuggerReady() {
       <button
         type="button"
         aria-label="打开文档结构调试面板"
-        className="fixed bottom-4 right-4 z-50 rounded-lg border border-[#D8D2C4] bg-white/95 px-3 py-1.5 text-xs font-medium text-[#5C574E] shadow-sm backdrop-blur hover:bg-[#FCFCFA]"
+        className="fixed right-4 bottom-4 z-50 rounded-lg border border-[#D8D2C4] bg-white/95 px-3 py-1.5 text-xs font-medium text-[#5C574E] shadow-sm backdrop-blur hover:bg-[#FCFCFA]"
         onClick={() => setOpen(true)}
       >
         文档结构
@@ -58,7 +58,7 @@ function BlockStructureDebuggerReady() {
   return (
     <aside
       aria-label="文档结构调试面板"
-      className="fixed bottom-4 right-4 z-50 flex w-[min(32rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[#D8D2C4] bg-white/95 shadow-lg backdrop-blur"
+      className="fixed right-4 bottom-4 z-50 flex w-[min(32rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-[#D8D2C4] bg-white/95 shadow-lg backdrop-blur"
     >
       <header className="flex items-center justify-between gap-2 border-b border-[#E8E6E1] px-3 py-2">
         <div className="flex items-center gap-1">
@@ -107,7 +107,7 @@ function ViewTab({
       aria-pressed={active}
       className={
         active
-          ? "rounded px-2 py-0.5 text-xs font-medium text-[#242321] bg-[#F3F1EC]"
+          ? "rounded bg-[#F3F1EC] px-2 py-0.5 text-xs font-medium text-[#242321]"
           : "rounded px-2 py-0.5 text-xs text-[#8A857A] hover:bg-[#F3F1EC] hover:text-[#242321]"
       }
       onClick={onClick}

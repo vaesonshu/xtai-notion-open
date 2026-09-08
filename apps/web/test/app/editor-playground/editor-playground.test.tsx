@@ -7,8 +7,12 @@ describe("EditorPlayground", () => {
   it("renders local editor controls and a JSON inspection panel", async () => {
     render(<EditorPlayground />)
 
-    expect(screen.getByRole("heading", { name: "编辑器测试台" })).toBeInTheDocument()
-    expect(await screen.findByRole("button", { name: "粗体" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "编辑器测试台" })
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "粗体" })
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "撤销" })).toBeInTheDocument()
     expect(screen.getByLabelText("链接地址")).toBeInTheDocument()
     expect(screen.getByLabelText("Slash command 查询")).toBeInTheDocument()

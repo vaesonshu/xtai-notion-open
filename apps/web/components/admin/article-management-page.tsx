@@ -89,65 +89,65 @@ export function ArticleManagementPage() {
   return (
     <AdminShell>
       <header className="flex shrink-0 items-center justify-between">
-            <div>
-              <h1 className="text-[26px] font-bold text-[#183e31]">文章管理</h1>
-              <p className="mt-[5px] text-[13px] text-[#718179]">
-                统一管理内容发布、审核与运营表现
-              </p>
-            </div>
-            <Link
-              href="/documents"
-              className="inline-flex h-auto items-center gap-[7px] rounded-[7px] bg-[#167251] px-[14px] py-[10px] text-[13px] font-semibold text-white hover:bg-[#145e45]"
-            >
-              <PlusIcon className="size-[15px]" />
-              前往文档创建
-            </Link>
-          </header>
-          <div className="flex shrink-0 gap-3">
-            <ArticleStatCard
-              index={0}
-              label="已发布文章"
-              value={String(stats.publishedCount)}
-              note={`草稿 ${stats.draftCount} 篇`}
-            />
-            <ArticleStatCard
-              index={1}
-              label="草稿箱"
-              value={String(stats.draftCount)}
-              note={`待审核 ${stats.pendingCount} 篇`}
-            />
-            <ArticleStatCard
-              index={2}
-              label="注册用户"
-              value={String(stats.totalUsers)}
-              note="平台用户总数"
-            />
-            <ArticleStatCard
-              index={3}
-              label="待审核"
-              value={String(stats.pendingCount)}
-              note="待处理发布申请"
-            />
+        <div>
+          <h1 className="text-[26px] font-bold text-[#183e31]">文章管理</h1>
+          <p className="mt-[5px] text-[13px] text-[#718179]">
+            统一管理内容发布、审核与运营表现
+          </p>
+        </div>
+        <Link
+          href="/documents"
+          className="inline-flex h-auto items-center gap-[7px] rounded-[7px] bg-[#167251] px-[14px] py-[10px] text-[13px] font-semibold text-white hover:bg-[#145e45]"
+        >
+          <PlusIcon className="size-[15px]" />
+          前往文档创建
+        </Link>
+      </header>
+      <div className="flex shrink-0 gap-3">
+        <ArticleStatCard
+          index={0}
+          label="已发布文章"
+          value={String(stats.publishedCount)}
+          note={`草稿 ${stats.draftCount} 篇`}
+        />
+        <ArticleStatCard
+          index={1}
+          label="草稿箱"
+          value={String(stats.draftCount)}
+          note={`待审核 ${stats.pendingCount} 篇`}
+        />
+        <ArticleStatCard
+          index={2}
+          label="注册用户"
+          value={String(stats.totalUsers)}
+          note="平台用户总数"
+        />
+        <ArticleStatCard
+          index={3}
+          label="待审核"
+          value={String(stats.pendingCount)}
+          note="待处理发布申请"
+        />
+      </div>
+      <ArticleFilters
+        value={filters}
+        onChange={setFilters}
+        categories={categories}
+        totalCount={filtered.length}
+      />
+      <PublicationApprovalQueue
+        apiUrl={apiUrl}
+        onChanged={() => void loadData()}
+      />
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center text-[12px] text-[#74857c]">
+            加载中…
           </div>
-          <ArticleFilters
-            value={filters}
-            onChange={setFilters}
-            categories={categories}
-            totalCount={filtered.length}
-          />
-          <PublicationApprovalQueue
-            apiUrl={apiUrl}
-            onChanged={() => void loadData()}
-          />
-          <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {loading ? (
-              <div className="flex flex-1 items-center justify-center text-[12px] text-[#74857c]">
-                加载中…
-              </div>
-            ) : (
-              <ArticleTable articles={filtered} />
-            )}
-          </section>
+        ) : (
+          <ArticleTable articles={filtered} />
+        )}
+      </section>
     </AdminShell>
   )
 }

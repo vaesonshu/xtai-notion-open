@@ -1,7 +1,10 @@
 import "@testing-library/jest-dom/vitest"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import { flattenDocuments, WorkspaceSidebar } from "@/components/inkspace/sidebar"
+import {
+  flattenDocuments,
+  WorkspaceSidebar,
+} from "@/components/inkspace/sidebar"
 
 describe("WorkspaceSidebar selection states", () => {
   it("orders child documents directly below their parent", () => {

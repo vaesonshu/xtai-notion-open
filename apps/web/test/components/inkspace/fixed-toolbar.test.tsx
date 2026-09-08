@@ -1,7 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { EditorProvider } from "@xtai-notion/editor-react"
-import { FixedEditorToolbar, insertEmoji } from "@/components/inkspace/fixed-toolbar"
+import {
+  FixedEditorToolbar,
+  insertEmoji,
+} from "@/components/inkspace/fixed-toolbar"
 
 vi.mock("@emoji-mart/data", () => ({ default: {} }))
 let selectEmoji: ((emoji: { native?: string }) => void) | undefined
