@@ -49,6 +49,28 @@ describe("markdown roundtrip", () => {
     const markdown = blocksToMarkdown(markdownToBlocks("**bold**"))
     expect(markdown).toContain("**bold**")
   })
+
+  it("parses bold links inside table cells", () => {
+    const blocks = markdownToBlocks(
+      "| Name |\n| --- |\n| **[Tiptap](https://tiptap.dev)** |"
+    )
+    const table = blocks[0]
+    expect(table?.type).toBe("table")
+    const cell = (
+      table?.content as { rows: { cells: { content: InlineContent[] }[] }[] }
+    )?.rows[1]?.cells[0]?.content
+    expect(cell?.[0]).toMatchObject({
+      type: "link",
+      href: "https://tiptap.dev",
+    })
+    expect(
+      cell?.[0]?.type === "link" &&
+        cell[0].content.some(
+          (item) =>
+            item.type === "text" && item.text === "Tiptap" && item.styles.bold
+        )
+    ).toBe(true)
+  })
 })
 
 describe("markdown detect", () => {

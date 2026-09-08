@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@workspace/ui/components/tooltip"
 import { PencilIcon } from "./icon"
+import { toast, toastError } from "@/lib/toast"
 
 type MarkdownExportButtonProps = {
   filename?: string
@@ -22,14 +23,22 @@ export function MarkdownExportButton({
   const editor = useBlockEditor()
 
   function exportMarkdown() {
-    const markdown = blocksToMarkdown(editor.document)
-    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement("a")
-    anchor.href = url
-    anchor.download = filename.endsWith(".md") ? filename : `${filename}.md`
-    anchor.click()
-    URL.revokeObjectURL(url)
+    try {
+      const markdown = blocksToMarkdown(editor.document)
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      const downloadName = filename.endsWith(".md")
+        ? filename
+        : `${filename}.md`
+      anchor.href = url
+      anchor.download = downloadName
+      anchor.click()
+      URL.revokeObjectURL(url)
+      toast.success("Markdown 导出成功")
+    } catch (error) {
+      toastError(error, "导出失败")
+    }
   }
 
   return (

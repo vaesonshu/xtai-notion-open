@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file=.env src/main.ts",
-    "dev:collab": "tsx watch --env-file=.env src/collab-main.ts",
+    "dev": "tsx watch --conditions=development --env-file=.env src/main.ts",
+    "dev:collab": "tsx watch --conditions=development --env-file=.env src/collab-main.ts",
     "build": "prisma generate && tsc -p tsconfig.build.json && node scripts/fix-dist-imports.mjs",
     "start:collab": "tsx src/collab-main.ts",
     "lint": "eslint .",

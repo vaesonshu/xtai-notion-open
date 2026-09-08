@@ -1,7 +1,7 @@
 import type { EditorState } from "@tiptap/pm/state"
 import type { BlockEditor } from "../block-editor"
 import type { Block } from "../block-schema/types"
-import { clipboardHtmlHasRichStructure, looksLikeMarkdown } from "./detect"
+import { looksLikeMarkdown } from "./detect"
 import { markdownToBlocks } from "./parse"
 
 function selectionIsInCodeBlock(state: EditorState): boolean {
@@ -47,15 +47,13 @@ export function handleMarkdownPaste(
     return false
   }
 
-  const html = event.clipboardData?.getData("text/html") ?? ""
-  if (clipboardHtmlHasRichStructure(html)) {
-    return false
-  }
-
   const plain = event.clipboardData?.getData("text/plain") ?? ""
   if (!looksLikeMarkdown(plain)) {
     return false
   }
+
+  // plain 已是 Markdown 时始终走块解析；富文本 HTML（预览页/聊天复制）会误触发
+  // clipboardHtmlHasRichStructure，默认 HTML 粘贴又无法映射到块 schema，只会留下原文
 
   const parsed = markdownToBlocks(plain)
   if (parsed.length === 0) {
@@ -68,20 +66,23 @@ export function handleMarkdownPaste(
   }
 
   const current = findBlockById(editor.document, refId)
-  const [first, ...rest] = parsed
+  const [first] = parsed
   if (!first) {
     return false
   }
 
   if (isEmptyParagraph(current ?? undefined)) {
-    editor.updateBlock(refId, {
-      type: first.type,
-      props: first.props,
-      content: first.content,
-    })
-    if (rest.length > 0) {
-      editor.insertBlocks(rest, refId, "after")
+    if (parsed.length === 1) {
+      editor.updateBlock(refId, {
+        type: first.type,
+        props: first.props,
+        content: first.content,
+      })
+      return true
     }
+    // 单块文档无法在块后安全 insert；先插入整段 Markdown 再移除空段落
+    editor.insertBlocks(parsed, refId, "before")
+    editor.removeBlocks([refId])
     return true
   }
 

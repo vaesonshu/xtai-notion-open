@@ -105,6 +105,17 @@ function findContainerById(doc: PMNode, id: string): ContainerRef | null {
   return match
 }
 
+/** 在 blockGroup 内紧挨 ref 块之后插入 sibling 的位置（单块文档也能用） */
+function insertPosAfterContainer(doc: PMNode, ref: ContainerRef): number {
+  const $inside = doc.resolve(Math.min(ref.pos + 1, doc.content.size))
+  for (let depth = $inside.depth; depth > 0; depth -= 1) {
+    if ($inside.node(depth).type.name === "blockContainer") {
+      return $inside.after(depth)
+    }
+  }
+  return ref.pos + ref.node.nodeSize
+}
+
 /** 从选区位置向上找到所在的 blockContainer */
 function findContainerAtSelection(state: EditorState): ContainerRef | null {
   const { from } = state.selection
@@ -426,10 +437,11 @@ export class BlockEditor {
         tr.insert(tr.mapping.map(insertPos), node)
       }
     } else {
-      let insertPos = ref.pos + ref.node.nodeSize
+      let insertPos = insertPosAfterContainer(tr.doc, ref)
       for (const node of nodes) {
-        tr.insert(tr.mapping.map(insertPos), node)
-        insertPos += node.nodeSize
+        const mappedPos = tr.mapping.map(insertPos)
+        tr.insert(mappedPos, node)
+        insertPos = mappedPos + node.nodeSize
       }
     }
 

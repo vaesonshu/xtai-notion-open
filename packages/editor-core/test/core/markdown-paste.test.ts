@@ -50,14 +50,11 @@ describe("handleMarkdownPaste", () => {
       pasteEvent("# Hello\n\n- item one")
     )
     expect(handled).toBe(true)
-    expect(editor.document[0]).toMatchObject({
-      id: EMPTY_ID,
-      type: "heading",
-    })
+    expect(editor.document[0]?.type).toBe("heading")
     expect(editor.document[1]?.type).toBe("bulletListItem")
   })
 
-  it("does not convert when html has list structure", () => {
+  it("still converts markdown when clipboard also includes list html", () => {
     const editor = track(
       new BlockEditor({
         initialContent: [
@@ -76,8 +73,50 @@ describe("handleMarkdownPaste", () => {
       editor,
       pasteEvent("- item one", "<ul><li>item one</li></ul>")
     )
-    expect(handled).toBe(false)
-    expect(editor.document[0]?.type).toBe("paragraph")
+    expect(handled).toBe(true)
+    expect(editor.document[0]?.type).toBe("bulletListItem")
+  })
+
+  it("converts full markdown document even with preview html on clipboard", () => {
+    const editor = track(
+      new BlockEditor({
+        initialContent: [
+          {
+            id: EMPTY_ID,
+            type: "paragraph",
+            props: {},
+            content: [],
+            children: [],
+          },
+        ],
+      })
+    )
+
+    const markdown = [
+      "# 让知识真正流动起来",
+      "",
+      "这是一个可编辑的知识文档。",
+      "",
+      "- 记录想法",
+      "",
+      "> 好的工具让秩序自然出现。",
+      "",
+      "```",
+      "const knowledge = true",
+      "```",
+    ].join("\n")
+    const html =
+      "<ul><li>记录想法</li></ul><blockquote>好的工具让秩序自然出现。</blockquote>"
+
+    const handled = handleMarkdownPaste(editor, pasteEvent(markdown, html))
+    expect(handled).toBe(true)
+    expect(editor.document.map((block) => block.type)).toEqual([
+      "heading",
+      "paragraph",
+      "bulletListItem",
+      "quote",
+      "codeBlock",
+    ])
   })
 
   it("does not convert inside a code block", () => {

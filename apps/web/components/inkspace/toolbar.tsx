@@ -62,6 +62,8 @@ export type EditorToolbarProps = {
   onVersionRestored?: () => void
   /** 触发 Markdown 文件选择（由 WorkspaceShell 提供 hidden input） */
   onImportMarkdown?: () => void
+  /** 导入进行中时禁用按钮并显示进度文案 */
+  importingMarkdown?: boolean
 }
 
 // 发布按钮用背景色区分草稿、待审批与已上线三种状态。
@@ -231,6 +233,7 @@ export function EditorToolbar({
   onPublish,
   onVersionRestored,
   onImportMarkdown,
+  importingMarkdown = false,
 }: EditorToolbarProps) {
   const [versionOpen, setVersionOpen] = useState(false)
   const publicationLabel =
@@ -317,11 +320,13 @@ export function EditorToolbar({
           <Button
             variant="outline"
             size="sm"
+            disabled={importingMarkdown}
+            aria-busy={importingMarkdown}
             onClick={onImportMarkdown}
             className="!text-[#373532] hover:!border-[#CFCBC4] hover:!bg-[#F3F2EF] hover:!text-[#373532]"
           >
             <PencilIcon icon={FileTextIcon} color="#4F4C47" />
-            导入
+            {importingMarkdown ? "导入中…" : "导入"}
           </Button>
         ) : null}
         {apiUrl && documentId ? (

@@ -51,6 +51,8 @@ export type DocumentWorkspaceProps = {
   mentionNavigate?: MentionNavigate
   /** 打开 Markdown 文件选择器，由 WorkspaceShell 注入 */
   onImportMarkdown?: () => void
+  /** 导入进行中时禁用工具栏按钮，避免重复提交 */
+  importingMarkdown?: boolean
 }
 
 type DocumentRole = "owner" | "editor" | "viewer"
@@ -151,6 +153,7 @@ export function DocumentWorkspace({
   parentTitle,
   mentionNavigate,
   onImportMarkdown,
+  importingMarkdown,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
   const [publicationStatus, setPublicationStatus] = useState<
@@ -421,6 +424,7 @@ export function DocumentWorkspace({
             onCommentsToggle={() => setCommentsOpen((open) => !open)}
             onVersionRestored={() => window.location.reload()}
             onImportMarkdown={onImportMarkdown}
+            importingMarkdown={importingMarkdown}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>

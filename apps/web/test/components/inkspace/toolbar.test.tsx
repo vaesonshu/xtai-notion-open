@@ -69,4 +69,14 @@ describe("EditorToolbar", () => {
     fireEvent.click(getByRole("button", { name: "导入" }))
     expect(onImportMarkdown).toHaveBeenCalledOnce()
   })
+
+  it("shows importing state and disables the import button while busy", () => {
+    const { getByRole } = render(
+      <EditorToolbar onImportMarkdown={vi.fn()} importingMarkdown />
+    )
+
+    const button = getByRole("button", { name: "导入中…" })
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute("aria-busy", "true")
+  })
 })

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
-import { toast, toastError } from "@/lib/toast"
+import { toast, toastError, getToastErrorMessage } from "@/lib/toast"
 import { apiRequest } from "@/lib/api-client"
 import {
   DocumentWorkspace,
@@ -100,6 +100,7 @@ export function WorkspaceShell({
   const router = useRouter()
   const importInputRef = useRef<HTMLInputElement>(null)
   const [creating, setCreating] = useState(false)
+  const [importingMarkdown, setImportingMarkdown] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [showFavorites, setShowFavorites] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
@@ -215,6 +216,11 @@ export function WorkspaceShell({
   }
 
   async function importMarkdownFile(file: File) {
+    if (importingMarkdown) return
+
+    setImportingMarkdown(true)
+    const toastId = toast.loading(`正在导入「${file.name}」…`)
+
     try {
       const markdown = await file.text()
       const title = file.name.replace(/\.md$/i, "") || "导入的文档"
@@ -228,9 +234,11 @@ export function WorkspaceShell({
       const document = (await response.json()) as CreatedDocumentResponse
       await refreshDocuments()
       router.push(`/documents/${document.id}`)
-      toast.success("Markdown 导入成功")
+      toast.success("Markdown 导入成功", { id: toastId })
     } catch (error) {
-      toastError(error, "导入失败")
+      toast.error(getToastErrorMessage(error, "导入失败"), { id: toastId })
+    } finally {
+      setImportingMarkdown(false)
     }
   }
 
@@ -448,6 +456,7 @@ export function WorkspaceShell({
                   : undefined
               })()}
               onImportMarkdown={() => importInputRef.current?.click()}
+              importingMarkdown={importingMarkdown}
             />
           ) : null)}
       </main>
