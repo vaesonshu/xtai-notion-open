@@ -84,7 +84,6 @@ export function WorkspaceSidebar({
   creatingDocument = false,
   documents = [],
   collaborativeDocuments = [],
-  trashedDocuments = [],
   showFavorites = false,
   showTrash = false,
   selectedDocumentId,
@@ -98,8 +97,6 @@ export function WorkspaceSidebar({
   onToggleFavorites,
   onToggleTrash,
   onToggleFavorite,
-  onRestoreDocument,
-  onPurgeDocument,
   activeNav = "editor",
 }: {
   onCreateDocument?: () => void
@@ -107,7 +104,6 @@ export function WorkspaceSidebar({
   creatingDocument?: boolean
   documents?: SidebarDocument[]
   collaborativeDocuments?: SidebarDocument[]
-  trashedDocuments?: SidebarDocument[]
   showFavorites?: boolean
   showTrash?: boolean
   selectedDocumentId?: string
@@ -121,8 +117,6 @@ export function WorkspaceSidebar({
   onToggleFavorites?: () => void
   onToggleTrash?: () => void
   onToggleFavorite?: (id: string, isFavorite: boolean) => void
-  onRestoreDocument?: (id: string) => void
-  onPurgeDocument?: (id: string) => void
 }) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const select = (key: string, action?: () => void) => {
@@ -194,7 +188,7 @@ export function WorkspaceSidebar({
             selectedKey={showTrash ? "trash" : selectedKey}
             onSelect={select}
             icon={RotateCcwIcon}
-            label={showTrash ? "全部文档" : "回收站"}
+            label="回收站"
             onClick={onToggleTrash}
           />
           <SideAction
@@ -202,44 +196,33 @@ export function WorkspaceSidebar({
             selectedKey={showFavorites ? "favorites" : selectedKey}
             onSelect={select}
             icon={StarIcon}
-            label={showFavorites ? "全部文档" : "收藏"}
-            shortcut="3"
+            label="收藏"
             onClick={onToggleFavorites}
           />
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-white">
-        {showTrash ? (
-          <TrashSection
-            items={trashedDocuments}
-            onRestore={onRestoreDocument}
-            onPurge={onPurgeDocument}
+        {collaborativeDocuments.length > 0 ? (
+          <SideSection
+            title="协作文档"
+            count={String(collaborativeDocuments.length)}
+            items={collaborativeDocuments}
+            selectedDocumentId={selectedDocumentId}
+            onSelect={selectDocument}
+            onToggleFavorite={onToggleFavorite}
           />
-        ) : (
-          <>
-            {!showFavorites && collaborativeDocuments.length > 0 ? (
-              <SideSection
-                title="协作文档"
-                count={String(collaborativeDocuments.length)}
-                items={collaborativeDocuments}
-                selectedDocumentId={selectedDocumentId}
-                onSelect={selectDocument}
-                onToggleFavorite={onToggleFavorite}
-              />
-            ) : null}
-            <SideSection
-              title={showFavorites ? "收藏" : "个人文档"}
-              count={String(documents.length)}
-              items={documents}
-              selectedDocumentId={selectedDocumentId}
-              onSelect={selectDocument}
-              onRename={onRenameDocument}
-              onDelete={onDeleteDocument}
-              onCreateChild={onCreateChildDocument}
-              onToggleFavorite={onToggleFavorite}
-            />
-          </>
-        )}
+        ) : null}
+        <SideSection
+          title="个人文档"
+          count={String(documents.length)}
+          items={documents}
+          selectedDocumentId={selectedDocumentId}
+          onSelect={selectDocument}
+          onRename={onRenameDocument}
+          onDelete={onDeleteDocument}
+          onCreateChild={onCreateChildDocument}
+          onToggleFavorite={onToggleFavorite}
+        />
       </div>
       <Separator />
       <div className="flex flex-col gap-[10px] px-1 pt-[10px]">
@@ -354,9 +337,7 @@ function SideSection({
       </div>
       <div className="flex flex-col gap-0.5">
         {visibleItems.length === 0 ? (
-          <p className="px-2 text-[12px] text-[#78746C]">
-            {title === "收藏" ? "暂无收藏的文档" : "暂无文档"}
-          </p>
+          <p className="px-2 text-[12px] text-[#78746C]">暂无文档</p>
         ) : null}
         {visibleItems.map(({ id, title: label }) => {
           const depth = getDocumentDepth(itemById.get(id)!, itemById)
@@ -535,99 +516,6 @@ function SideSection({
               }}
             >
               移入回收站
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  )
-}
-
-function TrashSection({
-  items,
-  onRestore,
-  onPurge,
-}: {
-  items: readonly SidebarDocument[]
-  onRestore?: (id: string) => void
-  onPurge?: (id: string) => void
-}) {
-  const [purgeTarget, setPurgeTarget] = useState<SidebarDocument | null>(null)
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex h-6 items-center gap-1.5 px-[7px] text-[11px] font-semibold tracking-[0.3px] text-[#78746C]">
-        <span>回收站</span>
-        <span className="flex-1" />
-        <span className="font-normal">{items.length}</span>
-      </div>
-      {items.length === 0 ? (
-        <p className="px-2 text-[12px] text-[#78746C]">暂无已删除的文档</p>
-      ) : (
-        <div className="flex flex-col gap-0.5">
-          {items.map((item) => (
-            <div key={item.id} className="group relative flex items-center">
-              <Button
-                variant="ghost"
-                className="h-8 w-full !justify-start gap-[9px] rounded-[7px] px-2 pr-8 !text-[#78746C]"
-              >
-                <PencilIcon icon={FileTextIcon} color="#78746C" />
-                <span className="truncate text-[13px]">{item.title}</span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className="absolute right-1 opacity-0 group-hover:opacity-100"
-                    />
-                  }
-                >
-                  <PencilIcon icon={EllipsisIcon} size={16} />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onRestore?.(item.id)}>
-                    恢复
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => setPurgeTarget(item)}
-                  >
-                    永久删除
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ))}
-        </div>
-      )}
-      <AlertDialog
-        open={purgeTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) setPurgeTarget(null)
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>永久删除？</AlertDialogTitle>
-            <AlertDialogDescription>
-              “{purgeTarget?.title}”将被永久删除，此操作无法撤销。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">
-              取消
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              className="cursor-pointer"
-              onClick={() => {
-                if (purgeTarget) onPurge?.(purgeTarget.id)
-                setPurgeTarget(null)
-              }}
-            >
-              永久删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

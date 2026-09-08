@@ -91,20 +91,8 @@ describe("WorkspaceSidebar selection states", () => {
   it("renders trash entry below document graph in the shortcut list", () => {
     render(<WorkspaceSidebar onToggleTrash={vi.fn()} />)
 
-    const buttons = screen.getAllByRole("button", { name: "回收站" })
-    expect(buttons.length).toBeGreaterThan(0)
+    expect(screen.getByRole("button", { name: "回收站" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "文档图谱" })).toBeInTheDocument()
-  })
-
-  it("shows trashed documents when trash view is active", () => {
-    render(
-      <WorkspaceSidebar
-        showTrash
-        trashedDocuments={[{ id: "trashed", title: "Deleted doc" }]}
-      />
-    )
-
-    expect(screen.getByText("Deleted doc")).toBeInTheDocument()
   })
 
   it("starts without a highlighted shortcut and selects one on click", () => {

@@ -9,6 +9,8 @@ import {
   type DocumentWorkspaceProps,
 } from "./document-workspace"
 import { DocumentSearchDialog } from "./document-search-dialog"
+import { FavoritesPanel } from "./favorites-panel"
+import { TrashPanel } from "./trash-panel"
 import { WorkspaceSidebar } from "./sidebar"
 
 type CreatedDocumentResponse = { id: string; title?: string }
@@ -123,6 +125,11 @@ export function WorkspaceShell({
   )
   const favoriteDocuments = documents.filter((item) => item.isFavorite)
 
+  const closeLibraryViews = useCallback(() => {
+    setShowFavorites(false)
+    setShowTrash(false)
+  }, [])
+
   const refreshDocuments = useCallback(async () => {
     if (!apiUrl) return
     const [activeResponse, trashResponse] = await Promise.all([
@@ -179,6 +186,7 @@ export function WorkspaceShell({
 
   async function restoreDocument(id: string) {
     try {
+      closeLibraryViews()
       const response = await apiRequest({
         path: `/documents/${id}/restore`,
         method: "POST",
@@ -358,50 +366,72 @@ export function WorkspaceShell({
         documents={documents}
         apiUrl={apiUrl}
         userId={user.id}
-        onSelect={(id) => router.push(`/documents/${id}`)}
+        onSelect={(id) => {
+          closeLibraryViews()
+          router.push(`/documents/${id}`)
+        }}
       />
       <WorkspaceSidebar
-        documents={showFavorites ? favoriteDocuments : personalDocuments}
+        documents={personalDocuments}
         collaborativeDocuments={collaborativeDocuments}
-        trashedDocuments={trashedDocuments}
         showFavorites={showFavorites}
         showTrash={showTrash}
         selectedDocumentId={documentId}
         activeNav={activeNav}
-        onSelectDocument={(id) => router.push(`/documents/${id}`)}
-        onCreateDocument={createDocument}
+        onSelectDocument={(id) => {
+          closeLibraryViews()
+          router.push(`/documents/${id}`)
+        }}
+        onCreateDocument={() => {
+          closeLibraryViews()
+          void createDocument()
+        }}
         creatingDocument={creating}
         onRenameDocument={renameDocument}
         onDeleteDocument={deleteDocument}
-        onCreateChildDocument={(id) => void createChildDocument(id)}
-        onOpenSquare={() => router.push("/square")}
-        onOpenGraph={() => router.push("/documents/graph")}
-        onOpenSearch={() => setSearchOpen(true)}
+        onCreateChildDocument={(id) => {
+          closeLibraryViews()
+          void createChildDocument(id)
+        }}
+        onOpenSquare={() => {
+          closeLibraryViews()
+          router.push("/square")
+        }}
+        onOpenGraph={() => {
+          closeLibraryViews()
+          router.push("/documents/graph")
+        }}
+        onOpenSearch={() => {
+          closeLibraryViews()
+          setSearchOpen(true)
+        }}
         onToggleFavorites={() => {
           setShowTrash(false)
-          setShowFavorites((current) => {
-            const next = !current
-            // 进入收藏视图时若列表为空，提示用户如何添加收藏
-            if (
-              next &&
-              documents.filter((item) => item.isFavorite).length === 0
-            ) {
-              toast.info("暂无收藏，悬停文档后点击星标即可收藏")
-            }
-            return next
-          })
+          setShowFavorites(true)
         }}
         onToggleTrash={() => {
-          setShowTrash((current) => !current)
           setShowFavorites(false)
+          setShowTrash(true)
         }}
         onToggleFavorite={toggleFavorite}
-        onRestoreDocument={restoreDocument}
-        onPurgeDocument={purgeDocument}
       />
       <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FCFCFA] !text-[#242321]">
         {children ??
-          (documentId ? (
+          (showFavorites ? (
+            <FavoritesPanel
+              documents={favoriteDocuments}
+              onSelectDocument={(id) => {
+                closeLibraryViews()
+                router.push(`/documents/${id}`)
+              }}
+            />
+          ) : showTrash ? (
+            <TrashPanel
+              documents={trashedDocuments}
+              onRestore={restoreDocument}
+              onPurge={purgeDocument}
+            />
+          ) : documentId ? (
             <DocumentWorkspace
               key={documentId}
               documentId={documentId}

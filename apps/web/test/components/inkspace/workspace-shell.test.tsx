@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { toast } from "@/lib/toast"
 import {
@@ -29,6 +29,11 @@ const props = {
   user: { id: "demo-owner", name: "林", color: "#E64B3C" },
   apiUrl: "http://127.0.0.1:3100",
   collaborationUrl: "ws://127.0.0.1:3101",
+}
+
+/** 侧边栏快捷「收藏」与文档星标按钮同名，取 DOM 中第一个快捷入口 */
+function clickFavoritesShortcut() {
+  fireEvent.click(screen.getAllByRole("button", { name: "收藏" })[0]!)
 }
 
 afterEach(() => {
@@ -160,5 +165,129 @@ describe("WorkspaceShell", () => {
     })
     expect(screen.getByRole("button", { name: /新建文档/ })).toBeEnabled()
     expect(push).not.toHaveBeenCalled()
+  })
+
+  it("shows favorites in the main panel while keeping personal documents in the sidebar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          {
+            id: "favorite-doc",
+            title: "Favorite doc",
+            role: "owner",
+            isFavorite: true,
+          },
+          { id: "personal-doc", title: "Personal doc", role: "owner" },
+        ],
+      })
+    )
+
+    render(<WorkspaceShell {...props} />)
+    await waitFor(() =>
+      expect(screen.getAllByText("Personal doc").length).toBeGreaterThan(0)
+    )
+
+    clickFavoritesShortcut()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("favorites-panel")).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId("workspace-document-id")).not.toBeInTheDocument()
+    expect(
+      within(screen.getByTestId("favorites-panel")).getByRole("button", {
+        name: "Favorite doc",
+      })
+    ).toBeInTheDocument()
+    expect(screen.getAllByText("Personal doc").length).toBeGreaterThan(0)
+  })
+
+  it("keeps the favorites panel open when the favorites shortcut is clicked again", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          {
+            id: "favorite-doc",
+            title: "Favorite doc",
+            role: "owner",
+            isFavorite: true,
+          },
+        ],
+      })
+    )
+
+    render(<WorkspaceShell {...props} />)
+    await waitFor(() =>
+      expect(screen.getAllByText("Favorite doc").length).toBeGreaterThan(0)
+    )
+
+    clickFavoritesShortcut()
+    await waitFor(() => {
+      expect(screen.getByTestId("favorites-panel")).toBeInTheDocument()
+    })
+
+    clickFavoritesShortcut()
+    expect(screen.getByTestId("favorites-panel")).toBeInTheDocument()
+    expect(screen.queryByTestId("workspace-document-id")).not.toBeInTheDocument()
+  })
+
+  it("shows trash in the main panel while keeping personal documents in the sidebar", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/documents/trash")) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => [
+              { id: "trashed", title: "Deleted doc", role: "owner" },
+            ],
+          })
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => [
+            { id: "personal-doc", title: "Personal doc", role: "owner" },
+          ],
+        })
+      })
+    )
+
+    render(<WorkspaceShell {...props} />)
+    await waitFor(() =>
+      expect(screen.getAllByText("Personal doc").length).toBeGreaterThan(0)
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "回收站" }))
+    await waitFor(() => {
+      expect(screen.getByTestId("trash-panel")).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId("workspace-document-id")).not.toBeInTheDocument()
+    expect(screen.getAllByText("Personal doc").length).toBeGreaterThan(0)
+  })
+
+  it("keeps the trash panel open when the trash shortcut is clicked again", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes("/documents/trash")) {
+          return Promise.resolve({ ok: true, json: async () => [] })
+        }
+        return Promise.resolve({ ok: true, json: async () => [] })
+      })
+    )
+
+    render(<WorkspaceShell {...props} />)
+    await waitFor(() => expect(screen.getByRole("button", { name: "回收站" })))
+
+    fireEvent.click(screen.getByRole("button", { name: "回收站" }))
+    await waitFor(() => {
+      expect(screen.getByTestId("trash-panel")).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "回收站" }))
+    expect(screen.getByTestId("trash-panel")).toBeInTheDocument()
   })
 })
