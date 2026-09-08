@@ -104,15 +104,6 @@ describe("LoginPage", () => {
     expect(push).toHaveBeenCalledWith("/share/share-token")
   })
 
-  it("shows a success toast after registration redirect", () => {
-    searchParams = "registered=1&returnTo=%2Fdocuments%2Fdemo"
-    render(<LoginPage />)
-
-    expect(toast.success).toHaveBeenCalledWith(
-      "账号创建成功，请使用新账号登录。"
-    )
-  })
-
   it("shows a toast when login fails", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ message: "邮箱或密码错误" }), {

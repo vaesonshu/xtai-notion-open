@@ -20,7 +20,7 @@ import { Spinner } from "@workspace/ui/components/spinner"
 import { useAuth } from "../../components/auth-provider"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import { toast, toastError } from "@/lib/toast"
 
 function getSafeReturnTo(value: string | null) {
@@ -40,13 +40,6 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const returnTo = getSafeReturnTo(searchParams.get("returnTo"))
   const registerHref = `/register?returnTo=${encodeURIComponent(returnTo)}`
-  const registered = searchParams.get("registered") === "1"
-
-  useEffect(() => {
-    if (registered) {
-      toast.success("账号创建成功，请使用新账号登录。")
-    }
-  }, [registered])
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()

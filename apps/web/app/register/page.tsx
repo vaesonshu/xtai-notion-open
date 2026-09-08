@@ -88,10 +88,10 @@ function RegisterForm() {
         throw new Error(body?.message || `注册失败 (${response.status})`)
       }
 
-      // Registration does not create a session, so send the new user to login
-      // and preserve the page they originally intended to visit.
-      const params = new URLSearchParams({ registered: "1", returnTo })
-      router.push(`/login?${params.toString()}`)
+      // Registration does not create a session. Toast here (not on /login) so
+      // React Strict Mode remounts cannot replay the same success message twice.
+      toast.success("账号创建成功，请使用新账号登录。")
+      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`)
     } catch (caught) {
       toastError(caught, "注册失败，请稍后重试")
     } finally {

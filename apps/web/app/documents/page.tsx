@@ -12,6 +12,70 @@ type DocumentListItem = {
   role?: "owner" | "editor" | "viewer"
 }
 
+// React Strict Mode remounts this page in dev; share one bootstrap promise per
+// user so an empty account does not POST two default documents.
+const bootstrapDocumentByUser = new Map<string, Promise<string>>()
+
+function documentsApiBase() {
+  return (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
+}
+
+function documentsApiHeaders(userId: string) {
+  return { "x-dev-user-id": userId }
+}
+
+/** 打开首篇文档；若无任何文档则为新用户创建默认工作区文档。 */
+export async function resolveDocumentsEntryTarget(
+  userId: string
+): Promise<string> {
+  const base = documentsApiBase()
+  const headers = documentsApiHeaders(userId)
+
+  const listResponse = await fetch(`${base}/documents`, {
+    credentials: "include",
+    headers,
+  })
+  if (!listResponse.ok) {
+    throw new Error(`Failed to load documents (${listResponse.status})`)
+  }
+
+  const documents = (await listResponse.json()) as DocumentListItem[]
+  const firstDocument =
+    documents.find((item) => item.role === "owner") ?? documents[0]
+  if (firstDocument?.id) return firstDocument.id
+
+  const createResponse = await fetch(`${base}/documents`, {
+    method: "POST",
+    credentials: "include",
+    headers,
+  })
+  if (!createResponse.ok) {
+    throw new Error(`新建文档失败 (${createResponse.status})`)
+  }
+
+  const document = (await createResponse.json()) as { id?: string }
+  if (!document.id) {
+    throw new Error("新建文档响应无效")
+  }
+  return document.id
+}
+
+function bootstrapDocumentsEntry(userId: string): Promise<string> {
+  const existing = bootstrapDocumentByUser.get(userId)
+  if (existing) return existing
+
+  const promise = resolveDocumentsEntryTarget(userId).finally(() => {
+    bootstrapDocumentByUser.delete(userId)
+  })
+  bootstrapDocumentByUser.set(userId, promise)
+  return promise
+}
+
+/** @internal 测试用：重置 Strict Mode 去重缓存。 */
+export function resetDocumentsEntryBootstrapForTests() {
+  bootstrapDocumentByUser.clear()
+}
+
 // This route acts as the authenticated entry point so login no longer lands on
 // the public demo document; it either opens the user's documents or creates one.
 export default function DocumentsIndexPage() {
@@ -31,27 +95,9 @@ export default function DocumentsIndexPage() {
 
     async function loadDocuments() {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
-        const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
-          credentials: "include",
-          headers: { "x-dev-user-id": currentUserId },
-        })
-        if (!response.ok) {
-          throw new Error(`Failed to load documents (${response.status})`)
-        }
-
-        const documents = (await response.json()) as DocumentListItem[]
-        const firstDocument =
-          documents.find((item) => item.role === "owner") ?? documents[0]
-
+        const documentId = await bootstrapDocumentsEntry(currentUserId)
         if (cancelled) return
-
-        if (firstDocument) {
-          router.replace(`/documents/${firstDocument.id}`)
-          return
-        }
-
-        setLoading(false)
+        router.replace(`/documents/${documentId}`)
       } catch (caught) {
         if (!cancelled) {
           toastError(caught, "加载文档失败")
@@ -71,11 +117,11 @@ export default function DocumentsIndexPage() {
     if (!user) return
     setLoading(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
-      const response = await fetch(`${apiUrl.replace(/\/$/, "")}/documents`, {
+      const base = documentsApiBase()
+      const response = await fetch(`${base}/documents`, {
         method: "POST",
         credentials: "include",
-        headers: { "x-dev-user-id": user.id },
+        headers: documentsApiHeaders(user.id),
       })
       if (!response.ok) {
         throw new Error(`新建文档失败 (${response.status})`)
