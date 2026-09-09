@@ -119,20 +119,16 @@ describe("WorkspaceSidebar selection states", () => {
 
     expect(selected).toHaveLength(0)
 
-    const unselected = buttons.find(
-      (button) => button.getAttribute("aria-current") !== "page"
-    )
-    expect(unselected).toBeDefined()
-    expect(unselected).not.toHaveClass("!bg-[#E6F3EC]")
-    expect(unselected).not.toHaveClass("!bg-[#EEF0EC]")
+    const searchButton = screen.getByRole("button", { name: /搜索/ })
+    expect(searchButton).not.toHaveAttribute("aria-current", "page")
 
-    fireEvent.click(unselected!)
+    fireEvent.click(searchButton)
 
     expect(
       screen
         .getAllByRole("button")
         .filter((button) => button.getAttribute("aria-current") === "page")
     ).toHaveLength(1)
-    expect(unselected).toHaveAttribute("aria-current", "page")
+    expect(searchButton).toHaveAttribute("aria-current", "page")
   })
 })

@@ -11,16 +11,51 @@ import {
 import { DocumentSearchDialog } from "./document-search-dialog"
 import { FavoritesPanel } from "./favorites-panel"
 import { TrashPanel } from "./trash-panel"
+import { CreateWorkspaceDialog } from "./create-workspace-dialog"
+import { WorkspaceHomePanel } from "./workspace-home-panel"
+import {
+  WorkspaceMembersDialog,
+  type WorkspaceRole,
+} from "./workspace-members-dialog"
 import { WorkspaceSidebar } from "./sidebar"
 
-type CreatedDocumentResponse = { id: string; title?: string }
+const WORKSPACE_STORAGE_KEY = "inkspace:workspace:v1"
+
+type CreatedDocumentResponse = { id: string; title?: string; workspaceId?: string }
 type DocumentRole = "owner" | "editor" | "viewer"
 type DocumentListItem = { id: string; title: string }
+type WorkspaceSummary = {
+  id: string
+  name: string
+  memberCount: number
+  documentCount: number
+  role: WorkspaceRole
+  createdAt?: string
+  updatedAt?: string
+}
 type SidebarDocument = DocumentListItem & {
   role: DocumentRole
   parentId: string | null
   depth: number
+  workspaceId?: string
   isFavorite?: boolean
+}
+
+function readStoredWorkspaceId(): string | null {
+  if (typeof window === "undefined") return null
+  try {
+    return localStorage.getItem(WORKSPACE_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function persistWorkspaceId(workspaceId: string) {
+  try {
+    localStorage.setItem(WORKSPACE_STORAGE_KEY, workspaceId)
+  } catch {
+    // 隐私模式或禁用 storage 时忽略
+  }
 }
 
 function normalizeDocumentHierarchy(
@@ -43,6 +78,7 @@ function normalizeDocumentHierarchy(
     role: item.role ?? "owner",
     parentId: item.parentId ?? null,
     depth: depthOf(item),
+    workspaceId: item.workspaceId,
     isFavorite: item.isFavorite ?? false,
   }))
 }
@@ -59,13 +95,19 @@ export function getDocumentIdAfterDeletion(
 export type WorkspaceShellProps = {
   documentId?: string
   openFirstDocument?: boolean
+  /** 路由 /workspaces/:id 注入的当前库，优先于 localStorage */
+  initialWorkspaceId?: string
+  /** 展示知识库首页（文档列表 + 新建入口） */
+  showWorkspaceHome?: boolean
   user: DocumentWorkspaceProps["user"]
   apiUrl: string
   collaborationUrl: string
   /** 覆盖主内容区，用于文档图谱等全页视图 */
   children?: ReactNode
-  /** 侧边栏高亮：文档编辑 / 图谱 / 广场 */
-  activeNav?: "editor" | "graph" | "square"
+  /** 侧边栏高亮：文档编辑 / 图谱 / 广场 / 知识库 */
+  activeNav?: "editor" | "graph" | "square" | "workspaces"
+  onOpenWorkspaces?: () => void
+  onWorkspaceSwitch?: (workspaceId: string) => void
 }
 
 function getCreationError(error: unknown): string {
@@ -91,11 +133,15 @@ export function resetDocumentsCacheForTests() {
 export function WorkspaceShell({
   documentId,
   openFirstDocument = false,
+  initialWorkspaceId,
+  showWorkspaceHome = false,
   user,
   apiUrl,
   collaborationUrl,
   children,
   activeNav = "editor",
+  onOpenWorkspaces,
+  onWorkspaceSwitch,
 }: WorkspaceShellProps) {
   const router = useRouter()
   const importInputRef = useRef<HTMLInputElement>(null)
@@ -107,8 +153,18 @@ export function WorkspaceShell({
   const [trashedDocuments, setTrashedDocuments] = useState<SidebarDocument[]>(
     []
   )
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([])
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(
+    null
+  )
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false)
+  const [membersOpen, setMembersOpen] = useState(false)
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false)
   const [documents, setDocuments] = useState<SidebarDocument[]>(() =>
     documentsCache?.userId === user.id ? documentsCache.items : []
+  )
+  const currentWorkspace = workspaces.find(
+    (item) => item.id === currentWorkspaceId
   )
   const syncDocuments = useCallback(
     (updater: (current: SidebarDocument[]) => SidebarDocument[]) => {
@@ -131,17 +187,48 @@ export function WorkspaceShell({
     setShowTrash(false)
   }, [])
 
-  const refreshDocuments = useCallback(async () => {
-    if (!apiUrl) return
-    const [activeResponse, trashResponse] = await Promise.all([
-      apiRequest({ path: "/documents", userId: user.id }),
-      apiRequest({ path: "/documents/trash", userId: user.id }),
-    ])
-    const activeItems = activeResponse.ok
-      ? ((await activeResponse.json()) as Array<
-          Partial<SidebarDocument> & DocumentListItem & { isFavorite?: boolean }
-        >)
-      : []
+  const refreshWorkspaces = useCallback(async () => {
+    if (!apiUrl) return null
+    const response = await apiRequest({ path: "/workspaces", userId: user.id })
+    if (!response.ok) return null
+    const items = (await response.json()) as WorkspaceSummary[]
+    setWorkspaces(items)
+    const stored = readStoredWorkspaceId()
+    const nextId =
+      items.find((item) => item.id === initialWorkspaceId)?.id ??
+      items.find((item) => item.id === stored)?.id ??
+      items.find((item) => item.role === "owner")?.id ??
+      items[0]?.id ??
+      null
+    if (nextId) {
+      setCurrentWorkspaceId(nextId)
+      persistWorkspaceId(nextId)
+    }
+    return nextId
+  }, [apiUrl, initialWorkspaceId, user.id])
+
+  const refreshDocuments = useCallback(
+    async (workspaceId?: string | null) => {
+      if (!apiUrl) return
+      const targetWorkspaceId = workspaceId ?? currentWorkspaceId
+      const [activeResponse, trashResponse] = await Promise.all([
+        targetWorkspaceId
+          ? apiRequest({
+              path: `/workspaces/${targetWorkspaceId}/documents`,
+              userId: user.id,
+            })
+          : apiRequest({ path: "/documents", userId: user.id }),
+        apiRequest({ path: "/documents/trash", userId: user.id }),
+      ])
+      const activeItems = activeResponse.ok
+        ? ((await activeResponse.json()) as Array<
+            Partial<SidebarDocument> &
+              DocumentListItem & {
+                workspaceId?: string
+                isFavorite?: boolean
+              }
+          >)
+        : []
     const trashItems = trashResponse.ok
       ? ((await trashResponse.json()) as Array<
           Partial<SidebarDocument> & DocumentListItem
@@ -150,16 +237,60 @@ export function WorkspaceShell({
     const normalized = normalizeDocumentHierarchy(activeItems)
     documentsCache = { userId: user.id, items: normalized }
     setDocuments(normalized)
-    setTrashedDocuments(
-      trashItems.map((item) => ({
-        id: item.id,
-        title: item.title || "未命名文档",
-        role: (item.role as DocumentRole) ?? "owner",
-        parentId: item.parentId ?? null,
-        depth: item.depth ?? 1,
-      }))
-    )
-  }, [apiUrl, user.id])
+      setTrashedDocuments(
+        trashItems.map((item) => ({
+          id: item.id,
+          title: item.title || "未命名文档",
+          role: (item.role as DocumentRole) ?? "owner",
+          parentId: item.parentId ?? null,
+          depth: item.depth ?? 1,
+        }))
+      )
+    },
+    [apiUrl, currentWorkspaceId, user.id]
+  )
+
+  const switchWorkspace = useCallback(
+    async (workspaceId: string) => {
+      closeLibraryViews()
+      setCurrentWorkspaceId(workspaceId)
+      persistWorkspaceId(workspaceId)
+      onWorkspaceSwitch?.(workspaceId)
+      await refreshDocuments(workspaceId)
+    },
+    [closeLibraryViews, onWorkspaceSwitch, refreshDocuments]
+  )
+
+  useEffect(() => {
+    if (!initialWorkspaceId || !apiUrl) return
+    setCurrentWorkspaceId(initialWorkspaceId)
+    persistWorkspaceId(initialWorkspaceId)
+    void refreshDocuments(initialWorkspaceId)
+  }, [apiUrl, initialWorkspaceId, refreshDocuments])
+
+  async function createWorkspace(name: string) {
+    setCreatingWorkspace(true)
+    try {
+      const response = await apiRequest({
+        path: "/workspaces",
+        method: "POST",
+        userId: user.id,
+        json: { name },
+      })
+      if (!response.ok) throw new Error("创建知识库失败")
+      const workspace = (await response.json()) as WorkspaceSummary
+      setWorkspaces((current) => [
+        workspace,
+        ...current.filter((item) => item.id !== workspace.id),
+      ])
+      await switchWorkspace(workspace.id)
+      toast.success("知识库已创建")
+    } catch (error) {
+      toastError(error, "创建知识库失败")
+    } finally {
+      setCreatingWorkspace(false)
+    }
+  }
   async function toggleFavorite(id: string, isFavorite: boolean) {
     try {
       const response = await apiRequest({
@@ -284,8 +415,31 @@ export function WorkspaceShell({
     if (documentsCache?.userId === user.id) {
       setDocuments(documentsCache.items)
     }
-    void refreshDocuments().catch(() => undefined)
-  }, [apiUrl, refreshDocuments, user.id])
+    void (async () => {
+      const workspaceId = await refreshWorkspaces()
+      await refreshDocuments(workspaceId)
+    })().catch(() => undefined)
+  }, [apiUrl, refreshDocuments, refreshWorkspaces, user.id])
+
+  useEffect(() => {
+    if (!documentId || !apiUrl) return
+    void (async () => {
+      const response = await apiRequest({
+        path: `/documents/${documentId}`,
+        userId: user.id,
+      })
+      if (!response.ok) return
+      const metadata = (await response.json()) as { workspaceId?: string }
+      if (
+        metadata.workspaceId &&
+        metadata.workspaceId !== currentWorkspaceId
+      ) {
+        setCurrentWorkspaceId(metadata.workspaceId)
+        persistWorkspaceId(metadata.workspaceId)
+        await refreshDocuments(metadata.workspaceId)
+      }
+    })().catch(() => undefined)
+  }, [apiUrl, currentWorkspaceId, documentId, refreshDocuments, user.id])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -306,10 +460,14 @@ export function WorkspaceShell({
   }, [documents, openFirstDocument, router])
 
   async function createDocument() {
+    if (!currentWorkspaceId) {
+      toast.error("请先选择或创建知识库")
+      return
+    }
     setCreating(true)
     try {
       const response = await apiRequest({
-        path: "/documents",
+        path: `/workspaces/${currentWorkspaceId}/documents`,
         method: "POST",
         userId: user.id,
       })
@@ -328,6 +486,7 @@ export function WorkspaceShell({
           role: "owner",
           parentId: null,
           depth: 1,
+          workspaceId: document.workspaceId ?? currentWorkspaceId,
         },
       ])
       router.push(`/documents/${document.id}`)
@@ -339,9 +498,13 @@ export function WorkspaceShell({
   }
 
   async function createChildDocument(parentId: string) {
+    if (!currentWorkspaceId) {
+      toast.error("请先选择或创建知识库")
+      return
+    }
     try {
       const response = await apiRequest({
-        path: "/documents",
+        path: `/workspaces/${currentWorkspaceId}/documents`,
         method: "POST",
         userId: user.id,
         json: { parentId },
@@ -368,6 +531,22 @@ export function WorkspaceShell({
           event.target.value = ""
         }}
       />
+      <CreateWorkspaceDialog
+        open={createWorkspaceOpen}
+        onOpenChange={setCreateWorkspaceOpen}
+        onSubmit={createWorkspace}
+        submitting={creatingWorkspace}
+      />
+      <WorkspaceMembersDialog
+        open={membersOpen}
+        onOpenChange={setMembersOpen}
+        workspaceId={currentWorkspaceId}
+        workspaceName={currentWorkspace?.name ?? "知识库"}
+        currentUserId={user.id}
+        currentUserRole={currentWorkspace?.role}
+        userId={user.id}
+        onMembersChanged={() => void refreshWorkspaces()}
+      />
       <DocumentSearchDialog
         open={searchOpen}
         onOpenChange={setSearchOpen}
@@ -380,6 +559,26 @@ export function WorkspaceShell({
         }}
       />
       <WorkspaceSidebar
+        workspace={
+          currentWorkspace
+            ? {
+                id: currentWorkspace.id,
+                name: currentWorkspace.name,
+                memberCount: currentWorkspace.memberCount,
+              }
+            : undefined
+        }
+        workspaces={workspaces.map((item) => ({
+          id: item.id,
+          name: item.name,
+          memberCount: item.memberCount,
+        }))}
+        onSwitchWorkspace={(id) => void switchWorkspace(id)}
+        onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+        onManageMembers={() => setMembersOpen(true)}
+        onOpenWorkspaces={
+          onOpenWorkspaces ?? (() => router.push("/workspaces"))
+        }
         documents={personalDocuments}
         collaborativeDocuments={collaborativeDocuments}
         showFavorites={showFavorites}
@@ -438,6 +637,22 @@ export function WorkspaceShell({
               documents={trashedDocuments}
               onRestore={restoreDocument}
               onPurge={purgeDocument}
+            />
+          ) : showWorkspaceHome && currentWorkspace ? (
+            <WorkspaceHomePanel
+              workspace={{
+                id: currentWorkspace.id,
+                name: currentWorkspace.name,
+                memberCount: currentWorkspace.memberCount,
+                documentCount:
+                  currentWorkspace.documentCount ?? documents.length,
+                role: currentWorkspace.role,
+                createdAt: currentWorkspace.createdAt ?? "",
+                updatedAt: currentWorkspace.updatedAt ?? "",
+              }}
+              documents={documents}
+              onCreateDocument={() => void createDocument()}
+              creatingDocument={creating}
             />
           ) : documentId ? (
             <DocumentWorkspace

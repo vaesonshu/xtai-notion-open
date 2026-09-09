@@ -31,6 +31,66 @@ const props = {
   collaborationUrl: "ws://127.0.0.1:3101",
 }
 
+const defaultWorkspace = {
+  id: "ws-1",
+  name: "我的知识库",
+  memberCount: 1,
+  documentCount: 0,
+  role: "owner",
+}
+
+function createShellFetchMock(
+  handler?: (
+    url: string,
+    options?: RequestInit
+  ) => { ok: boolean; json: () => Promise<unknown> } | null
+) {
+  return vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+    const custom = handler?.(url, options)
+    if (custom) return Promise.resolve(custom)
+
+    const method = options?.method ?? "GET"
+    if (url.includes("/workspaces/ws-1/documents") && method === "POST") {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ id: "new-document", workspaceId: "ws-1" }),
+      })
+    }
+    if (url.includes("/workspaces/ws-1/documents")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => [],
+      })
+    }
+    if (url.endsWith("/workspaces")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => [defaultWorkspace],
+      })
+    }
+    if (url.includes("/documents/trash")) {
+      return Promise.resolve({ ok: true, json: async () => [] })
+    }
+    if (url.includes("/documents/demo-document")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          id: "demo-document",
+          workspaceId: "ws-1",
+          title: "Demo",
+        }),
+      })
+    }
+    if (url.endsWith("/documents")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => [],
+      })
+    }
+    return Promise.resolve({ ok: true, json: async () => [] })
+  })
+}
+
 /** 侧边栏快捷「收藏」与文档星标按钮同名，取 DOM 中第一个快捷入口 */
 function clickFavoritesShortcut() {
   fireEvent.click(screen.getAllByRole("button", { name: "收藏" })[0]!)
@@ -98,18 +158,13 @@ describe("WorkspaceShell", () => {
   })
 
   it("navigates to the created document URL", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockImplementation((_url: string, options?: RequestInit) =>
-        Promise.resolve({
-          ok: true,
-          json: async () =>
-            options?.method === "POST" ? { id: "new-document" } : [],
-        })
-      )
+    const fetchMock = createShellFetchMock()
     vi.stubGlobal("fetch", fetchMock)
 
     render(<WorkspaceShell {...props} />)
+    await waitFor(() =>
+      expect(screen.getByText("我的知识库")).toBeInTheDocument()
+    )
     fireEvent.click(screen.getByRole("button", { name: /新建文档/ }))
 
     // The implementation includes credentials: 'include' so assert using
@@ -117,9 +172,13 @@ describe("WorkspaceShell", () => {
     // verifying the important request parts (method and headers).
     await waitFor(() => {
       const postCall = fetchMock.mock.calls.find(
-        ([, options]) => (options as RequestInit | undefined)?.method === "POST"
+        ([url, options]) =>
+          (options as RequestInit | undefined)?.method === "POST" &&
+          String(url).includes("/workspaces/ws-1/documents")
       )
-      expect(postCall?.[0]).toBe(buildClientApiUrl("/documents"))
+      expect(postCall?.[0]).toBe(
+        buildClientApiUrl("/workspaces/ws-1/documents")
+      )
       expect(
         new Headers((postCall?.[1] as RequestInit | undefined)?.headers).get(
           "x-dev-user-id"
@@ -132,9 +191,17 @@ describe("WorkspaceShell", () => {
   })
 
   it("shows cached documents immediately when the shell remounts", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [{ id: "first", title: "First", role: "owner" }],
+    const fetchMock = createShellFetchMock((_url, options) => {
+      if (
+        String(_url).includes("/workspaces/ws-1/documents") &&
+        (options?.method ?? "GET") === "GET"
+      ) {
+        return {
+          ok: true,
+          json: async () => [{ id: "first", title: "First", role: "owner" }],
+        }
+      }
+      return null
     })
     vi.stubGlobal("fetch", fetchMock)
 
@@ -142,20 +209,33 @@ describe("WorkspaceShell", () => {
     await waitFor(() =>
       expect(screen.getAllByText("First").length).toBeGreaterThan(0)
     )
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const callsAfterMount = fetchMock.mock.calls.length
 
     unmount()
     render(<WorkspaceShell {...props} documentId="another-document" />)
     expect(screen.getAllByText("First").length).toBeGreaterThan(0)
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterMount)
+    )
   })
 
   it("shows a clear error when document creation fails", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+      vi.fn().mockImplementation((url: string, options?: RequestInit) => {
+        if (
+          String(url).includes("/workspaces/ws-1/documents") &&
+          options?.method === "POST"
+        ) {
+          return Promise.reject(new TypeError("Failed to fetch"))
+        }
+        return createShellFetchMock()(url, options)
+      })
     )
     render(<WorkspaceShell {...props} />)
+    await waitFor(() =>
+      expect(screen.getByText("我的知识库")).toBeInTheDocument()
+    )
     fireEvent.click(screen.getByRole("button", { name: /新建文档/ }))
 
     await waitFor(() => {

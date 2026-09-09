@@ -7,6 +7,7 @@ import {
   FolderIcon,
   FolderOpenIcon,
   InfoIcon,
+  LibraryIcon,
   PlusIcon,
   SearchIcon,
   SquarePenIcon,
@@ -100,7 +101,19 @@ function getDocumentDepth(
   return Math.min(3, getDocumentDepth(parent, byId, seen) + 1)
 }
 
+type WorkspaceHeader = {
+  id: string
+  name: string
+  memberCount: number
+}
+
 export function WorkspaceSidebar({
+  workspace,
+  workspaces = [],
+  onSwitchWorkspace,
+  onCreateWorkspace,
+  onManageMembers,
+  onOpenWorkspaces,
   onCreateDocument,
   creatingDocument = false,
   documents = [],
@@ -120,6 +133,12 @@ export function WorkspaceSidebar({
   onToggleFavorite,
   activeNav = "editor",
 }: {
+  workspace?: WorkspaceHeader
+  workspaces?: WorkspaceHeader[]
+  onSwitchWorkspace?: (id: string) => void
+  onCreateWorkspace?: () => void
+  onManageMembers?: () => void
+  onOpenWorkspaces?: () => void
   onCreateDocument?: () => void
   onCreateChildDocument?: (id: string) => void
   creatingDocument?: boolean
@@ -128,7 +147,7 @@ export function WorkspaceSidebar({
   showFavorites?: boolean
   showTrash?: boolean
   selectedDocumentId?: string
-  activeNav?: "editor" | "graph" | "square"
+  activeNav?: "editor" | "graph" | "square" | "workspaces"
   onSelectDocument?: (id: string) => void
   onRenameDocument?: (id: string, title: string) => Promise<void>
   onDeleteDocument?: (id: string) => Promise<void>
@@ -189,18 +208,59 @@ export function WorkspaceSidebar({
           >
             <Avatar className="size-[34px] rounded-[10px] bg-[#242321]">
               <AvatarFallback className="rounded-[10px] bg-[#242321] text-white">
-                L
+                {(workspace?.name ?? "库").slice(0, 1).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             {collapsed ? null : (
               <>
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-sm font-semibold">栖木工作室</span>
-                  <span className="text-[10px] font-semibold tracking-[0.4px] text-[#78746C]">
-                    PRO · 6 位成员
+                  <span className="truncate text-sm font-semibold">
+                    {workspace?.name ?? "知识库"}
                   </span>
+                  <button
+                    type="button"
+                    className="text-left text-[10px] font-semibold tracking-[0.4px] text-[#78746C] hover:text-[#242321]"
+                    onClick={() => onManageMembers?.()}
+                  >
+                    {workspace?.memberCount ?? 0} 位成员
+                  </button>
                 </div>
-                <PencilIcon icon={ChevronsUpDownIcon} />
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="切换知识库"
+                        className="size-7 shrink-0"
+                      />
+                    }
+                  >
+                    <PencilIcon icon={ChevronsUpDownIcon} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {workspaces.map((item) => (
+                      <DropdownMenuItem
+                        key={item.id}
+                        onClick={() => onSwitchWorkspace?.(item.id)}
+                      >
+                        <span className="truncate">{item.name}</span>
+                        <span className="ml-auto text-[10px] text-[#78746C]">
+                          {item.memberCount}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuItem onClick={() => onOpenWorkspaces?.()}>
+                      全部知识库
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onManageMembers?.()}>
+                      成员管理
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onCreateWorkspace?.()}>
+                      新建知识库
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>
@@ -224,6 +284,17 @@ export function WorkspaceSidebar({
               shortcut="N"
               onClick={onCreateDocument}
               disabled={creatingDocument}
+              compact={collapsed}
+            />
+            <SideAction
+              itemKey="workspaces"
+              selectedKey={
+                activeNav === "workspaces" ? "workspaces" : selectedKey
+              }
+              onSelect={select}
+              icon={LibraryIcon}
+              label="知识库"
+              onClick={onOpenWorkspaces}
               compact={collapsed}
             />
             <SideAction
