@@ -79,20 +79,28 @@ describe("WorkspaceSidebar selection states", () => {
     ).toBeInTheDocument()
   })
 
-  it("navigates to the writing square when the entry is clicked", () => {
+  it("navigates to the writing square from the browse menu", () => {
     const onOpenSquare = vi.fn()
     render(<WorkspaceSidebar onOpenSquare={onOpenSquare} />)
 
-    fireEvent.click(screen.getByRole("button", { name: "写作广场" }))
+    fireEvent.click(screen.getByRole("button", { name: "浏览" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: /写作广场/ }))
 
     expect(onOpenSquare).toHaveBeenCalledOnce()
   })
 
-  it("renders trash entry below document graph in the shortcut list", () => {
+  it("groups secondary navigation under the browse menu", () => {
     render(<WorkspaceSidebar onToggleTrash={vi.fn()} />)
 
-    expect(screen.getByRole("button", { name: "回收站" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "文档图谱" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "浏览" })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "回收站" })
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "浏览" }))
+    expect(screen.getByRole("menuitem", { name: /回收站/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole("menuitem", { name: /文档图谱/ })
+    ).toBeInTheDocument()
   })
 
   it("collapses the sidebar to an icon rail and hides document lists", () => {

@@ -6,14 +6,12 @@ import {
   FileTextIcon,
   FolderIcon,
   FolderOpenIcon,
+  CheckIcon,
   InfoIcon,
-  LibraryIcon,
+  LayoutDashboardIcon,
   PlusIcon,
   SearchIcon,
-  SquarePenIcon,
   StarIcon,
-  WaypointsIcon,
-  RotateCcwIcon,
   PanelLeftCloseIcon,
   PanelLeftIcon,
 } from "@workspace/icons"
@@ -33,6 +31,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import {
@@ -191,6 +190,12 @@ export function WorkspaceSidebar({
     setSelectedKey(`doc:${id}`)
     onSelectDocument?.(id)
   }
+  const browseActive =
+    activeNav === "square" ||
+    activeNav === "graph" ||
+    activeNav === "workspaces" ||
+    showFavorites ||
+    showTrash
   return (
     <TooltipProvider delay={0}>
       <aside
@@ -286,52 +291,18 @@ export function WorkspaceSidebar({
               disabled={creatingDocument}
               compact={collapsed}
             />
-            <SideAction
-              itemKey="workspaces"
-              selectedKey={
-                activeNav === "workspaces" ? "workspaces" : selectedKey
-              }
-              onSelect={select}
-              icon={LibraryIcon}
-              label="知识库"
-              onClick={onOpenWorkspaces}
+            {/* 次要入口收进「浏览」，避免上半区按钮堆叠 */}
+            <SideBrowseMenu
+              active={browseActive}
+              activeNav={activeNav}
+              showFavorites={showFavorites}
+              showTrash={showTrash}
               compact={collapsed}
-            />
-            <SideAction
-              itemKey="square"
-              selectedKey={activeNav === "square" ? "square" : selectedKey}
-              onSelect={select}
-              icon={SquarePenIcon}
-              label="写作广场"
-              onClick={onOpenSquare}
-              compact={collapsed}
-            />
-            <SideAction
-              itemKey="graph"
-              selectedKey={activeNav === "graph" ? "graph" : selectedKey}
-              onSelect={select}
-              icon={WaypointsIcon}
-              label="文档图谱"
-              onClick={onOpenGraph}
-              compact={collapsed}
-            />
-            <SideAction
-              itemKey="trash"
-              selectedKey={showTrash ? "trash" : selectedKey}
-              onSelect={select}
-              icon={RotateCcwIcon}
-              label="回收站"
-              onClick={onToggleTrash}
-              compact={collapsed}
-            />
-            <SideAction
-              itemKey="favorites"
-              selectedKey={showFavorites ? "favorites" : selectedKey}
-              onSelect={select}
-              icon={StarIcon}
-              label="收藏"
-              onClick={onToggleFavorites}
-              compact={collapsed}
+              onOpenWorkspaces={onOpenWorkspaces}
+              onOpenSquare={onOpenSquare}
+              onOpenGraph={onOpenGraph}
+              onToggleFavorites={onToggleFavorites}
+              onToggleTrash={onToggleTrash}
             />
           </div>
         </div>
@@ -419,6 +390,127 @@ export function WorkspaceSidebar({
         </div>
       </aside>
     </TooltipProvider>
+  )
+}
+
+function SideBrowseMenu({
+  active,
+  activeNav,
+  showFavorites,
+  showTrash,
+  compact,
+  onOpenWorkspaces,
+  onOpenSquare,
+  onOpenGraph,
+  onToggleFavorites,
+  onToggleTrash,
+}: {
+  active: boolean
+  activeNav: "editor" | "graph" | "square" | "workspaces"
+  showFavorites: boolean
+  showTrash: boolean
+  compact: boolean
+  onOpenWorkspaces?: () => void
+  onOpenSquare?: () => void
+  onOpenGraph?: () => void
+  onToggleFavorites?: () => void
+  onToggleTrash?: () => void
+}) {
+  const trigger = (
+    <Button
+      variant="ghost"
+      aria-label={compact ? "浏览" : undefined}
+      aria-haspopup="menu"
+      className={`${compact ? "size-9 !justify-center px-0" : "h-[34px] !justify-start gap-2.5 px-[9px]"} rounded-[7px] ${active ? "!bg-[#E6F3EC] !text-[#24866B] hover:!bg-[#DDEFE5]" : "!text-[#242321] hover:!bg-[#F3F2EF]"}`}
+    >
+      <PencilIcon
+        icon={LayoutDashboardIcon}
+        color={active ? "#24866B" : "#78746C"}
+      />
+      {compact ? null : (
+        <>
+          <span className="text-[13px] font-medium">浏览</span>
+          <span className="flex-1" />
+        </>
+      )}
+    </Button>
+  )
+
+  const menuContent = (
+    <DropdownMenuContent align="start" className="w-52">
+      <BrowseMenuItem
+        label="全部知识库"
+        active={activeNav === "workspaces"}
+        onClick={onOpenWorkspaces}
+      />
+      <BrowseMenuItem
+        label="写作广场"
+        active={activeNav === "square"}
+        onClick={onOpenSquare}
+      />
+      <BrowseMenuItem
+        label="文档图谱"
+        active={activeNav === "graph"}
+        onClick={onOpenGraph}
+      />
+      <DropdownMenuSeparator />
+      <BrowseMenuItem
+        label="收藏"
+        active={showFavorites}
+        onClick={onToggleFavorites}
+      />
+      <BrowseMenuItem
+        label="回收站"
+        active={showTrash}
+        onClick={onToggleTrash}
+      />
+    </DropdownMenuContent>
+  )
+
+  if (!compact) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger render={trigger} />
+        {menuContent}
+      </DropdownMenu>
+    )
+  }
+
+  return (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger render={<DropdownMenuTrigger render={trigger} />} />
+        <TooltipContent side="right">浏览</TooltipContent>
+      </Tooltip>
+      {menuContent}
+    </DropdownMenu>
+  )
+}
+
+function BrowseMenuItem({
+  label,
+  active,
+  onClick,
+}: {
+  label: string
+  active: boolean
+  onClick?: () => void
+}) {
+  return (
+    <DropdownMenuItem onClick={onClick} className="gap-2">
+      <span className={active ? "font-semibold text-[#24866B]" : undefined}>
+        {label}
+      </span>
+      {active ? (
+        <PencilIcon
+          icon={CheckIcon}
+          size={14}
+          className="ml-auto text-[#24866B]"
+        />
+      ) : (
+        <span className="ml-auto size-3.5" aria-hidden="true" />
+      )}
+    </DropdownMenuItem>
   )
 }
 
