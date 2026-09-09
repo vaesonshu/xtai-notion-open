@@ -7,12 +7,18 @@ import { DocumentsRepository } from "@api/documents/documents.repository"
 // 转成 PrismaService，避免 cast 抹掉 mock 类型。
 function createPrisma() {
   const client = {
-    documentMember: { findFirst: vi.fn(), create: vi.fn() },
+    documentMember: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+    },
     document: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
       create: vi.fn(),
+      count: vi.fn(),
     },
     workspace: { create: vi.fn() },
     $queryRaw: vi.fn(),
@@ -72,7 +78,7 @@ describe("DocumentsRepository", () => {
 
   it("findById returns document metadata row", async () => {
     const prisma = createPrisma()
-    prisma.document.findUnique.mockResolvedValue(camelDocument())
+    prisma.document.findFirst.mockResolvedValue(camelDocument())
     const repo = makeRepo(prisma)
 
     await expect(repo.findById("doc-1")).resolves.toEqual({
@@ -88,14 +94,14 @@ describe("DocumentsRepository", () => {
       published_at: null,
       published_by: null,
     })
-    expect(prisma.document.findUnique).toHaveBeenCalledWith({
-      where: { id: "doc-1" },
+    expect(prisma.document.findFirst).toHaveBeenCalledWith({
+      where: { id: "doc-1", deletedAt: null },
     })
   })
 
   it("findById returns null when document is missing", async () => {
     const prisma = createPrisma()
-    prisma.document.findUnique.mockResolvedValue(null)
+    prisma.document.findFirst.mockResolvedValue(null)
     const repo = makeRepo(prisma)
 
     await expect(repo.findById("missing")).resolves.toBeNull()

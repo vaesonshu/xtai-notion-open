@@ -215,6 +215,24 @@ export class YjsPersistenceService {
     await Promise.all(documentIds.map((id) => this.flushDocument(id)))
   }
 
+  /** solo REST 保存：整篇替换 Yjs 快照，并丢弃未合并的增量更新 */
+  async replaceDocumentContent(
+    documentId: string,
+    blocks: Block[]
+  ): Promise<void> {
+    await this.flushDocument(documentId)
+    const yDoc = createBlockSchemaYDoc(blocks)
+    try {
+      const snapshot = Y.encodeStateAsUpdate(yDoc)
+      await this.repository.deleteAllUpdates(documentId)
+      const nextSequence =
+        (await this.repository.getMaxSequence(documentId)) + 1
+      await this.repository.insertSnapshot(documentId, snapshot, nextSequence)
+    } finally {
+      yDoc.destroy()
+    }
+  }
+
   /** 为新文档写入初始 Block[] 快照（导入 Markdown 等场景） */
   async seedInitialContent(documentId: string, blocks: Block[]): Promise<void> {
     const existing = await this.repository.getLatestSnapshot(documentId)
@@ -339,4 +357,3 @@ export class YjsPersistenceService {
     buffer.timer = null
   }
 }
-

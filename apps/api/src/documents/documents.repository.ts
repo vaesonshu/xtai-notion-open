@@ -34,6 +34,12 @@ export class DocumentsRepository {
     }
   }
 
+  async countMembers(documentId: string): Promise<number> {
+    return this.prisma.client.documentMember.count({
+      where: { documentId },
+    })
+  }
+
   async getMemberRole(
     documentId: string,
     userId: string
@@ -377,9 +383,7 @@ export class DocumentsRepository {
     const documents = await this.prisma.client.document.findMany({
       where: {
         ...(filters.status ? { publicationStatus: filters.status } : {}),
-        ...(filters.category
-          ? { workspace: { name: filters.category } }
-          : {}),
+        ...(filters.category ? { workspace: { name: filters.category } } : {}),
       },
       orderBy: { updatedAt: "desc" },
       include: {

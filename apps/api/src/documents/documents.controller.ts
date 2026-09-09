@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,9 +9,11 @@ import {
   Patch,
   Post,
   Optional,
+  Put,
   Query,
   UseGuards,
 } from "@nestjs/common"
+import type { Block } from "@xtai-notion/editor-core/server"
 import { CurrentUser } from "../auth/current-user.decorator"
 import type { DevUser } from "../auth/dev-user"
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
@@ -116,6 +119,30 @@ export class DocumentsController {
     return this.documents.getDocument(documentId, user.id)
   }
 
+  @Get(":documentId/content")
+  getDocumentContent(
+    @Param("documentId") documentId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<{ content: Block[] }> {
+    return this.documents
+      .getDocumentContent(documentId, user.id)
+      .then((content) => ({ content }))
+  }
+
+  @Put(":documentId/content")
+  saveDocumentContent(
+    @Param("documentId") documentId: string,
+    @Body() body: { content?: Block[] },
+    @CurrentUser() user: DevUser
+  ): Promise<{ ok: true }> {
+    if (!Array.isArray(body.content)) {
+      throw new BadRequestException("Invalid document content payload")
+    }
+    return this.documents
+      .saveDocumentContent(documentId, user.id, body.content)
+      .then(() => ({ ok: true as const }))
+  }
+
   @Post(":documentId/submit-publication")
   submitPublication(
     @Param("documentId") documentId: string,
@@ -147,11 +174,7 @@ export class DocumentsController {
     @Param("versionId") versionId: string,
     @CurrentUser() user: DevUser
   ): Promise<void> {
-    return this.documents.restoreDocumentVersion(
-      documentId,
-      versionId,
-      user.id
-    )
+    return this.documents.restoreDocumentVersion(documentId, versionId, user.id)
   }
 
   @Patch(":documentId")

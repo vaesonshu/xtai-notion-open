@@ -35,6 +35,15 @@ export interface DocumentListRow extends DocumentRow {
   last_opened_at?: Date | null
 }
 
+export type DocumentCollaborationMode = "solo" | "realtime"
+
+/** 前端据此决定 REST 单人保存还是连接 Hocuspocus。 */
+export interface DocumentCollaborationPolicy {
+  mode: DocumentCollaborationMode
+  memberCount: number
+  hasActiveShareLink: boolean
+}
+
 export interface DocumentMetadata {
   id: string
   workspaceId: string
@@ -51,6 +60,13 @@ export interface DocumentMetadata {
   isFavorite: boolean
   lastOpenedAt: Date | null
   deletedAt?: Date | null
+  collaboration: DocumentCollaborationPolicy
+  /** solo 模式下 GET /documents/:id 内联返回，避免前端二次请求 */
+  content?: Block[]
+}
+
+export interface DocumentContentResponse {
+  content: Block[]
 }
 
 export interface PublicationMetadata extends DocumentMetadata {

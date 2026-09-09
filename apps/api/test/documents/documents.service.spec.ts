@@ -16,6 +16,7 @@ function createRepo(
   return {
     getMemberRole: vi.fn(),
     findById: vi.fn(),
+    countMembers: vi.fn().mockResolvedValue(1),
     ...overrides,
   } as unknown as DocumentsRepository
 }
@@ -88,7 +89,7 @@ describe("DocumentsService", () => {
     ).rejects.toBeInstanceOf(ForbiddenException)
   })
 
-  it("getDocument returns metadata with role for members", async () => {
+  it("getDocument returns metadata with inline content for solo documents", async () => {
     const createdAt = new Date("2026-01-01T00:00:00.000Z")
     const updatedAt = new Date("2026-01-02T00:00:00.000Z")
     const repo = createRepo({
@@ -101,7 +102,21 @@ describe("DocumentsService", () => {
         updated_at: updatedAt,
       }),
     })
-    const service = new DocumentsService(repo)
+    const yDoc = new Y.Doc()
+    yDoc.getText("content").insert(0, "Hello")
+    const persistence = {
+      loadDocument: vi.fn().mockResolvedValue(yDoc),
+    }
+    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue([
+      {
+        id: "block-1",
+        type: "paragraph",
+        props: {},
+        content: [{ type: "text", text: "Hello", styles: {} }],
+        children: [],
+      },
+    ] as never)
+    const service = new DocumentsService(repo, undefined, persistence as never)
 
     await expect(service.getDocument("doc-1", "user-1")).resolves.toEqual({
       id: "doc-1",
@@ -119,6 +134,20 @@ describe("DocumentsService", () => {
       isFavorite: false,
       lastOpenedAt: null,
       deletedAt: null,
+      collaboration: {
+        mode: "solo",
+        memberCount: 1,
+        hasActiveShareLink: false,
+      },
+      content: [
+        {
+          id: "block-1",
+          type: "paragraph",
+          props: {},
+          content: [{ type: "text", text: "Hello", styles: {} }],
+          children: [],
+        },
+      ],
     })
   })
 
@@ -176,6 +205,11 @@ describe("DocumentsService", () => {
       isFavorite: false,
       lastOpenedAt: null,
       deletedAt: null,
+      collaboration: {
+        mode: "solo",
+        memberCount: 1,
+        hasActiveShareLink: false,
+      },
     })
     expect(repo.createForOwner).toHaveBeenCalledWith("user-1")
   })
@@ -490,5 +524,71 @@ describe("DocumentsService", () => {
     expect(results[0]?.matchIn).toBe("body")
     expect(results[0]?.matchExcerpt).toContain("协作")
     expect(persistence.loadDocument).toHaveBeenCalledWith("doc-1")
+  })
+
+  it("resolveCollaborationPolicy returns solo for single member without share link", async () => {
+    const repo = createRepo({
+      countMembers: vi.fn().mockResolvedValue(1),
+    })
+    const shareLinks = {
+      findActiveByDocumentId: vi.fn().mockResolvedValue(null),
+    }
+    const service = new DocumentsService(
+      repo,
+      undefined,
+      undefined,
+      shareLinks as never
+    )
+
+    await expect(service.resolveCollaborationPolicy("doc-1")).resolves.toEqual({
+      mode: "solo",
+      memberCount: 1,
+      hasActiveShareLink: false,
+    })
+  })
+
+  it("resolveCollaborationPolicy returns realtime when share link is active", async () => {
+    const repo = createRepo({
+      countMembers: vi.fn().mockResolvedValue(1),
+    })
+    const shareLinks = {
+      findActiveByDocumentId: vi.fn().mockResolvedValue({ token: "abc" }),
+    }
+    const service = new DocumentsService(
+      repo,
+      undefined,
+      undefined,
+      shareLinks as never
+    )
+
+    await expect(service.resolveCollaborationPolicy("doc-1")).resolves.toEqual({
+      mode: "realtime",
+      memberCount: 1,
+      hasActiveShareLink: true,
+    })
+  })
+
+  it("saveDocumentContent rejects realtime documents with 409", async () => {
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue("owner"),
+      countMembers: vi.fn().mockResolvedValue(2),
+    })
+    const shareLinks = {
+      findActiveByDocumentId: vi.fn().mockResolvedValue(null),
+    }
+    const persistence = {
+      replaceDocumentContent: vi.fn(),
+    }
+    const service = new DocumentsService(
+      repo,
+      undefined,
+      persistence as never,
+      shareLinks as never
+    )
+
+    await expect(
+      service.saveDocumentContent("doc-1", "user-1", [])
+    ).rejects.toBeInstanceOf(ConflictException)
+    expect(persistence.replaceDocumentContent).not.toHaveBeenCalled()
   })
 })

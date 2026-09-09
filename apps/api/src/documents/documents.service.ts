@@ -13,9 +13,11 @@ import {
   createBlockSchemaYDoc,
   markdownToBlocks,
 } from "@xtai-notion/editor-core/server"
+import type { Block } from "@xtai-notion/editor-core/server"
 import { UserRepository } from "../auth/user.repository"
 import { YjsPersistenceService } from "../collaboration/yjs-persistence.service"
 import type {
+  DocumentCollaborationPolicy,
   DocumentMetadata,
   DocumentRole,
   DocumentRow,
@@ -26,6 +28,7 @@ import type {
   PublishedArticleDetail,
 } from "./document-types"
 import { DocumentsRepository } from "./documents.repository"
+import { ShareLinkRepository } from "./share-link.repository"
 
 @Injectable()
 export class DocumentsService {
@@ -37,8 +40,38 @@ export class DocumentsService {
     private readonly users?: UserRepository,
     @Optional()
     @Inject(YjsPersistenceService)
-    private readonly yjsPersistence?: YjsPersistenceService
+    private readonly yjsPersistence?: YjsPersistenceService,
+    @Optional()
+    @Inject(ShareLinkRepository)
+    private readonly shareLinks?: ShareLinkRepository
   ) {}
+
+  async resolveCollaborationPolicy(
+    documentId: string
+  ): Promise<DocumentCollaborationPolicy> {
+    const [memberCount, activeShareLink] = await Promise.all([
+      this.documents.countMembers(documentId),
+      this.shareLinks
+        ? this.shareLinks.findActiveByDocumentId(documentId)
+        : Promise.resolve(null),
+    ])
+    const hasActiveShareLink = activeShareLink !== null
+    const mode = memberCount > 1 || hasActiveShareLink ? "realtime" : "solo"
+    return { mode, memberCount, hasActiveShareLink }
+  }
+
+  /** 从 Yjs 持久层读取 Block[]；调用方须已完成鉴权。 */
+  private async loadDocumentBlocks(documentId: string): Promise<Block[]> {
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+    const yDoc = await this.yjsPersistence.loadDocument(documentId)
+    try {
+      return documentFromYjs(yDoc)
+    } finally {
+      yDoc.destroy()
+    }
+  }
 
   getMemberRole(
     documentId: string,
@@ -74,11 +107,44 @@ export class DocumentsService {
     userId: string
   ): Promise<DocumentMetadata> {
     const role = await this.assertCanRead(documentId, userId)
-    const row = await this.documents.findById(documentId)
+    const [row, collaboration] = await Promise.all([
+      this.documents.findById(documentId),
+      this.resolveCollaborationPolicy(documentId),
+    ])
     if (!row) {
       throw new NotFoundException("Document not found")
     }
-    return this.toMetadata(row, role)
+    const metadata = this.toMetadata(row, role, collaboration)
+    if (collaboration.mode === "solo") {
+      metadata.content = await this.loadDocumentBlocks(documentId)
+    }
+    return metadata
+  }
+
+  async getDocumentContent(
+    documentId: string,
+    userId: string
+  ): Promise<Block[]> {
+    await this.assertCanRead(documentId, userId)
+    return this.loadDocumentBlocks(documentId)
+  }
+
+  async saveDocumentContent(
+    documentId: string,
+    userId: string,
+    content: Block[]
+  ): Promise<void> {
+    await this.assertCanWrite(documentId, userId)
+    const collaboration = await this.resolveCollaborationPolicy(documentId)
+    if (collaboration.mode !== "solo") {
+      throw new ConflictException(
+        "Document uses realtime collaboration; REST save is disabled"
+      )
+    }
+    if (!this.yjsPersistence) {
+      throw new Error("Collaboration persistence unavailable")
+    }
+    await this.yjsPersistence.replaceDocumentContent(documentId, content)
   }
 
   async listDocuments(userId: string): Promise<DocumentMetadata[]> {
@@ -158,9 +224,7 @@ export class DocumentsService {
   ): Promise<DocumentMetadata> {
     const role = await this.assertCanRead(documentId, userId)
     await this.documents.upsertUserPref(userId, documentId, {
-      ...(pref.isFavorite !== undefined
-        ? { isFavorite: pref.isFavorite }
-        : {}),
+      ...(pref.isFavorite !== undefined ? { isFavorite: pref.isFavorite } : {}),
       ...(pref.recordOpened ? { lastOpenedAt: new Date() } : {}),
     })
     const row = await this.documents.findById(documentId)
@@ -431,7 +495,12 @@ export class DocumentsService {
       is_favorite?: boolean
       last_opened_at?: Date | null
     },
-    role: DocumentRole
+    role: DocumentRole,
+    collaboration: DocumentCollaborationPolicy = {
+      mode: "solo",
+      memberCount: 1,
+      hasActiveShareLink: false,
+    }
   ): DocumentMetadata {
     // Old rows and test fixtures without the migration fields are drafts.
     return {
@@ -450,6 +519,7 @@ export class DocumentsService {
       isFavorite: row.is_favorite ?? false,
       lastOpenedAt: row.last_opened_at ?? null,
       deletedAt: row.deleted_at ?? null,
+      collaboration,
     }
   }
 }

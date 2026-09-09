@@ -34,6 +34,7 @@ function createRepo(
     insertUpdates: vi.fn().mockResolvedValue({ lastSequence: 0 }),
     insertSnapshot: vi.fn().mockResolvedValue(undefined),
     deleteUpdatesUpTo: vi.fn().mockResolvedValue(undefined),
+    deleteAllUpdates: vi.fn().mockResolvedValue(undefined),
     countUpdatesAfterSequence: vi.fn().mockResolvedValue(0),
     getMaxSequence: vi.fn().mockResolvedValue(0),
     ...overrides,
@@ -298,5 +299,33 @@ describe("YjsPersistenceService", () => {
       0
     )
     loaded.destroy()
+  })
+
+  it("replaceDocumentContent writes a fresh snapshot and clears updates", async () => {
+    const insertSnapshot = vi.fn().mockResolvedValue(undefined)
+    const deleteAllUpdates = vi.fn().mockResolvedValue(undefined)
+    const repo = createRepo({
+      getMaxSequence: vi.fn().mockResolvedValue(2),
+      insertSnapshot,
+      deleteAllUpdates,
+    })
+    const service = new YjsPersistenceService(repo)
+
+    await service.replaceDocumentContent("doc-1", [
+      {
+        id: "block-1",
+        type: "paragraph",
+        props: {},
+        content: [{ type: "text", text: "solo save", styles: {} }],
+        children: [],
+      },
+    ])
+
+    expect(deleteAllUpdates).toHaveBeenCalledWith("doc-1")
+    expect(insertSnapshot).toHaveBeenCalledWith(
+      "doc-1",
+      expect.any(Uint8Array),
+      3
+    )
   })
 })
