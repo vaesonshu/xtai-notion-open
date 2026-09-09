@@ -55,11 +55,20 @@
 | **Markdown 导出** | 编辑器固定工具栏下载按钮 | 将当前文档导出为 `.md`（`blocksToMarkdown`） |
 | **版本历史** | 工具栏 **⋯ → 版本历史** | 基于 Yjs 快照：手动保存当前版本、列表浏览、回滚到历史版本 |
 | **文档内评论** | 工具栏 **「评论」** | 块级锚定（`block_id`）；光标所在段落可评论，支持嵌套回复与跳转到对应块 |
+| **知识库** | 侧边栏顶部名称 / 切换器 | 创建知识库、切换当前库；库内新建文档；成员数来自 `workspace_member` |
+| **知识库成员** | 侧边栏「N 位成员」或切换器 → 成员管理 | 搜索/邮箱邀请、角色调整、移除成员（owner/admin） |
+| **知识库总览** | `/workspaces` 或侧边栏「知识库」（新建文档下方） | 多库列表、筛选排序、进入库首页 `/workspaces/:id` |
 
 ### 相关 API（节选）
 
 | 方法 | 路径 | 用途 |
 |------|------|------|
+| `GET` · `POST` | `/workspaces` | 知识库列表 / 创建 |
+| `GET` · `PATCH` | `/workspaces/:id` | 知识库详情 / 重命名 |
+| `GET` · `POST` · `DELETE` | `/workspaces/:id/members` | 成员列表 / 邀请（`userId` 或 `email`）/ 移除 |
+| `GET` | `/workspaces/:id/members/search?q=` | 邀请前搜索用户（owner/admin） |
+| `PATCH` | `/workspaces/:id/members/:userId` | 更新成员角色（owner/admin） |
+| `GET` · `POST` | `/workspaces/:id/documents` | 库内文档列表 / 新建（可带 `parentId`） |
 | `GET` | `/documents/search?q=` | 全文搜索 |
 | `GET` | `/documents/trash` | 回收站列表 |
 | `POST` | `/documents/:id/restore` | 从回收站恢复 |
@@ -79,6 +88,7 @@ P0 能力依赖以下迁移（在 [`apps/api/prisma/migrations`](./apps/api/pris
 |------|------|
 | `003_document_lifecycle` | `document.deleted_at`；`user_document_pref`（收藏、最近打开） |
 | `004_document_comment` | `document_comment`（块级评论线程） |
+| `007_workspace_members` | `workspace_member`；按 owner 合并历史 workspace；库级成员与权限 |
 
 升级或首次部署后执行：
 
