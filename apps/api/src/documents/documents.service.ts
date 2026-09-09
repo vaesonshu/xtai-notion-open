@@ -28,6 +28,8 @@ import type {
   PublishedArticle,
   PublishedArticleDetail,
 } from "./document-types"
+import { WorkspaceRepository } from "../workspaces/workspace.repository"
+import { mapWorkspaceRoleToDocumentRole } from "../workspaces/workspace.types"
 import { DocumentsRepository } from "./documents.repository"
 import { ShareLinkRepository } from "./share-link.repository"
 
@@ -36,6 +38,8 @@ export class DocumentsService {
   constructor(
     @Inject(DocumentsRepository)
     private readonly documents: DocumentsRepository,
+    @Inject(WorkspaceRepository)
+    private readonly workspaces: WorkspaceRepository,
     @Optional()
     @Inject(UserRepository)
     private readonly users?: UserRepository,
@@ -75,10 +79,20 @@ export class DocumentsService {
     }
   }
 
-  getMemberRole(
+  async getMemberRole(
     documentId: string,
     userId: string
   ): Promise<DocumentRole | null> {
+    const row = await this.documents.findById(documentId)
+    if (!row) return null
+    const workspaceRole = await this.workspaces.getMemberRole(
+      row.workspace_id,
+      userId
+    )
+    if (workspaceRole) {
+      return mapWorkspaceRoleToDocumentRole(workspaceRole)
+    }
+    // 兼容迁移前写入 document_member 的历史数据（P2 后新分享不再写该表）
     return this.documents.getMemberRole(documentId, userId)
   }
 
@@ -88,7 +102,7 @@ export class DocumentsService {
   ): Promise<DocumentRole> {
     const role = await this.getMemberRole(documentId, userId)
     if (!role) {
-      throw new ForbiddenException("Not a document member")
+      throw new ForbiddenException("不是该知识库成员")
     }
     return role
   }
@@ -149,9 +163,25 @@ export class DocumentsService {
     await this.yjsPersistence.replaceDocumentContent(documentId, content)
   }
 
-  async listDocuments(userId: string): Promise<DocumentMetadata[]> {
-    const rows = await this.documents.listForUser(userId)
+  async listDocuments(
+    userId: string,
+    workspaceId?: string
+  ): Promise<DocumentMetadata[]> {
+    const rows = workspaceId
+      ? await this.documents.listForUserInWorkspace(userId, workspaceId)
+      : await this.documents.listForUser(userId)
     return rows.map((row) => this.toMetadata(row, row.role))
+  }
+
+  async listDocumentsInWorkspace(
+    userId: string,
+    workspaceId: string
+  ): Promise<DocumentMetadata[]> {
+    const role = await this.workspaces.getMemberRole(workspaceId, userId)
+    if (!role) {
+      throw new ForbiddenException("不是该知识库成员")
+    }
+    return this.listDocuments(userId, workspaceId)
   }
 
   async listTrashedDocuments(userId: string): Promise<DocumentMetadata[]> {
@@ -272,7 +302,8 @@ export class DocumentsService {
       throw new Error("Collaboration persistence unavailable")
     }
     const blocks = markdownToBlocks(markdown)
-    const row = await this.documents.createForOwner(userId)
+    const workspace = await this.resolveDefaultWorkspace(userId)
+    const row = await this.documents.createInWorkspace(workspace.id, userId)
     const nextTitle = title.trim() || "导入的文档"
     await this.documents.rename(row.id, nextTitle)
     await this.yjsPersistence.seedInitialContent(row.id, blocks)
@@ -353,8 +384,54 @@ export class DocumentsService {
   }
 
   async createDocument(userId: string): Promise<DocumentMetadata> {
-    const row = await this.documents.createForOwner(userId)
-    return this.toMetadata(row, "owner")
+    const workspace = await this.resolveDefaultWorkspace(userId)
+    return this.createDocumentInWorkspace(userId, workspace.id)
+  }
+
+  async createDocumentInWorkspace(
+    userId: string,
+    workspaceId: string
+  ): Promise<DocumentMetadata> {
+    const workspaceRole = await this.workspaces.getMemberRole(
+      workspaceId,
+      userId
+    )
+    if (!workspaceRole) {
+      throw new ForbiddenException("不是该知识库成员")
+    }
+    if (workspaceRole === "viewer") {
+      throw new ForbiddenException("查看者无法创建文档")
+    }
+    const row = await this.documents.createInWorkspace(workspaceId, userId)
+    return this.toMetadata(
+      row,
+      mapWorkspaceRoleToDocumentRole(workspaceRole)
+    )
+  }
+
+  async createChildDocumentInWorkspace(
+    parentId: string,
+    userId: string,
+    workspaceId: string
+  ): Promise<DocumentMetadata> {
+    const role = await this.assertCanWrite(parentId, userId)
+    const parent = await this.documents.findById(parentId)
+    if (!parent) throw new NotFoundException("Parent document not found")
+    if (parent.workspace_id !== workspaceId) {
+      throw new ForbiddenException("子文档必须与父文档在同一知识库")
+    }
+    if ((parent.depth ?? 1) >= 3) {
+      throw new ForbiddenException("Documents can be nested up to three levels")
+    }
+    const row = await this.documents.createChild(parent, userId)
+    return this.toMetadata(row, role)
+  }
+
+  /** 默认知识库：最近更新的 owner 库，否则自动创建「我的知识库」。 */
+  private async resolveDefaultWorkspace(userId: string) {
+    const existing = await this.workspaces.findDefaultForUser(userId)
+    if (existing) return existing
+    return this.workspaces.create("我的知识库", userId)
   }
 
   async renameDocument(

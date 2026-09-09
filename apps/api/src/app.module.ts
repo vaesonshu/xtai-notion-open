@@ -13,6 +13,7 @@ import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
 import { AiModule } from "./ai/ai.module"
 import { AdminModule } from "./admin/admin.module"
+import { WorkspacesModule } from "./workspaces/workspaces.module"
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AdminModule } from "./admin/admin.module"
     PrismaModule,
     AuthModule,
     DocumentsModule,
+    WorkspacesModule,
     CommentsModule,
     DocumentCommentsModule,
     CollaborationModule,

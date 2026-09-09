@@ -9,37 +9,85 @@ import * as editorCore from "@xtai-notion/editor-core/server"
 import type { DocumentsRepository } from "@api/documents/documents.repository"
 import { DocumentsService } from "@api/documents/documents.service"
 import type { UserRepository } from "@api/auth/user.repository"
+import type { WorkspaceRepository } from "@api/workspaces/workspace.repository"
+
+const defaultWorkspace = {
+  id: "ws-1",
+  name: "我的知识库",
+  createdBy: "user-1",
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+}
 
 function createRepo(
   overrides: Partial<DocumentsRepository> = {}
 ): DocumentsRepository {
   return {
     getMemberRole: vi.fn(),
-    findById: vi.fn(),
+    findById: vi.fn().mockResolvedValue({
+      id: "doc-1",
+      workspace_id: "ws-1",
+      title: "Demo",
+      depth: 1,
+      created_at: new Date("2026-01-01T00:00:00.000Z"),
+      updated_at: new Date("2026-01-02T00:00:00.000Z"),
+    }),
     countMembers: vi.fn().mockResolvedValue(1),
     ...overrides,
   } as unknown as DocumentsRepository
 }
 
+function createWorkspaces(
+  overrides: Partial<WorkspaceRepository> = {}
+): WorkspaceRepository {
+  return {
+    getMemberRole: vi.fn().mockResolvedValue("owner"),
+    findDefaultForUser: vi.fn().mockResolvedValue(defaultWorkspace),
+    create: vi.fn().mockResolvedValue(defaultWorkspace),
+    ...overrides,
+  } as unknown as WorkspaceRepository
+}
+
+function makeService(
+  repo: DocumentsRepository,
+  workspaces = createWorkspaces(),
+  users?: UserRepository,
+  persistence?: unknown,
+  shareLinks?: unknown
+) {
+  return new DocumentsService(
+    repo,
+    workspaces,
+    users,
+    persistence as never,
+    shareLinks as never
+  )
+}
+
 describe("DocumentsService", () => {
-  it("getMemberRole delegates to repository", async () => {
-    const repo = createRepo({
+  it("getMemberRole prefers workspace membership", async () => {
+    const workspaces = createWorkspaces({
       getMemberRole: vi.fn().mockResolvedValue("viewer"),
     })
-    const service = new DocumentsService(repo)
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue("editor"),
+    })
+    const service = makeService(repo, workspaces)
 
     await expect(service.getMemberRole("doc-1", "user-1")).resolves.toBe(
       "viewer"
     )
-    expect(repo.getMemberRole).toHaveBeenCalledWith("doc-1", "user-1")
+    expect(workspaces.getMemberRole).toHaveBeenCalledWith("ws-1", "user-1")
+    expect(repo.getMemberRole).not.toHaveBeenCalled()
   })
 
   it("assertCanRead allows owner, editor, and viewer", async () => {
     for (const role of ["owner", "editor", "viewer"] as const) {
-      const repo = createRepo({
-        getMemberRole: vi.fn().mockResolvedValue(role),
-      })
-      const service = new DocumentsService(repo)
+      const repo = createRepo()
+      const service = makeService(
+        repo,
+        createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue(role) })
+      )
       await expect(service.assertCanRead("doc-1", "user-1")).resolves.toBe(role)
     }
   })
@@ -48,7 +96,10 @@ describe("DocumentsService", () => {
     const repo = createRepo({
       getMemberRole: vi.fn().mockResolvedValue(null),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(
+      repo,
+      createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue(null) })
+    )
 
     await expect(
       service.assertCanRead("doc-1", "stranger")
@@ -57,10 +108,11 @@ describe("DocumentsService", () => {
 
   it("assertCanWrite allows owner and editor", async () => {
     for (const role of ["owner", "editor"] as const) {
-      const repo = createRepo({
-        getMemberRole: vi.fn().mockResolvedValue(role),
-      })
-      const service = new DocumentsService(repo)
+      const repo = createRepo()
+      const service = makeService(
+        repo,
+        createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue(role) })
+      )
       await expect(service.assertCanWrite("doc-1", "user-1")).resolves.toBe(
         role
       )
@@ -68,10 +120,11 @@ describe("DocumentsService", () => {
   })
 
   it("assertCanWrite rejects viewer with 403", async () => {
-    const repo = createRepo({
-      getMemberRole: vi.fn().mockResolvedValue("viewer"),
-    })
-    const service = new DocumentsService(repo)
+    const repo = createRepo()
+    const service = makeService(
+      repo,
+      createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue("viewer") })
+    )
 
     await expect(
       service.assertCanWrite("doc-1", "viewer-1")
@@ -82,7 +135,10 @@ describe("DocumentsService", () => {
     const repo = createRepo({
       getMemberRole: vi.fn().mockResolvedValue(null),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(
+      repo,
+      createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue(null) })
+    )
 
     await expect(
       service.assertCanWrite("doc-1", "stranger")
@@ -116,7 +172,12 @@ describe("DocumentsService", () => {
         children: [],
       },
     ] as never)
-    const service = new DocumentsService(repo, undefined, persistence as never)
+    const service = makeService(
+      repo,
+      createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue("editor") }),
+      undefined,
+      persistence
+    )
 
     await expect(service.getDocument("doc-1", "user-1")).resolves.toEqual({
       id: "doc-1",
@@ -165,7 +226,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(new Y.Doc()),
     }
-    const service = new DocumentsService(repo, undefined, persistence as never)
+    const service = makeService(repo, createWorkspaces(), undefined, persistence)
 
     const result = await service.getDocument("doc-new", "user-1")
     expect(result.content?.length).toBeGreaterThan(0)
@@ -175,22 +236,41 @@ describe("DocumentsService", () => {
   it("getDocument rejects non-members with 403", async () => {
     const repo = createRepo({
       getMemberRole: vi.fn().mockResolvedValue(null),
-      findById: vi.fn(),
+      findById: vi.fn().mockResolvedValue({
+        id: "doc-1",
+        workspace_id: "ws-1",
+        title: "Demo",
+        depth: 1,
+        created_at: new Date(),
+        updated_at: new Date(),
+      }),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(
+      repo,
+      createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue(null) })
+    )
 
     await expect(
       service.getDocument("doc-1", "stranger")
     ).rejects.toBeInstanceOf(ForbiddenException)
-    expect(repo.findById).not.toHaveBeenCalled()
   })
 
   it("getDocument throws NotFound when document row is missing", async () => {
+    const row = {
+      id: "doc-1",
+      workspace_id: "ws-1",
+      title: "Demo",
+      depth: 1,
+      created_at: new Date(),
+      updated_at: new Date(),
+    }
     const repo = createRepo({
-      getMemberRole: vi.fn().mockResolvedValue("owner"),
-      findById: vi.fn().mockResolvedValue(null),
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce(row)
+        .mockResolvedValueOnce(null),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(repo)
 
     await expect(
       service.getDocument("doc-1", "owner-1")
@@ -200,7 +280,7 @@ describe("DocumentsService", () => {
   it("createDocument returns owner metadata for the new document", async () => {
     const createdAt = new Date("2026-01-01T00:00:00.000Z")
     const repo = createRepo({
-      createForOwner: vi.fn().mockResolvedValue({
+      createInWorkspace: vi.fn().mockResolvedValue({
         id: "doc-1",
         workspace_id: "ws-1",
         title: "未命名文档",
@@ -208,7 +288,7 @@ describe("DocumentsService", () => {
         updated_at: createdAt,
       }),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(repo)
 
     await expect(service.createDocument("user-1")).resolves.toEqual({
       id: "doc-1",
@@ -232,7 +312,7 @@ describe("DocumentsService", () => {
         hasActiveShareLink: false,
       },
     })
-    expect(repo.createForOwner).toHaveBeenCalledWith("user-1")
+    expect(repo.createInWorkspace).toHaveBeenCalledWith("ws-1", "user-1")
   })
 
   it("lists documents with each user's membership role", async () => {
@@ -256,7 +336,7 @@ describe("DocumentsService", () => {
         },
       ]),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(repo)
 
     await expect(service.listDocuments("user-1")).resolves.toEqual([
       expect.objectContaining({ id: "owned", role: "owner" }),
@@ -276,7 +356,7 @@ describe("DocumentsService", () => {
         updated_at: new Date("2026-01-02"),
       }),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(repo)
 
     await expect(
       service.submitPublication("doc-1", "editor-1")
@@ -287,10 +367,11 @@ describe("DocumentsService", () => {
   })
 
   it("rejects publication submission from a viewer", async () => {
-    const repo = createRepo({
-      getMemberRole: vi.fn().mockResolvedValue("viewer"),
-    })
-    const service = new DocumentsService(repo)
+    const repo = createRepo()
+    const service = makeService(
+      repo,
+      createWorkspaces({ getMemberRole: vi.fn().mockResolvedValue("viewer") })
+    )
 
     await expect(
       service.submitPublication("doc-1", "viewer-1")
@@ -302,7 +383,7 @@ describe("DocumentsService", () => {
       getMemberRole: vi.fn().mockResolvedValue("owner"),
       submitPublication: vi.fn().mockResolvedValue(null),
     })
-    const service = new DocumentsService(repo)
+    const service = makeService(repo)
 
     await expect(
       service.submitPublication("doc-1", "owner-1")
@@ -325,7 +406,7 @@ describe("DocumentsService", () => {
     const users = {
       findById: vi.fn().mockResolvedValue({ role: "admin" }),
     } as unknown as UserRepository
-    const service = new DocumentsService(repo, users)
+    const service = makeService(repo, createWorkspaces(), users)
 
     await expect(
       service.approvePublication("doc-1", "admin-1")
@@ -339,7 +420,7 @@ describe("DocumentsService", () => {
     const users = {
       findById: vi.fn().mockResolvedValue({ role: "user" }),
     } as unknown as UserRepository
-    const service = new DocumentsService(createRepo(), users)
+    const service = makeService(createRepo(), createWorkspaces(), users)
 
     await expect(
       service.approvePublication("doc-1", "user-1")
@@ -350,7 +431,7 @@ describe("DocumentsService", () => {
     const users = {
       findById: vi.fn().mockResolvedValue({ role: "admin" }),
     } as unknown as UserRepository
-    const service = new DocumentsService(createRepo(), users)
+    const service = makeService(createRepo(), createWorkspaces(), users)
 
     await expect(
       service.rejectPublication("doc-1", "admin-1", "  ")
@@ -388,7 +469,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(yDoc),
     }
-    const service = new DocumentsService(repo, undefined, persistence as never)
+    const service = makeService(repo, createWorkspaces(), undefined, persistence)
 
     await expect(service.getPublishedArticle("doc-1")).resolves.toMatchObject({
       id: "doc-1",
@@ -413,9 +494,9 @@ describe("DocumentsService", () => {
     const repo = createRepo({
       findPublishedById: vi.fn().mockResolvedValue(null),
     })
-    const service = new DocumentsService(repo, undefined, {
+    const service = makeService(repo, createWorkspaces(), undefined, {
       loadDocument: vi.fn(),
-    } as never)
+    })
 
     await expect(service.getPublishedArticle("missing")).rejects.toBeInstanceOf(
       NotFoundException
@@ -486,7 +567,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(yDoc),
     }
-    const service = new DocumentsService(repo, undefined, persistence as never)
+    const service = makeService(repo, createWorkspaces(), undefined, persistence)
 
     await expect(service.listDocumentGraph("user-1")).resolves.toEqual([
       { id: "doc-1", title: "Source", links: ["doc-2"] },
@@ -509,7 +590,7 @@ describe("DocumentsService", () => {
       ]),
     })
     const persistence = { loadDocument: vi.fn() }
-    const service = new DocumentsService(repo, undefined, persistence as never)
+    const service = makeService(repo, createWorkspaces(), undefined, persistence)
 
     const results = await service.searchDocuments("user-1", "产品")
     expect(results).toHaveLength(1)
@@ -538,7 +619,7 @@ describe("DocumentsService", () => {
     vi.spyOn(editorCore, "documentToPlainText").mockReturnValue(
       "这是一段关于协作编辑器的说明"
     )
-    const service = new DocumentsService(repo, undefined, persistence as never)
+    const service = makeService(repo, createWorkspaces(), undefined, persistence)
 
     const results = await service.searchDocuments("user-1", "协作")
     expect(results).toHaveLength(1)
@@ -554,11 +635,12 @@ describe("DocumentsService", () => {
     const shareLinks = {
       findActiveByDocumentId: vi.fn().mockResolvedValue(null),
     }
-    const service = new DocumentsService(
+    const service = makeService(
       repo,
+      createWorkspaces(),
       undefined,
       undefined,
-      shareLinks as never
+      shareLinks
     )
 
     await expect(service.resolveCollaborationPolicy("doc-1")).resolves.toEqual({
@@ -575,11 +657,12 @@ describe("DocumentsService", () => {
     const shareLinks = {
       findActiveByDocumentId: vi.fn().mockResolvedValue({ token: "abc" }),
     }
-    const service = new DocumentsService(
+    const service = makeService(
       repo,
+      createWorkspaces(),
       undefined,
       undefined,
-      shareLinks as never
+      shareLinks
     )
 
     await expect(service.resolveCollaborationPolicy("doc-1")).resolves.toEqual({
@@ -600,11 +683,12 @@ describe("DocumentsService", () => {
     const persistence = {
       replaceDocumentContent: vi.fn(),
     }
-    const service = new DocumentsService(
+    const service = makeService(
       repo,
+      createWorkspaces(),
       undefined,
-      persistence as never,
-      shareLinks as never
+      persistence,
+      shareLinks
     )
 
     await expect(

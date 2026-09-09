@@ -35,8 +35,13 @@ export class DocumentsRepository {
   }
 
   async countMembers(documentId: string): Promise<number> {
-    return this.prisma.client.documentMember.count({
-      where: { documentId },
+    const document = await this.prisma.client.document.findUnique({
+      where: { id: documentId },
+      select: { workspaceId: true },
+    })
+    if (!document) return 0
+    return this.prisma.client.workspaceMember.count({
+      where: { workspaceId: document.workspaceId },
     })
   }
 
@@ -90,11 +95,15 @@ export class DocumentsRepository {
     const documents = await this.prisma.client.document.findMany({
       where: {
         deletedAt: null,
-        members: { some: { userId } },
+        workspace: { members: { some: { userId } } },
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       include: {
-        members: { where: { userId }, select: { role: true } },
+        workspace: {
+          include: {
+            members: { where: { userId }, select: { role: true } },
+          },
+        },
         userPrefs: {
           where: { userId },
           select: { isFavorite: true, lastOpenedAt: true },
@@ -103,23 +112,63 @@ export class DocumentsRepository {
     })
     return documents.map((document) => ({
       ...this.toDocumentRow(document),
-      role: isDocumentRole(document.members[0]?.role)
-        ? (document.members[0]?.role as DocumentRole)
-        : "viewer",
+      role: this.mapWorkspaceMemberRole(document.workspace.members[0]?.role),
       is_favorite: document.userPrefs[0]?.isFavorite ?? false,
       last_opened_at: document.userPrefs[0]?.lastOpenedAt ?? null,
     }))
+  }
+
+  async listForUserInWorkspace(
+    userId: string,
+    workspaceId: string
+  ): Promise<DocumentListRow[]> {
+    const documents = await this.prisma.client.document.findMany({
+      where: {
+        deletedAt: null,
+        workspaceId,
+        workspace: { members: { some: { userId } } },
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      include: {
+        workspace: {
+          include: {
+            members: { where: { userId }, select: { role: true } },
+          },
+        },
+        userPrefs: {
+          where: { userId },
+          select: { isFavorite: true, lastOpenedAt: true },
+        },
+      },
+    })
+    return documents.map((document) => ({
+      ...this.toDocumentRow(document),
+      role: this.mapWorkspaceMemberRole(document.workspace.members[0]?.role),
+      is_favorite: document.userPrefs[0]?.isFavorite ?? false,
+      last_opened_at: document.userPrefs[0]?.lastOpenedAt ?? null,
+    }))
+  }
+
+  private mapWorkspaceMemberRole(role: string | undefined): DocumentRole {
+    if (role === "owner") return "owner"
+    if (role === "viewer") return "viewer"
+    if (role === "admin" || role === "editor") return "editor"
+    return "viewer"
   }
 
   async listTrashedForUser(userId: string): Promise<DocumentListRow[]> {
     const documents = await this.prisma.client.document.findMany({
       where: {
         deletedAt: { not: null },
-        members: { some: { userId } },
+        workspace: { members: { some: { userId } } },
       },
       orderBy: { deletedAt: "desc" },
       include: {
-        members: { where: { userId }, select: { role: true } },
+        workspace: {
+          include: {
+            members: { where: { userId }, select: { role: true } },
+          },
+        },
         userPrefs: {
           where: { userId },
           select: { isFavorite: true, lastOpenedAt: true },
@@ -128,9 +177,7 @@ export class DocumentsRepository {
     })
     return documents.map((document) => ({
       ...this.toDocumentRow(document),
-      role: isDocumentRole(document.members[0]?.role)
-        ? (document.members[0]?.role as DocumentRole)
-        : "viewer",
+      role: this.mapWorkspaceMemberRole(document.workspace.members[0]?.role),
       is_favorite: document.userPrefs[0]?.isFavorite ?? false,
       last_opened_at: document.userPrefs[0]?.lastOpenedAt ?? null,
     }))
@@ -218,42 +265,36 @@ export class DocumentsRepository {
     return result.count > 0
   }
 
-  async createForOwner(userId: string): Promise<DocumentRow> {
+  async createInWorkspace(
+    workspaceId: string,
+    userId: string,
+    parent?: DocumentRow
+  ): Promise<DocumentRow> {
     return this.prisma.client.$transaction(async (tx) => {
-      const workspace = await tx.workspace.create({
-        data: { name: "个人空间" },
-      })
       const document = await tx.document.create({
         data: {
-          workspaceId: workspace.id,
+          workspaceId,
+          parentId: parent?.id ?? null,
+          depth: parent ? (parent.depth ?? 1) + 1 : 1,
           title: "未命名文档",
-          depth: 1,
           ownerId: userId,
         },
       })
-      await tx.documentMember.create({
-        data: { documentId: document.id, userId, role: "owner" },
+      await tx.workspace.update({
+        where: { id: workspaceId },
+        data: { updatedAt: new Date() },
       })
       return this.toDocumentRow(document)
     })
   }
 
+  /** @deprecated 使用 createInWorkspace；保留供旧测试路径调用。 */
+  async createForOwner(userId: string): Promise<DocumentRow> {
+    throw new Error("createForOwner is deprecated; use createInWorkspace")
+  }
+
   async createChild(parent: DocumentRow, userId: string): Promise<DocumentRow> {
-    return this.prisma.client.$transaction(async (tx) => {
-      const document = await tx.document.create({
-        data: {
-          workspaceId: parent.workspace_id,
-          parentId: parent.id,
-          depth: (parent.depth ?? 1) + 1,
-          title: "未命名文档",
-          ownerId: userId,
-        },
-      })
-      await tx.documentMember.create({
-        data: { documentId: document.id, userId, role: "owner" },
-      })
-      return this.toDocumentRow(document)
-    })
+    return this.createInWorkspace(parent.workspace_id, userId, parent)
   }
 
   async submitPublication(documentId: string): Promise<DocumentRow | null> {

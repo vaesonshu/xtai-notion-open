@@ -130,4 +130,46 @@ export class UserRepository {
   async countAdmins(): Promise<number> {
     return this.prisma.client.appUser.count({ where: { role: "admin" } })
   }
+
+  /** P1 邀请：按邮箱或昵称前缀搜索，排除已在库内的用户。 */
+  async searchForWorkspaceInvite(
+    query: string,
+    excludeUserIds: readonly string[],
+    limit = 8
+  ): Promise<
+    Array<{
+      id: string
+      email: string
+      display_name: string
+      color: string
+    }>
+  > {
+    const trimmed = query.trim()
+    if (trimmed.length < 2) return []
+
+    const users = await this.prisma.client.appUser.findMany({
+      where: {
+        id: { notIn: [...excludeUserIds] },
+        OR: [
+          { email: { contains: trimmed, mode: "insensitive" } },
+          { displayName: { contains: trimmed, mode: "insensitive" } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        color: true,
+      },
+    })
+
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      display_name: user.displayName,
+      color: user.color,
+    }))
+  }
 }

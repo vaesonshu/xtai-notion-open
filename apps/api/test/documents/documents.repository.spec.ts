@@ -20,7 +20,8 @@ function createPrisma() {
       create: vi.fn(),
       count: vi.fn(),
     },
-    workspace: { create: vi.fn() },
+    workspace: { create: vi.fn(), update: vi.fn() },
+    workspaceMember: { create: vi.fn() },
     $queryRaw: vi.fn(),
     $transaction: vi.fn(
       async (callback: (tx: unknown) => Promise<unknown>) => callback(client)
@@ -107,32 +108,30 @@ describe("DocumentsRepository", () => {
     await expect(repo.findById("missing")).resolves.toBeNull()
   })
 
-  it("createForOwner creates a workspace, document, and owner membership", async () => {
+  it("createInWorkspace creates a document in the given workspace", async () => {
     const prisma = createPrisma()
-    prisma.workspace.create.mockResolvedValue({ id: "ws-1" })
     prisma.document.create.mockResolvedValue(
       camelDocument({ title: "未命名文档" })
     )
-    prisma.documentMember.create.mockResolvedValue({})
+    prisma.workspace.update.mockResolvedValue({ id: "ws-1" })
     const repo = makeRepo(prisma)
 
-    await expect(repo.createForOwner("user-1")).resolves.toMatchObject({
-      id: "doc-1",
-      title: "未命名文档",
-    })
-    expect(prisma.workspace.create).toHaveBeenCalledWith({
-      data: { name: "个人空间" },
-    })
+    await expect(repo.createInWorkspace("ws-1", "user-1")).resolves.toMatchObject(
+      {
+        id: "doc-1",
+        title: "未命名文档",
+        workspace_id: "ws-1",
+      }
+    )
     expect(prisma.document.create).toHaveBeenCalledWith({
       data: {
         workspaceId: "ws-1",
+        parentId: null,
         title: "未命名文档",
         depth: 1,
         ownerId: "user-1",
       },
     })
-    expect(prisma.documentMember.create).toHaveBeenCalledWith({
-      data: { documentId: "doc-1", userId: "user-1", role: "owner" },
-    })
+    expect(prisma.workspace.update).toHaveBeenCalled()
   })
 })

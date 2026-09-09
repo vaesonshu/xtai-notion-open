@@ -59,8 +59,11 @@ export class DocumentsController {
   }
 
   @Get()
-  listDocuments(@CurrentUser() user: DevUser): Promise<DocumentMetadata[]> {
-    return this.documents.listDocuments(user.id)
+  listDocuments(
+    @CurrentUser() user: DevUser,
+    @Query("workspaceId") workspaceId?: string
+  ): Promise<DocumentMetadata[]> {
+    return this.documents.listDocuments(user.id, workspaceId)
   }
 
   @Get("search")
