@@ -177,7 +177,7 @@ export function Page() {
 
 - **Node.js** ≥ 20
 - **pnpm** 10.x（见根目录 `packageManager` 字段）
-- **PostgreSQL**（API 与协作持久化，推荐 [Neon](https://neon.tech) 或本地实例）
+- **PostgreSQL**（API 与协作持久化，推荐 [Neon](https://neon.tech) 或本地实例；本地 Docker 见 [`docs/local-database.md`](./docs/local-database.md)）
 
 ### 1. 安装依赖
 

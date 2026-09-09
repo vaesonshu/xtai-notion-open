@@ -10,7 +10,12 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "test:e2e": "playwright test",
-    "check:editor-boundaries": "node scripts/check-editor-boundaries.mjs"
+    "check:editor-boundaries": "node scripts/check-editor-boundaries.mjs",
+    "db:local:up": "docker compose up -d postgres",
+    "db:local:down": "docker compose down",
+    "db:local:reset": "docker compose down -v && docker compose up -d postgres && node scripts/wait-for-local-postgres.mjs && pnpm --filter api migrate:local",
+    "db:local:setup": "pnpm db:local:up && node scripts/wait-for-local-postgres.mjs && pnpm --filter api migrate:local",
+    "dev:local": "pnpm --parallel --filter api dev:local --filter web dev"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

@@ -1,0 +1,23 @@
+# 本地开发 PostgreSQL，用于对比 Neon 远程库的加载延迟。
+# 使用前请先启动 Docker Desktop，再执行：pnpm db:local:up
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: xtai-notion-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: xtai
+      POSTGRES_PASSWORD: xtai_local_dev
+      POSTGRES_DB: xtai_notion
+    volumes:
+      - xtai_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U xtai -d xtai_notion"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  xtai_postgres_data:
