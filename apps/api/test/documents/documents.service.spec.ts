@@ -107,7 +107,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(yDoc),
     }
-    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue([
+    vi.spyOn(editorCore, "documentFromYjsOrStarter").mockReturnValue([
       {
         id: "block-1",
         type: "paragraph",
@@ -149,6 +149,27 @@ describe("DocumentsService", () => {
         },
       ],
     })
+  })
+
+  it("getDocument returns starter blocks when Yjs snapshot is empty", async () => {
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue("owner"),
+      findById: vi.fn().mockResolvedValue({
+        id: "doc-new",
+        workspace_id: "ws-1",
+        title: "未命名",
+        created_at: new Date(),
+        updated_at: new Date(),
+      }),
+    })
+    const persistence = {
+      loadDocument: vi.fn().mockResolvedValue(new Y.Doc()),
+    }
+    const service = new DocumentsService(repo, undefined, persistence as never)
+
+    const result = await service.getDocument("doc-new", "user-1")
+    expect(result.content?.length).toBeGreaterThan(0)
+    expect(result.content?.[0]?.type).toBe("paragraph")
   })
 
   it("getDocument rejects non-members with 403", async () => {
@@ -404,7 +425,7 @@ describe("DocumentsService", () => {
   it("aggregates mention links for the document graph", async () => {
     const yDoc = new Y.Doc()
     let loadCount = 0
-    vi.spyOn(editorCore, "documentFromYjs").mockImplementation(() => {
+    vi.spyOn(editorCore, "documentFromYjsOrStarter").mockImplementation(() => {
       loadCount += 1
       if (loadCount === 1) {
         return [
@@ -513,7 +534,7 @@ describe("DocumentsService", () => {
     const persistence = {
       loadDocument: vi.fn().mockResolvedValue(yDoc),
     }
-    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue([])
+    vi.spyOn(editorCore, "documentFromYjsOrStarter").mockReturnValue([])
     vi.spyOn(editorCore, "documentToPlainText").mockReturnValue(
       "这是一段关于协作编辑器的说明"
     )

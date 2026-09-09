@@ -100,6 +100,7 @@ export {
   blockSchemaYDocHasContent,
   createBlockSchemaYDoc,
   documentFromYjs,
+  documentFromYjsOrStarter,
   documentToPlainText,
   forkYDoc,
   mergeForkInto,

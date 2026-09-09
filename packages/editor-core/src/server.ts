@@ -14,6 +14,7 @@ export {
   blockSchemaYDocHasContent,
   createBlockSchemaYDoc,
   documentFromYjs,
+  documentFromYjsOrStarter,
   documentToPlainText,
 } from "./core/yjs-document"
 export { collectMentionIds } from "./core/mention-collect"

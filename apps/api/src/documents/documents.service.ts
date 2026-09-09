@@ -8,6 +8,7 @@
 } from "@nestjs/common"
 import {
   documentFromYjs,
+  documentFromYjsOrStarter,
   documentToPlainText,
   collectMentionIds,
   createBlockSchemaYDoc,
@@ -67,7 +68,8 @@ export class DocumentsService {
     }
     const yDoc = await this.yjsPersistence.loadDocument(documentId)
     try {
-      return documentFromYjs(yDoc)
+      // 新建文档可能尚无 Yjs 快照，需回退 starter 而非抛错。
+      return documentFromYjsOrStarter(yDoc)
     } finally {
       yDoc.destroy()
     }
@@ -203,7 +205,7 @@ export class DocumentsService {
       if (!this.yjsPersistence) continue
       const yDoc = await this.yjsPersistence.loadDocument(row.id)
       try {
-        const plainText = documentToPlainText(documentFromYjs(yDoc))
+        const plainText = documentToPlainText(documentFromYjsOrStarter(yDoc))
         if (!plainText.toLowerCase().includes(trimmed)) continue
         results.push({
           ...this.toMetadata(row, row.role),
@@ -336,7 +338,7 @@ export class DocumentsService {
     for (const row of rows) {
       const yDoc = await this.yjsPersistence.loadDocument(row.id)
       try {
-        const content = documentFromYjs(yDoc)
+        const content = documentFromYjsOrStarter(yDoc)
         const mentionIds = collectMentionIds(content)
         const links = [...new Set(mentionIds)].filter(
           (id) => accessibleIds.has(id) && id !== row.id

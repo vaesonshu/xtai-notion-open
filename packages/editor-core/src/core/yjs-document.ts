@@ -17,13 +17,20 @@ function isBlockSchemaJson(json: { content?: { type?: string }[] }): boolean {
   return json.content?.[0]?.type === "blockGroup"
 }
 
-/** 将已加载的 Yjs 文档快照转为 Block[]，供只读渲染或公开 API 使用。 */
-export function documentFromYjs(yDoc: Y.Doc): Block[] {
+function yDocToBlockSchemaJson(yDoc: Y.Doc): {
+  type?: string
+  content?: { type?: string }[]
+} {
   const extensions = createEditorExtensions()
-  const json = TiptapTransformer.extensions(extensions).fromYdoc(
+  return TiptapTransformer.extensions(extensions).fromYdoc(
     yDoc,
     "default"
   ) as { type?: string; content?: { type?: string }[] }
+}
+
+/** 将已加载的 Yjs 文档快照转为 Block[]，供只读渲染或公开 API 使用。 */
+export function documentFromYjs(yDoc: Y.Doc): Block[] {
+  const json = yDocToBlockSchemaJson(yDoc)
 
   if (!isBlockSchemaJson(json)) {
     throw new Error(
@@ -31,6 +38,19 @@ export function documentFromYjs(yDoc: Y.Doc): Block[] {
     )
   }
 
+  const extensions = createEditorExtensions()
+  const schema = getSchema(extensions)
+  const pmDoc = PMNode.fromJSON(schema, json)
+  return pmDocToBlocks(pmDoc)
+}
+
+/** 读取 Yjs 内容；尚未持久化块 schema 时返回空白 starter（新建文档常见）。 */
+export function documentFromYjsOrStarter(yDoc: Y.Doc): Block[] {
+  const json = yDocToBlockSchemaJson(yDoc)
+  if (!isBlockSchemaJson(json)) {
+    return createStarterBlocks()
+  }
+  const extensions = createEditorExtensions()
   const schema = getSchema(extensions)
   const pmDoc = PMNode.fromJSON(schema, json)
   return pmDocToBlocks(pmDoc)
