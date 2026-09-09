@@ -119,17 +119,76 @@ const baseProps: DocumentWorkspaceProps = {
   collaborationUrl: "ws://127.0.0.1:3101",
 }
 
-function mockDocumentRole(role: "owner" | "editor" | "viewer") {
+function mockDocumentRole(
+  role: "owner" | "editor" | "viewer",
+  collaborationMode: "solo" | "realtime" = "solo"
+) {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        id: baseProps.documentId,
-        role,
-        title: "Demo",
-      }),
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url
+
+      if (url.includes("/content")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            content: [
+              {
+                id: "block-1",
+                type: "paragraph",
+                props: {},
+                content: [{ type: "text", text: "Hello", styles: {} }],
+                children: [],
+              },
+            ],
+          }),
+        }
+      }
+
+      if (
+        url.includes(`/documents/${baseProps.documentId}`) &&
+        !url.includes("/content")
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: baseProps.documentId,
+            role,
+            title: "Demo",
+            collaboration: {
+              mode: collaborationMode,
+              memberCount: collaborationMode === "realtime" ? 2 : 1,
+              hasActiveShareLink: collaborationMode === "realtime",
+            },
+            ...(collaborationMode === "solo"
+              ? {
+                  content: [
+                    {
+                      id: "block-1",
+                      type: "paragraph",
+                      props: {},
+                      content: [{ type: "text", text: "Hello", styles: {} }],
+                      children: [],
+                    },
+                  ],
+                }
+              : {}),
+          }),
+        }
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [],
+      }
     })
   )
 }
@@ -140,15 +199,35 @@ describe("DocumentWorkspace", () => {
     vi.restoreAllMocks()
   })
 
-  it("shows a configuration error when client endpoints are missing", () => {
+  it("shows a configuration error when API endpoint is missing", () => {
     render(<DocumentWorkspace {...baseProps} apiUrl="" collaborationUrl="" />)
 
     expect(screen.getByRole("alert")).toHaveTextContent(/缺少客户端端点|配置/)
     expect(screen.queryByText("新一代知识工作台")).not.toBeInTheDocument()
   })
 
+  it("renders solo editor without collaboration websocket", async () => {
+    mockDocumentRole("owner", "solo")
+
+    const { container } = render(
+      <DocumentWorkspace {...baseProps} collaborationUrl="" />
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("editor-workspace")).toHaveAttribute(
+        "data-collaboration-mode",
+        "solo"
+      )
+    })
+
+    const proseMirror = container.querySelector(".ProseMirror")
+    expect(proseMirror).not.toBeNull()
+    expect(proseMirror).toHaveAttribute("contenteditable", "true")
+    expect(screen.queryByRole("status", { name: /连接中/ })).not.toBeInTheDocument()
+  })
+
   it("renders the current document title and parent breadcrumb", async () => {
-    mockDocumentRole("owner")
+    mockDocumentRole("owner", "realtime")
     const provider = createMockProvider()
 
     render(
@@ -197,7 +276,7 @@ describe("DocumentWorkspace", () => {
   })
 
   it("renders an editable editor after collaboration sync for owner", async () => {
-    mockDocumentRole("owner")
+    mockDocumentRole("owner", "realtime")
     const provider = createMockProvider()
 
     const { container } = render(
@@ -225,7 +304,7 @@ describe("DocumentWorkspace", () => {
   })
 
   it("renders a read-only editor for viewer members", async () => {
-    mockDocumentRole("viewer")
+    mockDocumentRole("viewer", "realtime")
     const provider = createMockProvider()
 
     const { container } = render(
@@ -252,7 +331,7 @@ describe("DocumentWorkspace", () => {
   })
 
   it("keeps the editor alongside the AI assistant panel", async () => {
-    mockDocumentRole("owner")
+    mockDocumentRole("owner", "realtime")
     const provider = createMockProvider()
 
     render(
@@ -275,7 +354,7 @@ describe("DocumentWorkspace", () => {
   })
 
   it("surfaces offline collaboration status", async () => {
-    mockDocumentRole("editor")
+    mockDocumentRole("editor", "realtime")
     const provider = createMockProvider()
 
     render(
@@ -307,7 +386,7 @@ describe("DocumentWorkspace", () => {
   })
 
   it("surfaces unauthorized collaboration status", async () => {
-    mockDocumentRole("owner")
+    mockDocumentRole("owner", "realtime")
     const provider = createMockProvider()
 
     render(
@@ -332,7 +411,7 @@ describe("DocumentWorkspace", () => {
   })
 
   it("surfaces error collaboration status without saved badge", async () => {
-    mockDocumentRole("owner")
+    mockDocumentRole("owner", "realtime")
     const provider = createMockProvider()
 
     render(

@@ -21,12 +21,15 @@ export type ShareDialogProps = {
   apiUrl?: string
   documentId: string
   disabled?: boolean
+  /** 分享链接就绪后通知父级切换到 realtime 协作 */
+  onShareEnabled?: () => void
 }
 
 export function ShareDialog({
   apiUrl,
   documentId,
   disabled = false,
+  onShareEnabled,
 }: ShareDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -48,6 +51,7 @@ export function ShareDialog({
       }
       // Keep the generated URL same-origin so cookies and login handoff work.
       setShareUrl(`${window.location.origin}/share/${body.token}`)
+      onShareEnabled?.()
     } catch (cause) {
       toastError(cause, "无法生成分享链接")
     } finally {

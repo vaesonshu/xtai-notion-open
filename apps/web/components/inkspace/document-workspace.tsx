@@ -5,6 +5,8 @@ import type {
   CommentTextAnchor,
   DocumentCommentMarkEntry,
 } from "@xtai-notion/editor-core"
+import { createBlockSchemaYDoc } from "@xtai-notion/editor-core"
+import type { Block } from "@xtai-notion/editor-core/block-schema/types"
 import { useEditorText } from "@xtai-notion/editor-react"
 import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import { DocumentEditor } from "@xtai-notion/editor-shadcn"
@@ -16,8 +18,10 @@ import {
   AlertTitle,
 } from "@workspace/ui/components/alert"
 import { useCallback, useEffect, useState } from "react"
+import type { Doc as YDoc } from "yjs"
 import { toast, toastError } from "@/lib/toast"
 import { apiRequest } from "@/lib/api-client"
+import { useSoloDocumentSave } from "@/lib/document-content"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
 import { FixedEditorToolbar } from "./fixed-toolbar"
@@ -38,6 +42,8 @@ const showBlockStructureDebugger = process.env.NODE_ENV === "development"
 
 export type DocumentWorkspaceUser = CollaborationUser
 
+export type MentionDocumentCandidate = { id: string; title: string }
+
 export type DocumentWorkspaceProps = {
   documentId: string
   user: DocumentWorkspaceUser
@@ -47,6 +53,8 @@ export type DocumentWorkspaceProps = {
   createProvider?: CreateProvider
   title?: string
   parentTitle?: string
+  /** 侧边栏已有文档列表时传入，避免重复 GET /documents */
+  mentionDocuments?: MentionDocumentCandidate[]
   /** 点击提及链接时的跳转动作；省略时回退为浏览器默认跳转。 */
   mentionNavigate?: MentionNavigate
   /** 打开 Markdown 文件选择器，由 WorkspaceShell 注入 */
@@ -56,20 +64,34 @@ export type DocumentWorkspaceProps = {
 }
 
 type DocumentRole = "owner" | "editor" | "viewer"
+type DocumentCollaborationMode = "solo" | "realtime"
 
 type DocumentMetadataResponse = {
   id: string
   role: DocumentRole
   title?: string
   publicationStatus?: "draft" | "pending" | "published"
+  collaboration?: {
+    mode: DocumentCollaborationMode
+    memberCount: number
+    hasActiveShareLink: boolean
+  }
+  /** solo 模式由 GET /documents/:id 内联返回 */
+  content?: Block[]
 }
 
-function isConfigured(apiUrl: string, collaborationUrl: string): boolean {
-  return apiUrl.trim().length > 0 && collaborationUrl.trim().length > 0
+function isApiConfigured(apiUrl: string): boolean {
+  return apiUrl.trim().length > 0
 }
 
 function isDocumentRole(value: unknown): value is DocumentRole {
   return value === "owner" || value === "editor" || value === "viewer"
+}
+
+function isCollaborationMode(
+  value: unknown
+): value is DocumentCollaborationMode {
+  return value === "solo" || value === "realtime"
 }
 
 function getLoadErrorMessage(error: unknown): string {
@@ -79,7 +101,7 @@ function getLoadErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Failed to load document"
 }
 
-async function fetchDocumentRole(
+async function fetchDocumentMetadata(
   documentId: string,
   userId: string
 ): Promise<DocumentMetadataResponse> {
@@ -96,51 +118,89 @@ async function fetchDocumentRole(
   if (!isDocumentRole(body.role)) {
     throw new Error("Invalid document role in API response")
   }
+  if (body.collaboration && !isCollaborationMode(body.collaboration.mode)) {
+    throw new Error("Invalid collaboration mode in API response")
+  }
   return body
 }
 
-type MentionableDocument = { id: string; title: string }
+async function fetchDocumentContent(
+  documentId: string,
+  userId: string
+): Promise<Block[]> {
+  const response = await apiRequest({
+    path: `/documents/${encodeURIComponent(documentId)}/content`,
+    userId,
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to load document content (${response.status})`)
+  }
+  const body = (await response.json()) as { content?: Block[] }
+  if (!Array.isArray(body.content)) {
+    throw new Error("Invalid document content in API response")
+  }
+  return body.content
+}
 
 /**
- * 拉取用户可见的全部文档，供 @ 提及使用。结果在组件生命周期内缓存，
- * 避免每次键入都重新请求；提及菜单在本地按查询过滤。
+ * @ 提及候选：优先复用 WorkspaceShell 的文档列表，否则回退为独立拉取。
  */
 function useMentionProvider(
+  mentionDocuments: MentionDocumentCandidate[] | undefined,
   apiUrl: string,
   userId: string,
   excludeDocumentId?: string
 ): MentionProvider {
-  const [documents, setDocuments] = useState<MentionableDocument[]>([])
+  const [fetchedDocuments, setFetchedDocuments] = useState<
+    MentionDocumentCandidate[]
+  >([])
 
   useEffect(() => {
-    if (!apiUrl) return
+    if (mentionDocuments !== undefined || !apiUrl) {
+      return
+    }
     let cancelled = false
     void apiRequest({ path: "/documents", userId })
       .then((response) => (response.ok ? response.json() : []))
       .then((items: Array<{ id: string; title?: string }>) => {
         if (cancelled) return
-        setDocuments(
-          items
-            .filter((item) => item.id !== excludeDocumentId)
-            .map((item) => ({ id: item.id, title: item.title || "未命名文档" }))
+        setFetchedDocuments(
+          items.map((item) => ({
+            id: item.id,
+            title: item.title || "未命名文档",
+          }))
         )
       })
       .catch(() => undefined)
     return () => {
       cancelled = true
     }
-  }, [apiUrl, userId, excludeDocumentId])
+  }, [apiUrl, mentionDocuments, userId])
+
+  const documents = mentionDocuments ?? fetchedDocuments
 
   return useCallback(
-    // query 参数由 editor 端在本地过滤，这里始终返回全量候选文档。
     () =>
-      documents.map((document) => ({
-        id: document.id,
-        title: document.title,
-        href: `/documents/${document.id}`,
-      })),
-    [documents]
+      documents
+        .filter((document) => document.id !== excludeDocumentId)
+        .map((document) => ({
+          id: document.id,
+          title: document.title,
+          href: `/documents/${document.id}`,
+        })),
+    [documents, excludeDocumentId]
   )
+}
+
+async function resolveSoloContent(
+  documentId: string,
+  userId: string,
+  metadata: DocumentMetadataResponse
+): Promise<Block[]> {
+  if (Array.isArray(metadata.content)) {
+    return metadata.content
+  }
+  return fetchDocumentContent(documentId, userId)
 }
 
 export function DocumentWorkspace({
@@ -151,11 +211,17 @@ export function DocumentWorkspace({
   createProvider,
   title,
   parentTitle,
+  mentionDocuments,
   mentionNavigate,
   onImportMarkdown,
   importingMarkdown,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
+  const [collaborationMode, setCollaborationMode] =
+    useState<DocumentCollaborationMode | null>(null)
+  const [editorEpoch, setEditorEpoch] = useState(0)
+  const [soloYDoc, setSoloYDoc] = useState<YDoc | null>(null)
+  const [soloContentLoading, setSoloContentLoading] = useState(false)
   const [publicationStatus, setPublicationStatus] = useState<
     "draft" | "pending" | "published"
   >("draft")
@@ -196,8 +262,21 @@ export function DocumentWorkspace({
     setActiveCommentId((current) => (current === commentId ? null : current))
   }, [])
 
-  const configured = isConfigured(apiUrl, collaborationUrl)
-  const mentionProvider = useMentionProvider(apiUrl, user.id, documentId)
+  const configured = isApiConfigured(apiUrl)
+  const mentionProvider = useMentionProvider(
+    mentionDocuments,
+    apiUrl,
+    user.id,
+    documentId
+  )
+  const editable = role !== "viewer"
+  const { status: soloSaveStatus, flush: flushSoloSave } = useSoloDocumentSave({
+    documentId,
+    userId: user.id,
+    sharedDocument: soloYDoc,
+    enabled: collaborationMode === "solo" && editable,
+  })
+
   const submitPublication = useCallback(async () => {
     try {
       const response = await apiRequest({
@@ -211,7 +290,6 @@ export function DocumentWorkspace({
         } | null
         throw new Error(body?.message || `发布失败 (${response.status})`)
       }
-      // The post response is authoritative, avoiding a local-only pending state.
       const body = (await response.json()) as DocumentMetadataResponse
       const nextStatus = body.publicationStatus ?? "pending"
       setPublicationStatus(nextStatus)
@@ -225,7 +303,18 @@ export function DocumentWorkspace({
     } catch (error) {
       toastError(error, "发布失败，请稍后重试")
     }
-  }, [apiUrl, documentId, user.id])
+  }, [documentId, user.id])
+
+  const handleShareEnabled = useCallback(async () => {
+    if (collaborationMode === "solo") {
+      await flushSoloSave().catch(() => undefined)
+      soloYDoc?.destroy()
+      setSoloYDoc(null)
+      setCollaborationMode("realtime")
+      setEditorEpoch((value) => value + 1)
+      toast.success("已开启分享，正在切换到实时协作")
+    }
+  }, [collaborationMode, flushSoloSave, soloYDoc])
 
   useEffect(() => {
     if (!configured || !documentId) return
@@ -243,18 +332,43 @@ export function DocumentWorkspace({
     }
 
     let cancelled = false
+    setRole(null)
+    setCollaborationMode(null)
+    setSoloContentLoading(true)
+    setSoloYDoc((current) => {
+      current?.destroy()
+      return null
+    })
 
-    void fetchDocumentRole(documentId, user.id)
-      .then((metadata) => {
-        if (!cancelled) {
-          setRole(metadata.role)
-          setPublicationStatus(metadata.publicationStatus ?? "draft")
-          setLoadError(null)
+    void fetchDocumentMetadata(documentId, user.id)
+      .then(async (metadata) => {
+        if (cancelled) {
+          return
         }
+        const mode = metadata.collaboration?.mode ?? "solo"
+        setRole(metadata.role)
+        setPublicationStatus(metadata.publicationStatus ?? "draft")
+        setCollaborationMode(mode)
+        setLoadError(null)
+
+        if (mode === "solo") {
+          const content = await resolveSoloContent(
+            documentId,
+            user.id,
+            metadata
+          )
+          if (cancelled) {
+            return
+          }
+          setSoloYDoc(createBlockSchemaYDoc(content))
+        }
+        setSoloContentLoading(false)
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           setRole(null)
+          setCollaborationMode(null)
+          setSoloContentLoading(false)
           const message = getLoadErrorMessage(error)
           toastError(error, message)
           setLoadError(message)
@@ -263,8 +377,12 @@ export function DocumentWorkspace({
 
     return () => {
       cancelled = true
+      setSoloYDoc((current) => {
+        current?.destroy()
+        return null
+      })
     }
-  }, [apiUrl, configured, documentId, user.id])
+  }, [apiUrl, configured, documentId, user.id, editorEpoch])
 
   if (!configured) {
     return (
@@ -272,8 +390,7 @@ export function DocumentWorkspace({
         <Alert variant="destructive" className="max-w-lg" role="alert">
           <AlertTitle>配置错误</AlertTitle>
           <AlertDescription>
-            缺少客户端端点。请设置 `NEXT_PUBLIC_API_URL` 与
-            `NEXT_PUBLIC_COLLABORATION_URL` 后重新启动应用。
+            缺少客户端端点。请设置 `NEXT_PUBLIC_API_URL` 后重新启动应用。
           </AlertDescription>
         </Alert>
       </div>
@@ -293,7 +410,11 @@ export function DocumentWorkspace({
     )
   }
 
-  if (!role) {
+  if (
+    !role ||
+    !collaborationMode ||
+    (collaborationMode === "solo" && (soloContentLoading || !soloYDoc))
+  ) {
     return (
       <div
         className="flex min-h-0 flex-1 flex-col"
@@ -322,7 +443,20 @@ export function DocumentWorkspace({
     )
   }
 
-  const editable = role !== "viewer"
+  if (collaborationMode === "realtime" && !collaborationUrl.trim()) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <Alert variant="destructive" className="max-w-lg" role="alert">
+          <AlertTitle>配置错误</AlertTitle>
+          <AlertDescription>
+            此文档已开启分享或多成员协作，需要配置
+            `NEXT_PUBLIC_COLLABORATION_URL` 后重新启动应用。
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   const imageUpload = editable
     ? createDocumentImageUploader({ apiUrl, documentId, userId: user.id })
     : undefined
@@ -332,6 +466,21 @@ export function DocumentWorkspace({
     userId: user.id,
   })
 
+  const editorProps =
+    collaborationMode === "solo"
+      ? ({
+          sharedDocument: soloYDoc,
+        } as const)
+      : ({
+          collaboration: {
+            documentId,
+            websocketUrl: collaborationUrl,
+            token: user.id,
+            user,
+          },
+          createProvider,
+        } as const)
+
   return (
     <div
       className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -340,18 +489,14 @@ export function DocumentWorkspace({
       <div
         className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         data-testid="editor-workspace"
+        data-collaboration-mode={collaborationMode}
       >
         <DocumentEditor
-          collaboration={{
-            documentId,
-            websocketUrl: collaborationUrl,
-            token: user.id,
-            user,
-          }}
+          key={`${documentId}-${collaborationMode}-${editorEpoch}`}
+          {...editorProps}
           editable={editable}
           imageUpload={imageUpload}
           canvasImageFetch={canvasImageFetch}
-          createProvider={createProvider}
           mentionProvider={mentionProvider}
           mentionNavigate={mentionNavigate}
           renderToolbar={() => (
@@ -388,9 +533,7 @@ export function DocumentWorkspace({
               />
             </>
           )}
-          // The editor must shrink beside the AI panel without losing its own column layout.
           className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-          // AiWritingHost 必须包住 EditorSurface，斜杠/气泡菜单才能读到 AiWriteHostContext
           renderSurface={(surface) => (
             <AiWritingHost
               apiUrl={apiUrl}
@@ -425,6 +568,11 @@ export function DocumentWorkspace({
             onVersionRestored={() => window.location.reload()}
             onImportMarkdown={onImportMarkdown}
             importingMarkdown={importingMarkdown}
+            collaborationMode={collaborationMode}
+            soloSaveStatus={
+              collaborationMode === "solo" ? soloSaveStatus : undefined
+            }
+            onShareEnabled={() => void handleShareEnabled()}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>

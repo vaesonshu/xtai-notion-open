@@ -446,6 +446,10 @@ export function WorkspaceShell({
               user={user}
               apiUrl={apiUrl}
               collaborationUrl={collaborationUrl}
+              mentionDocuments={documents.map((item) => ({
+                id: item.id,
+                title: item.title,
+              }))}
               mentionNavigate={(href: string) => router.push(href)}
               title={documents.find((item) => item.id === documentId)?.title}
               parentTitle={(() => {

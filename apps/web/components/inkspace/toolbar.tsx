@@ -1,6 +1,7 @@
 "use client"
 
 import type { CollaborationStatus } from "@xtai-notion/editor-react/collaboration/types"
+import type { SoloSaveStatus } from "@/lib/document-content"
 import {
   useCollaborationStatus,
   useCollaborators,
@@ -64,6 +65,10 @@ export type EditorToolbarProps = {
   onImportMarkdown?: () => void
   /** 导入进行中时禁用按钮并显示进度文案 */
   importingMarkdown?: boolean
+  collaborationMode?: "solo" | "realtime"
+  soloSaveStatus?: SoloSaveStatus
+  /** 分享链接创建成功后回调（solo → realtime 切换） */
+  onShareEnabled?: () => void
 }
 
 // 发布按钮用背景色区分草稿、待审批与已上线三种状态。
@@ -145,6 +150,66 @@ function StatusBadge({ status }: { status: CollaborationStatus }) {
 function CollaborationToolbarBadge() {
   const status = useCollaborationStatus()
   return <StatusBadge status={status} />
+}
+
+function SoloSaveBadge({ status }: { status: SoloSaveStatus }) {
+  if (status === "saving") {
+    return (
+      <Badge
+        role="status"
+        aria-label="保存中"
+        variant="secondary"
+        className="ml-1 px-2 py-1 text-[11px] font-medium"
+      >
+        保存中
+      </Badge>
+    )
+  }
+
+  if (status === "saved") {
+    return (
+      <Badge
+        role="status"
+        aria-label="已保存"
+        variant="secondary"
+        className="ml-1 gap-1 !bg-[#EEF8F4] px-2 py-1 text-[11px] font-medium !text-[#24866B]"
+      >
+        <PencilIcon icon={CloudCheckIcon} color="#24866B" size={13} />
+        已保存
+      </Badge>
+    )
+  }
+
+  if (status === "error") {
+    return (
+      <Badge
+        role="status"
+        aria-label="保存失败"
+        variant="secondary"
+        className="ml-1 !bg-[#FDECEC] px-2 py-1 text-[11px] font-medium !text-[#B53B30]"
+      >
+        保存失败
+      </Badge>
+    )
+  }
+
+  return null
+}
+
+function DocumentSaveBadge({
+  collaborationMode,
+  soloSaveStatus,
+}: {
+  collaborationMode?: "solo" | "realtime"
+  soloSaveStatus?: SoloSaveStatus
+}) {
+  if (collaborationMode === "solo" && soloSaveStatus) {
+    return <SoloSaveBadge status={soloSaveStatus} />
+  }
+  if (collaborationMode === "realtime") {
+    return <CollaborationToolbarBadge />
+  }
+  return null
 }
 
 /** 存在其他在线协作者时，在工具栏顶部渲染协作状态与头像组。 */
@@ -234,6 +299,9 @@ export function EditorToolbar({
   onVersionRestored,
   onImportMarkdown,
   importingMarkdown = false,
+  collaborationMode,
+  soloSaveStatus,
+  onShareEnabled,
 }: EditorToolbarProps) {
   const [versionOpen, setVersionOpen] = useState(false)
   const publicationLabel =
@@ -253,7 +321,10 @@ export function EditorToolbar({
         </span>
         <PencilIcon icon={ChevronDownIcon} color="#B5B1AA" size={14} />
         <span className="font-semibold !text-[#242321]">{title}</span>
-        <CollaborationToolbarBadge />
+        <DocumentSaveBadge
+          collaborationMode={collaborationMode}
+          soloSaveStatus={soloSaveStatus}
+        />
       </div>
       <div className="flex items-center gap-2.5">
         <CollaborationPresence />
@@ -334,6 +405,7 @@ export function EditorToolbar({
             apiUrl={apiUrl}
             documentId={documentId}
             disabled={!canShare}
+            onShareEnabled={onShareEnabled}
           />
         ) : (
           <Button
