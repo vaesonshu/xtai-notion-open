@@ -1,27 +1,31 @@
+import { NotFoundException } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import type { PrismaService } from "@api/database/prisma.module"
 import { ShareLinkRepository } from "@api/documents/share-link.repository"
+import type { WorkspaceRepository } from "@api/workspaces/workspace.repository"
 
 // 构造最小可用的 Prisma mock；返回未断言类型的 client 以保留 vi.fn() 类型。
 function createPrisma() {
   const client = {
     documentShareLink: { findFirst: vi.fn(), create: vi.fn() },
-    $queryRaw: vi.fn(),
-    $transaction: vi.fn(
-      async (callback: (tx: unknown) => Promise<unknown>) => callback(client)
-    ),
+    document: { findUnique: vi.fn() },
   }
   return client
 }
 
 function makeRepo(
-  prisma: ReturnType<typeof createPrisma>
+  prisma: ReturnType<typeof createPrisma>,
+  workspaces: Partial<WorkspaceRepository> = {}
 ): ShareLinkRepository {
-  // PrismaService 持有 client 属性；将 mock 包装成 { client } 后再断言为
-  // PrismaService，保留 prisma.* 上的 vi.fn() mock 类型。
-  return new ShareLinkRepository({
-    client: prisma,
-  } as unknown as PrismaService)
+  const workspaceRepo = {
+    upsertMemberAsEditorForShareLink: vi.fn().mockResolvedValue("editor"),
+    ...workspaces,
+  } as unknown as WorkspaceRepository
+
+  return new ShareLinkRepository(
+    { client: prisma } as unknown as PrismaService,
+    workspaceRepo
+  )
 }
 
 function camelLink(overrides: Record<string, unknown> = {}) {
@@ -79,18 +83,32 @@ describe("ShareLinkRepository", () => {
     })
   })
 
-  it("promotes viewers while preserving owner and editor roles", async () => {
+  it("promotes viewers via workspace_member while preserving owner role", async () => {
     const prisma = createPrisma()
-    prisma.$queryRaw.mockResolvedValue([{ role: "editor" }])
-    const repo = makeRepo(prisma)
+    prisma.document.findUnique.mockResolvedValue({ workspaceId: "ws-1" })
+    const upsertMemberAsEditorForShareLink = vi.fn().mockResolvedValue("owner")
+    const repo = makeRepo(prisma, { upsertMemberAsEditorForShareLink })
 
     await expect(repo.upsertMemberAsEditor("doc-1", "user-2")).resolves.toBe(
-      "editor"
+      "owner"
     )
-    // 事务内 $queryRaw 执行了 upsert；参数化值按顺序为 documentId、userId。
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1)
-    const call = prisma.$queryRaw.mock.calls[0]?.[0] ?? ""
-    expect(String(call)).toContain("ON CONFLICT (document_id, user_id)")
-    expect(String(call)).toContain("WHEN document_member.role = 'viewer'")
+    expect(prisma.document.findUnique).toHaveBeenCalledWith({
+      where: { id: "doc-1" },
+      select: { workspaceId: true },
+    })
+    expect(upsertMemberAsEditorForShareLink).toHaveBeenCalledWith(
+      "ws-1",
+      "user-2"
+    )
+  })
+
+  it("throws when the document does not exist", async () => {
+    const prisma = createPrisma()
+    prisma.document.findUnique.mockResolvedValue(null)
+    const repo = makeRepo(prisma)
+
+    await expect(repo.upsertMemberAsEditor("missing", "user-2")).rejects.toBeInstanceOf(
+      NotFoundException
+    )
   })
 })

@@ -11,7 +11,7 @@
 3. 前端展示同源 URL `/share/<token>`，支持复制并显示成功/失败状态。
 4. `/share/[token]` 页面请求 `POST /share/:token/accept`：
    - 未登录时跳转 `/login?returnTo=<分享地址>`；
-   - 已登录时校验 token，将用户以 `editor` 写入或更新 `document_member`；
+   - 已登录时校验 token，将用户以 `editor` 写入或更新 `workspace_member`（P2；历史数据仍可读 `document_member` fallback）；
    - 成功后跳转 `/documents/<documentId>`。
 5. 文档页面继续使用现有成员权限 API 和 WebSocket 协作鉴权，不复制权限逻辑。
 

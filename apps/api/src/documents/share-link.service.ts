@@ -31,7 +31,7 @@ export class ShareLinkService {
     const link = await this.links.findActiveByToken(token)
     if (!link) throw new NotFoundException("Share link not found")
 
-    // Repository SQL preserves owner/editor roles while promoting viewers.
+    // P2：接受链接加入知识库（workspace_member），viewer 升 editor，高角色不降级。
     const role = await this.links.upsertMemberAsEditor(link.document_id, userId)
     return { documentId: link.document_id, role }
   }
