@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, use, type ReactNode } from "react"
+import type { EditorProviderProps } from "@xtai-notion/editor-react/providers/editor-provider"
 import { createEditorSchema } from "@xtai-notion/editor-core/schema"
 import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "@xtai-notion/editor-react/collaboration/types"
@@ -38,12 +39,15 @@ type DocumentEditorSharedProps = {
 export type DocumentEditorProps =
   | (DocumentEditorSharedProps & {
       content?: Block[]
+      /** solo REST：绑定本地 Y.Doc，不连接 WebSocket */
+      sharedDocument?: EditorProviderProps["sharedDocument"]
       collaboration?: never
       createProvider?: never
     })
   | (DocumentEditorSharedProps & {
       collaboration: CollaborationConfig
       content?: never
+      sharedDocument?: never
       /** Optional provider factory for tests; omit in production. */
       createProvider?: CreateProvider
     })
@@ -106,9 +110,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
         <ImageUpload>
           {/* 顶栏固定、仅正文区滚动：整列占满父级高度并截断溢出 */}
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            {children ? (
-              <div className="shrink-0">{children}</div>
-            ) : null}
+            {children ? <div className="shrink-0">{children}</div> : null}
             <div
               className="flex min-h-0 flex-1 flex-row overflow-hidden"
               data-testid="editor-body-row"
@@ -144,6 +146,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   return (
     <EditorProvider
       initialContent={props.content}
+      sharedDocument={props.sharedDocument}
       editable={editable}
       imageUpload={props.imageUpload}
       canvasImageFetch={props.canvasImageFetch}
