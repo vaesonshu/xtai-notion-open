@@ -1,3 +1,5 @@
+import type { WorkspaceAiSettings } from "./workspace-ai.types"
+
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer"
 
 export const WORKSPACE_ROLES: readonly WorkspaceRole[] = [
@@ -19,6 +21,7 @@ export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
 export interface WorkspaceRow {
   id: string
   name: string
+  settings: unknown
   createdBy: string | null
   createdAt: Date
   updatedAt: Date
@@ -36,6 +39,7 @@ export interface WorkspaceSummary {
   memberCount: number
   documentCount: number
   role: WorkspaceRole
+  aiSettings: WorkspaceAiSettings
   createdAt: Date
   updatedAt: Date
 }

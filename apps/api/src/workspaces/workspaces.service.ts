@@ -8,6 +8,11 @@ import {
 import { UserRepository } from "../auth/user.repository"
 import { WorkspaceRepository } from "./workspace.repository"
 import {
+  mergeWorkspaceAiSettings,
+  parseWorkspaceAiSettings,
+  type WorkspaceAiSettings,
+} from "./workspace-ai.types"
+import {
   isWorkspaceRole,
   type WorkspaceInviteCandidate,
   type WorkspaceMemberView,
@@ -27,6 +32,7 @@ export class WorkspacesService {
     row: {
       id: string
       name: string
+      settings?: unknown
       createdAt: Date
       updatedAt: Date
       role: WorkspaceRole
@@ -40,6 +46,7 @@ export class WorkspacesService {
       memberCount: row.memberCount,
       documentCount: row.documentCount,
       role: row.role,
+      aiSettings: parseWorkspaceAiSettings(row.settings),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }
@@ -267,5 +274,40 @@ export class WorkspacesService {
     userId: string
   ): Promise<WorkspaceRole | null> {
     return this.workspaces.getMemberRole(workspaceId, userId)
+  }
+
+  async getAiSettings(
+    workspaceId: string,
+    userId: string
+  ): Promise<WorkspaceAiSettings> {
+    const role = await this.workspaces.getMemberRole(workspaceId, userId)
+    if (!role) {
+      throw new ForbiddenException("不是该知识库成员")
+    }
+    const workspace = await this.workspaces.findById(workspaceId)
+    if (!workspace) {
+      throw new NotFoundException("知识库不存在")
+    }
+    return parseWorkspaceAiSettings(workspace.settings)
+  }
+
+  async updateAiSettings(
+    workspaceId: string,
+    userId: string,
+    patch: Partial<WorkspaceAiSettings>
+  ): Promise<WorkspaceAiSettings> {
+    await this.assertCanManage(
+      await this.workspaces.getMemberRole(workspaceId, userId)
+    )
+    const workspace = await this.workspaces.findById(workspaceId)
+    if (!workspace) {
+      throw new NotFoundException("知识库不存在")
+    }
+    const next = mergeWorkspaceAiSettings(workspace.settings, patch)
+    const updated = await this.workspaces.updateSettings(workspaceId, next)
+    if (!updated) {
+      throw new NotFoundException("知识库不存在")
+    }
+    return parseWorkspaceAiSettings(updated.settings)
   }
 }

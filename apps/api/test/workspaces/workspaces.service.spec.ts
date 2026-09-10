@@ -11,6 +11,7 @@ import { WorkspacesService } from "@api/workspaces/workspaces.service"
 const defaultWorkspace = {
   id: "ws-1",
   name: "产品知识库",
+  settings: {},
   createdBy: "owner-user",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-02T00:00:00.000Z"),
@@ -45,6 +46,11 @@ function createWorkspaces(
     addMember: vi.fn().mockResolvedValue(undefined),
     removeMember: vi.fn().mockResolvedValue(undefined),
     countOwners: vi.fn().mockResolvedValue(1),
+    countActiveDocuments: vi.fn().mockResolvedValue(0),
+    updateSettings: vi.fn().mockResolvedValue({
+      ...defaultWorkspace,
+      settings: { aiProvider: "local_codex" },
+    }),
     ...overrides,
   } as unknown as WorkspaceRepository
 }
@@ -175,6 +181,19 @@ describe("WorkspacesService", () => {
     await expect(
       service.searchInviteCandidates("ws-1", "viewer-user", "demo")
     ).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it("updateAiSettings persists provider for managers", async () => {
+    const workspaces = createWorkspaces()
+    const service = makeService(workspaces)
+
+    const settings = await service.updateAiSettings("ws-1", "owner-user", {
+      aiProvider: "local_codex",
+      localCodexPrompt: "学术语气",
+    })
+
+    expect(settings.aiProvider).toBe("local_codex")
+    expect(workspaces.updateSettings).toHaveBeenCalled()
   })
 
   it("removeMember rejects missing member", async () => {

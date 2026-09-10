@@ -16,6 +16,7 @@ export class WorkspaceRepository {
     return {
       id: workspace.id,
       name: workspace.name,
+      settings: workspace.settings,
       createdBy: workspace.createdBy,
       createdAt: workspace.createdAt,
       updatedAt: workspace.updatedAt,
@@ -53,6 +54,17 @@ export class WorkspaceRepository {
     const workspace = await this.prisma.client.workspace.update({
       where: { id: workspaceId },
       data: { name, updatedAt: new Date() },
+    })
+    return this.toRow(workspace)
+  }
+
+  async updateSettings(
+    workspaceId: string,
+    settings: Record<string, unknown>
+  ): Promise<WorkspaceRow | null> {
+    const workspace = await this.prisma.client.workspace.update({
+      where: { id: workspaceId },
+      data: { settings, updatedAt: new Date() },
     })
     return this.toRow(workspace)
   }

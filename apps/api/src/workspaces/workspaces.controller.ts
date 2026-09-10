@@ -17,6 +17,7 @@ import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard
 import type { DocumentMetadata } from "../documents/document-types"
 import { DocumentsService } from "../documents/documents.service"
 import { WorkspacesService } from "./workspaces.service"
+import type { WorkspaceAiSettings } from "./workspace-ai.types"
 import type {
   WorkspaceInviteCandidate,
   WorkspaceMemberView,
@@ -51,6 +52,27 @@ export class WorkspacesController {
     @CurrentUser() user: DevUser
   ): Promise<WorkspaceSummary> {
     return this.workspaces.getWorkspace(workspaceId, user.id)
+  }
+
+  @Get(":workspaceId/ai-settings")
+  getAiSettings(
+    @Param("workspaceId") workspaceId: string,
+    @CurrentUser() user: DevUser
+  ): Promise<WorkspaceAiSettings> {
+    return this.workspaces.getAiSettings(workspaceId, user.id)
+  }
+
+  @Patch(":workspaceId/ai-settings")
+  updateAiSettings(
+    @Param("workspaceId") workspaceId: string,
+    @CurrentUser() user: DevUser,
+    @Body()
+    body: {
+      aiProvider?: WorkspaceAiSettings["aiProvider"]
+      localCodexPrompt?: string
+    }
+  ): Promise<WorkspaceAiSettings> {
+    return this.workspaces.updateAiSettings(workspaceId, user.id, body)
   }
 
   @Patch(":workspaceId")
@@ -149,6 +171,20 @@ export class WorkspacesController {
     @CurrentUser() user: DevUser
   ): Promise<DocumentMetadata[]> {
     return this.documents.listDocumentsInWorkspace(user.id, workspaceId)
+  }
+
+  @Post(":workspaceId/documents/import-markdown")
+  importMarkdown(
+    @Param("workspaceId") workspaceId: string,
+    @CurrentUser() user: DevUser,
+    @Body() body: { title?: string; markdown?: string }
+  ): Promise<DocumentMetadata> {
+    return this.documents.importMarkdownInWorkspace(
+      user.id,
+      workspaceId,
+      body.title ?? "",
+      body.markdown ?? ""
+    )
   }
 
   @Post(":workspaceId/documents")
