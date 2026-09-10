@@ -26,7 +26,8 @@ export function WorkspaceHomePanel({
   onCreateDocument: () => void
   creatingDocument?: boolean
 }) {
-  const recentDocuments = documents.toSorted((a, b) => {
+  // Copy before sort — ts lib is es2022 (no toSorted).
+  const recentDocuments = [...documents].sort((a, b) => {
     const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
     const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
     return bTime - aTime

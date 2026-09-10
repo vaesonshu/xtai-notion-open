@@ -73,12 +73,11 @@ export function WorkspaceListPage({ userId }: { userId: string }) {
     } else if (filter === "collaborative") {
       items = items.filter((item) => !canManageWorkspace(item.role))
     }
-    return items.toSorted((a, b) => {
+    // Copy before sort — ts lib is es2022 (no toSorted).
+    return [...items].sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name, "zh-CN")
       if (sort === "documents") return b.documentCount - a.documentCount
-      return (
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      )
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     })
   }, [filter, query, sort, workspaces])
 
