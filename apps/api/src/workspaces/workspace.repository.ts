@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common"
-import type { Workspace } from "../generated/prisma/client"
+import type { Prisma, Workspace } from "../generated/prisma/client"
 import { PrismaService } from "../database/prisma.module"
 import {
   isWorkspaceRole,
@@ -50,7 +50,10 @@ export class WorkspaceRepository {
     return workspace ? this.toRow(workspace) : null
   }
 
-  async rename(workspaceId: string, name: string): Promise<WorkspaceRow | null> {
+  async rename(
+    workspaceId: string,
+    name: string
+  ): Promise<WorkspaceRow | null> {
     const workspace = await this.prisma.client.workspace.update({
       where: { id: workspaceId },
       data: { name, updatedAt: new Date() },
@@ -60,7 +63,8 @@ export class WorkspaceRepository {
 
   async updateSettings(
     workspaceId: string,
-    settings: Record<string, unknown>
+    // Prisma Json 列要求 InputJsonValue，不能用 Record<string, unknown>
+    settings: Prisma.InputJsonValue
   ): Promise<WorkspaceRow | null> {
     const workspace = await this.prisma.client.workspace.update({
       where: { id: workspaceId },
@@ -79,9 +83,7 @@ export class WorkspaceRepository {
       },
       select: { role: true },
     })
-    return isWorkspaceRole(member?.role)
-      ? (member.role as WorkspaceRole)
-      : null
+    return isWorkspaceRole(member?.role) ? (member.role as WorkspaceRole) : null
   }
 
   async addMember(

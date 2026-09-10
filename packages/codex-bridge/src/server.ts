@@ -8,10 +8,13 @@ import {
   DEFAULT_BRIDGE_PORT,
   loadBridgeConfig,
   upsertWorkspaceMapping,
-  type BridgeConfig,
 } from "./config.js"
 import { createCodexRunner, type CodexRunner } from "./codex-runner.js"
-import type { ArticleRunRequest, ArticleStreamEvent } from "./types.js"
+import type {
+  ArticleRunRequest,
+  ArticleStreamEvent,
+  BridgeConfig,
+} from "./types.js"
 
 const CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
