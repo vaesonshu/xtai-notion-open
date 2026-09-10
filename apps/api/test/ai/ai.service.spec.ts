@@ -32,9 +32,28 @@ function writeRequest() {
 function createService(
   documents: { assertCanRead: ReturnType<typeof vi.fn> },
   agent: { stream: ReturnType<typeof vi.fn> },
-  writeAgent: { stream: ReturnType<typeof vi.fn> } = { stream: vi.fn() }
+  writeAgent: { stream: ReturnType<typeof vi.fn> } = { stream: vi.fn() },
+  workspaces: { getWorkspace: ReturnType<typeof vi.fn> } = {
+    getWorkspace: vi.fn().mockResolvedValue({
+      id: "ws-1",
+      name: "产品知识库",
+      role: "owner",
+      aiSettings: { aiProvider: "cloud" },
+      memberCount: 1,
+      documentCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
+  },
+  articleAgent: { stream: ReturnType<typeof vi.fn> } = { stream: vi.fn() }
 ) {
-  return new AiService(documents as any, agent as any, writeAgent as any)
+  return new AiService(
+    documents as any,
+    workspaces as any,
+    agent as any,
+    writeAgent as any,
+    articleAgent as any
+  )
 }
 
 describe("AiService", () => {

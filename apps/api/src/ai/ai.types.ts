@@ -6,6 +6,7 @@ export const AI_LIMITS = {
   messages: 40,
   message: 10_000,
   prompt: 10_000,
+  articlePrompt: 20_000,
   blocksJson: 100_000,
   selectedIds: 200,
 }
@@ -73,6 +74,30 @@ function isAiBlockView(value: unknown): value is AiBlockView {
 }
 
 /** 校验 POST /ai/write 请求体结构 */
+export type ArticleRequest = {
+  workspaceId: string
+  prompt: string
+  title?: string
+  /** 基于当前文档写作时附带正文快照 */
+  documentText?: string
+}
+
+export type ArticleStreamEvent =
+  | { type: "token"; content: string }
+  | { type: "done" }
+  | { type: "error"; message: string }
+
+export function isArticleRequest(value: unknown): value is ArticleRequest {
+  if (!value || typeof value !== "object") return false
+  const request = value as Record<string, unknown>
+  return (
+    typeof request.workspaceId === "string" &&
+    typeof request.prompt === "string" &&
+    (request.documentText === undefined ||
+      typeof request.documentText === "string")
+  )
+}
+
 export function isAiWriteRequest(value: unknown): value is AiWriteRequest {
   if (!value || typeof value !== "object") return false
   const request = value as Record<string, unknown>

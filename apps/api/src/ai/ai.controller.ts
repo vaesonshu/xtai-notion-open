@@ -11,7 +11,11 @@ import {
 import { AuthenticatedIdentityGuard } from "../auth/authenticated-identity.guard"
 import { CurrentUser, type DevUser } from "../auth/current-user.decorator"
 import { AiService } from "./ai.service"
-import type { AiChatRequest, AiWriteRequest } from "./ai.types"
+import type {
+  AiChatRequest,
+  AiWriteRequest,
+  ArticleRequest,
+} from "./ai.types"
 
 @Controller("ai")
 @UseGuards(AuthenticatedIdentityGuard)
@@ -27,6 +31,18 @@ export class AiController {
   ): Promise<void> {
     await this.streamSse(response, request, (signal) =>
       this.ai.chat(body, user.id, signal)
+    )
+  }
+
+  @Post("article")
+  async article(
+    @Body() body: ArticleRequest,
+    @CurrentUser() user: DevUser,
+    @Req() request: any,
+    @Res() response: any
+  ): Promise<void> {
+    await this.streamSse(response, request, (signal) =>
+      this.ai.article(body, user.id, signal)
     )
   }
 

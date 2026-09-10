@@ -1,4 +1,5 @@
 ﻿import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -298,12 +299,40 @@ export class DocumentsService {
     title: string,
     markdown: string
   ): Promise<DocumentMetadata> {
+    const workspace = await this.resolveDefaultWorkspace(userId)
+    return this.importMarkdownInWorkspace(
+      userId,
+      workspace.id,
+      title,
+      markdown
+    )
+  }
+
+  async importMarkdownInWorkspace(
+    userId: string,
+    workspaceId: string,
+    title: string,
+    markdown: string
+  ): Promise<DocumentMetadata> {
     if (!this.yjsPersistence) {
       throw new Error("Collaboration persistence unavailable")
     }
-    const blocks = markdownToBlocks(markdown)
-    const workspace = await this.resolveDefaultWorkspace(userId)
-    const row = await this.documents.createInWorkspace(workspace.id, userId)
+    const trimmed = markdown.trim()
+    if (!trimmed) {
+      throw new BadRequestException("Markdown 内容不能为空")
+    }
+    const workspaceRole = await this.workspaces.getMemberRole(
+      workspaceId,
+      userId
+    )
+    if (!workspaceRole) {
+      throw new ForbiddenException("不是该知识库成员")
+    }
+    if (workspaceRole === "viewer") {
+      throw new ForbiddenException("查看者无法导入文档")
+    }
+    const blocks = markdownToBlocks(trimmed)
+    const row = await this.documents.createInWorkspace(workspaceId, userId)
     const nextTitle = title.trim() || "导入的文档"
     await this.documents.rename(row.id, nextTitle)
     await this.yjsPersistence.seedInitialContent(row.id, blocks)
@@ -314,7 +343,7 @@ export class DocumentsService {
         is_favorite: false,
         last_opened_at: null,
       },
-      "owner"
+      mapWorkspaceRoleToDocumentRole(workspaceRole)
     )
   }
 
