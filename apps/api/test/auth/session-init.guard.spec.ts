@@ -29,4 +29,29 @@ describe("SessionInitGuard", () => {
     await expect(guard.canActivate(context)).resolves.toBe(true)
     expect(findUserBySessionToken).toHaveBeenCalledWith("token-1")
   })
+
+  it("allows the request when session lookup fails (e.g. bad DATABASE_URL)", async () => {
+    const findUserBySessionToken = vi
+      .fn()
+      .mockRejectedValue(new Error("Authentication failed"))
+    const module = await Test.createTestingModule({
+      providers: [
+        SessionInitGuard,
+        {
+          provide: AuthService,
+          useValue: { findUserBySessionToken },
+        },
+      ],
+    }).compile()
+    const guard = module.get(SessionInitGuard)
+    const request = {
+      headers: { cookie: "session_token=token-1" },
+    }
+    const context = {
+      switchToHttp: () => ({ getRequest: () => request }),
+    } as any
+
+    await expect(guard.canActivate(context)).resolves.toBe(true)
+    expect(request.user).toBeUndefined()
+  })
 })

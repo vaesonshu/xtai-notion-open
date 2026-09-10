@@ -24,10 +24,16 @@ export class SessionInitGuard implements CanActivate {
       req.cookies?.[COOKIE_NAME] ??
       parseCookieHeader(req.headers?.cookie)?.[COOKIE_NAME]
     if (!token) return true
-    const user = await this.auth.findUserBySessionToken(token)
-    if (user) {
-      // attach user to request; downstream CurrentUser decorator can use this
-      req.user = user
+    try {
+      const user = await this.auth.findUserBySessionToken(token)
+      if (user) {
+        // attach user to request; downstream CurrentUser decorator can use this
+        req.user = user
+      }
+    } catch (error) {
+      // Session lookup must not take down public routes (e.g. /health) when
+      // DATABASE_URL is misconfigured or Neon is temporarily unavailable.
+      console.error("[SessionInitGuard] session lookup failed", error)
     }
     return true
   }
