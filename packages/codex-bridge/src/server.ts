@@ -16,11 +16,24 @@ import type {
   BridgeConfig,
 } from "./types.js"
 
-const CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-function applyCors(req: IncomingMessage, res: ServerResponse) {
+function buildCorsOriginSet(extra?: string[]): Set<string> {
+  const allowed = new Set(DEFAULT_CORS_ORIGINS)
+  for (const origin of extra ?? []) {
+    const trimmed = origin.trim()
+    if (trimmed) allowed.add(trimmed)
+  }
+  return allowed
+}
+
+function applyCors(
+  req: IncomingMessage,
+  res: ServerResponse,
+  allowedOrigins: Set<string>
+) {
   const origin = req.headers.origin
-  if (origin && CORS_ORIGINS.includes(origin)) {
+  if (origin && allowedOrigins.has(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin)
     res.setHeader("Vary", "Origin")
   }
@@ -66,15 +79,20 @@ async function streamArticleSse(
   }
 }
 
-export function createBridgeServer(options?: {
+export type BridgeServerOptions = {
   runner?: CodexRunner
   configLoader?: () => Promise<BridgeConfig>
-}) {
+  /** Extra browser origins (e.g. packaged desktop loading a Vercel URL). */
+  corsOrigins?: string[]
+}
+
+export function createBridgeServer(options?: BridgeServerOptions) {
   const runner = options?.runner ?? createCodexRunner()
   const configLoader = options?.configLoader ?? loadBridgeConfig
+  const allowedOrigins = buildCorsOriginSet(options?.corsOrigins)
 
   return createServer(async (req, res) => {
-    applyCors(req, res)
+    applyCors(req, res, allowedOrigins)
     if (req.method === "OPTIONS") {
       res.statusCode = 204
       res.end()
@@ -135,8 +153,11 @@ export function createBridgeServer(options?: {
   })
 }
 
-export async function startBridgeServer(port = DEFAULT_BRIDGE_PORT) {
-  const server = createBridgeServer()
+export async function startBridgeServer(
+  port = DEFAULT_BRIDGE_PORT,
+  options?: Pick<BridgeServerOptions, "corsOrigins">
+) {
+  const server = createBridgeServer(options)
   await new Promise<void>((resolve) => {
     server.listen(port, "127.0.0.1", resolve)
   })

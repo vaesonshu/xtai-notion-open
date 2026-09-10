@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    "./server": "./dist/server.js"
+  },
   "bin": {
     "inkspace-codex-bridge": "./dist/cli.js"
   },
