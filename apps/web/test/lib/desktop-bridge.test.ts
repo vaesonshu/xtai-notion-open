@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { getDesktopBridge } from "@/lib/desktop-bridge"
+import { getDesktopBridge, isDesktopClient } from "@/lib/desktop-bridge"
 
 afterEach(() => {
   delete window.electronDesktop
@@ -17,5 +17,6 @@ describe("getDesktopBridge", () => {
       retryLoad: async () => undefined,
     }
     expect(getDesktopBridge()?.isDesktop).toBe(true)
+    expect(isDesktopClient()).toBe(true)
   })
 })

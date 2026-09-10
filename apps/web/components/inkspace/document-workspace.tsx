@@ -35,11 +35,7 @@ import {
   type AiCollaborationTab,
 } from "./ai-collaboration-panel"
 import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
-import {
-  getAgentUnavailableMessage,
-  isAgentAvailable,
-  resolveArticleAgentMode,
-} from "@/lib/article-agent"
+import { ensureDocumentAgentAccess } from "@/lib/article-agent"
 import { AiWritingHost } from "./ai-writing-host"
 import {
   DocumentCommentBridge,
@@ -253,13 +249,12 @@ export function DocumentWorkspace({
   }, [aiPanelTab])
   const toggleAiAgent = useCallback(() => {
     void (async () => {
-      if (!workspaceId || !aiSettings) {
-        toast.error("当前文档未关联知识库，无法使用智能体。")
-        return
-      }
-      const mode = await resolveArticleAgentMode(aiSettings.aiProvider)
-      if (!isAgentAvailable(mode)) {
-        toast.error(getAgentUnavailableMessage(mode, aiSettings.aiProvider))
+      const access = await ensureDocumentAgentAccess({
+        workspaceId,
+        aiProvider: aiSettings?.aiProvider,
+      })
+      if (!access.ok) {
+        toast.error(access.message)
         return
       }
       setAiOpen((open) => {
@@ -269,6 +264,26 @@ export function DocumentWorkspace({
       setAiPanelTab("agent")
     })()
   }, [aiPanelTab, aiSettings, workspaceId])
+  const handleAiTabChange = useCallback(
+    (next: AiCollaborationTab) => {
+      if (next === "assistant") {
+        setAiPanelTab("assistant")
+        return
+      }
+      void (async () => {
+        const access = await ensureDocumentAgentAccess({
+          workspaceId,
+          aiProvider: aiSettings?.aiProvider,
+        })
+        if (!access.ok) {
+          toast.error(access.message)
+          return
+        }
+        setAiPanelTab("agent")
+      })()
+    },
+    [aiSettings, workspaceId]
+  )
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentAnchor, setCommentAnchor] = useState<CommentTextAnchor | null>(
     null
@@ -576,7 +591,7 @@ export function DocumentWorkspace({
               <AiCollaborationPanel
                 open={aiOpen}
                 tab={aiPanelTab}
-                onTabChange={setAiPanelTab}
+                onTabChange={handleAiTabChange}
                 onClose={() => setAiOpen(false)}
                 apiUrl={apiUrl}
                 documentId={documentId}

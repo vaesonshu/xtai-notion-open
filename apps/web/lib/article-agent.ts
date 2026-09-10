@@ -4,7 +4,11 @@ import type {
   ArticleStreamEvent,
   WorkspaceAiProvider,
 } from "@/lib/article-agent-types"
+import { isDesktopClient } from "@/lib/desktop-bridge"
 import { fetchBridgeHealth, streamLocalArticle } from "@/lib/local-codex-bridge"
+
+export const DOCUMENT_AGENT_DESKTOP_ONLY_MESSAGE =
+  "目前仅支持桌面端，请使用 XtAi Notion 桌面客户端。"
 
 async function* readCloudArticleSse(
   response: Response
@@ -54,9 +58,33 @@ export async function resolveArticleAgentMode(
   return health.ok ? "local_codex" : "unavailable"
 }
 
-/** 智能体仅在本机 Codex Bridge 在线时可用。 */
+/** 智能体仅在桌面端且本机 Codex Bridge 在线时可用。 */
 export function isAgentAvailable(mode: ArticleAgentMode): boolean {
-  return mode === "local_codex"
+  return isDesktopClient() && mode === "local_codex"
+}
+
+/** 打开智能体前的统一校验（工具栏按钮、侧栏 Tab 共用）。 */
+export async function ensureDocumentAgentAccess(input: {
+  workspaceId?: string
+  aiProvider?: WorkspaceAiProvider
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!input.workspaceId || !input.aiProvider) {
+    return {
+      ok: false,
+      message: "当前文档未关联知识库，无法使用智能体。",
+    }
+  }
+  if (!isDesktopClient()) {
+    return { ok: false, message: DOCUMENT_AGENT_DESKTOP_ONLY_MESSAGE }
+  }
+  const mode = await resolveArticleAgentMode(input.aiProvider)
+  if (!isAgentAvailable(mode)) {
+    return {
+      ok: false,
+      message: getAgentUnavailableMessage(mode, input.aiProvider),
+    }
+  }
+  return { ok: true }
 }
 
 /** 智能体不可用时的提示文案（用于 toast / 面板空态）。 */
@@ -64,6 +92,9 @@ export function getAgentUnavailableMessage(
   mode: ArticleAgentMode,
   aiProvider: WorkspaceAiProvider
 ): string {
+  if (!isDesktopClient()) {
+    return DOCUMENT_AGENT_DESKTOP_ONLY_MESSAGE
+  }
   if (aiProvider === "cloud") {
     return "智能体需接入本地 Codex。请在个人中心 → AI 设置中切换为「本地 Codex」。"
   }
@@ -79,6 +110,11 @@ export async function* streamArticle(
     signal?: AbortSignal
   }
 ): AsyncGenerator<ArticleStreamEvent> {
+  if (!isDesktopClient()) {
+    yield { type: "error", message: DOCUMENT_AGENT_DESKTOP_ONLY_MESSAGE }
+    return
+  }
+
   const mode = await resolveArticleAgentMode(input.aiSettings.aiProvider)
 
   if (mode === "unavailable") {

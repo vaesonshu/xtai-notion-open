@@ -20,3 +20,8 @@ export function getDesktopBridge(): ElectronDesktopApi | null {
   if (typeof window === "undefined") return null
   return window.electronDesktop ?? null
 }
+
+/** True when the UI runs inside the Electron desktop shell (not a normal browser tab). */
+export function isDesktopClient(): boolean {
+  return getDesktopBridge()?.isDesktop === true
+}
