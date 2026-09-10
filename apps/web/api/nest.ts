@@ -1,6 +1,9 @@
 type NestHandler = (req: unknown, res: unknown) => Promise<void>
 
-type RequestLike = { url?: string }
+type RequestLike = {
+  url?: string
+  headers?: Record<string, string | string[] | undefined>
+}
 
 type ResponseLike = {
   statusCode?: number
@@ -10,12 +13,42 @@ type ResponseLike = {
 
 let cached: NestHandler | null = null
 
+function readRequestHeader(
+  headers: RequestLike["headers"],
+  name: string
+): string | undefined {
+  const value = headers?.[name]
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
 // 浏览器走同域 /auth/* 时，Vercel rewrite 不会自动加 Nest 的 globalPrefix。
+function resolveAuthProxyPath(req: unknown): string | undefined {
+  const request = req as RequestLike
+  const directUrl = request.url
+  if (typeof directUrl === "string") {
+    const path = directUrl.split("?")[0]
+    if (path.startsWith("/auth")) {
+      return directUrl
+    }
+  }
+
+  // Some Vercel rewrites replace req.url with /api/nest; recover the auth path.
+  const forwarded =
+    readRequestHeader(request.headers, "x-vercel-original-path") ??
+    readRequestHeader(request.headers, "x-forwarded-uri") ??
+    readRequestHeader(request.headers, "x-invoke-path")
+  if (forwarded?.startsWith("/auth")) {
+    return forwarded
+  }
+  return undefined
+}
+
 function withApiPrefixForAuthProxy(req: unknown): void {
   const request = req as RequestLike
-  const url = request.url
-  if (typeof url === "string" && url.startsWith("/auth")) {
-    request.url = `/api${url}`
+  const authPath = resolveAuthProxyPath(req)
+  if (authPath) {
+    request.url = `/api${authPath.startsWith("/") ? authPath : `/${authPath}`}`
   }
 }
 
@@ -42,7 +75,9 @@ export default async function handler(
   } catch (error) {
     const response = res as ResponseLike
     const message =
-      error instanceof Error ? error.message : "Nest serverless bootstrap failed"
+      error instanceof Error
+        ? error.message
+        : "Nest serverless bootstrap failed"
     console.error("[api/nest]", error)
     if (typeof response.statusCode === "number") {
       response.statusCode = 500
