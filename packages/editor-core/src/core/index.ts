@@ -55,6 +55,10 @@ export {
   setDocumentCommentMarks,
 } from "./extensions/document-comment-mark-extension"
 export {
+  setDocumentAgentSelectionTarget,
+  type DocumentAgentSelectionState,
+} from "./extensions/document-agent-selection-extension"
+export {
   type CommentTextAnchor,
   type DocumentCommentMarkEntry,
   findCommentMarkAtPos,

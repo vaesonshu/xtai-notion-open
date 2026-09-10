@@ -56,6 +56,19 @@
   outline: 1px solid rgba(234, 179, 8, 0.45);
 }
 
+/* 智能体选区：标注即将由 AI 处理的文本/块（与侧栏绿色主题一致） */
+.ProseMirror .document-agent-selection-mark {
+  background: rgba(36, 134, 107, 0.22);
+  border-radius: 0.125rem;
+  box-decoration-break: clone;
+}
+
+.ProseMirror [data-node-type="blockContainer"].document-agent-block-mark {
+  background: rgba(36, 134, 107, 0.1);
+  border-radius: 0.25rem;
+  outline: 1px solid rgba(36, 134, 107, 0.28);
+}
+
 /* 旧数据块级评论回退样式 */
 .ProseMirror [data-node-type="blockContainer"].document-comment-marked {
   background: rgba(255, 212, 0, 0.12);

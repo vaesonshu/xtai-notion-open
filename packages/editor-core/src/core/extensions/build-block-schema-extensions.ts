@@ -5,6 +5,7 @@ import { TextStyle } from "@tiptap/extension-text-style"
 import { BlockDropcursor } from "./block-dropcursor"
 import { createAiWriteAgentCursorExtension } from "./ai-write-agent-cursor-extension"
 import { createAiWriteDraftExtension } from "./ai-write-draft-extension"
+import { createDocumentAgentSelectionExtension } from "./document-agent-selection-extension"
 import { createDocumentCommentMarkExtension } from "./document-comment-mark-extension"
 import { createBlockPlaceholderExtension } from "./block-placeholder-extension"
 import TableCell from "@tiptap/extension-table-cell"
@@ -100,6 +101,7 @@ export function buildBlockSchemaExtensions(
     // AI 写入态只走 PM 装饰，避免把 class / 光标写入协作文档
     createAiWriteDraftExtension(),
     createDocumentCommentMarkExtension(),
+    createDocumentAgentSelectionExtension(),
     createAiWriteAgentCursorExtension(),
     MentionNode,
   ]
