@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev",
+    "dev": "turbo dev --filter=api --filter=web --filter=@xtai-notion/codex-bridge",
     "lint": "turbo lint",
     "format": "turbo format",
     "typecheck": "turbo typecheck",
@@ -15,7 +15,8 @@
     "db:local:down": "docker compose down",
     "db:local:reset": "docker compose down -v && docker compose up -d postgres && node scripts/wait-for-local-postgres.mjs && pnpm --filter api migrate:local",
     "db:local:setup": "pnpm db:local:up && node scripts/wait-for-local-postgres.mjs && pnpm --filter api migrate:local",
-    "dev:local": "pnpm --parallel --filter api dev:local --filter web dev"
+    "dev:local": "pnpm --parallel --filter api dev:local --filter web dev --filter @xtai-notion/codex-bridge dev",
+    "codex-bridge": "pnpm --filter @xtai-notion/codex-bridge start"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

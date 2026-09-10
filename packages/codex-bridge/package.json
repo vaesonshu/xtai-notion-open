@@ -1,0 +1,26 @@
+{
+  "name": "@xtai-notion/codex-bridge",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "inkspace-codex-bridge": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "tsx src/cli.ts",
+    "dev": "tsx watch src/cli.ts",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "^0.154.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@workspace/typescript-config": "workspace:*",
+    "tsx": "4.20.3",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}
