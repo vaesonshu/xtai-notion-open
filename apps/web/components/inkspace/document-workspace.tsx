@@ -510,7 +510,8 @@ export function DocumentWorkspace({
   const editorProps =
     collaborationMode === "solo"
       ? ({
-          sharedDocument: soloYDoc,
+          // Loading guard above ensures soloYDoc is set; ?? undefined matches EditorProvider.
+          sharedDocument: soloYDoc ?? undefined,
         } as const)
       : ({
           collaboration: {
