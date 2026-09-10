@@ -34,7 +34,7 @@ describe("AuthMenu", () => {
 
   it("hides the admin console link for regular users", () => {
     render(<AuthMenu />)
-    fireEvent.click(screen.getByRole("button"))
+    fireEvent.click(screen.getByRole("button", { name: "账户菜单" }))
     expect(screen.queryByText("控制台")).not.toBeInTheDocument()
   })
 
@@ -47,7 +47,7 @@ describe("AuthMenu", () => {
     }
 
     render(<AuthMenu />)
-    fireEvent.click(screen.getByRole("button"))
+    fireEvent.click(screen.getByRole("button", { name: "账户菜单" }))
 
     const consoleLink = screen.getByRole("menuitem", { name: "控制台" })
     expect(consoleLink).toHaveAttribute("href", "/admin/users")
@@ -64,7 +64,7 @@ describe("AuthMenu", () => {
     })
 
     render(<AuthMenu />)
-    fireEvent.click(screen.getByRole("button"))
+    fireEvent.click(screen.getByRole("button", { name: "账户菜单" }))
     fireEvent.click(screen.getByText("注销"))
 
     await waitFor(() => expect(refresh).toHaveBeenCalledOnce())

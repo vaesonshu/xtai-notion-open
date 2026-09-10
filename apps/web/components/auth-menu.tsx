@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useAuthOptional } from "./auth-provider"
+import { usePersonalCenterOptional } from "./personal-center-context"
 import {
   LayoutDashboardIcon,
   LogOutIcon,
@@ -13,10 +14,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu"
 import { useState } from "react"
-import { toast, toastError } from "@/lib/toast"
+import { toastError } from "@/lib/toast"
 import { apiRequest } from "@/lib/api-client"
 
 function getInitials(name: string) {
@@ -34,6 +36,7 @@ function getInitials(name: string) {
 // can render the live avatar and sign-out affordance without hard-coded data.
 export function AuthMenu() {
   const auth = useAuthOptional()
+  const personalCenter = usePersonalCenterOptional()
   const [busy, setBusy] = useState(false)
 
   // If the provider is missing in a narrow test harness, fall back to the
@@ -83,6 +86,7 @@ export function AuthMenu() {
           <Button
             variant="ghost"
             size="icon-sm"
+            aria-label="账户菜单"
             className="rounded-full border border-border bg-white shadow-sm hover:bg-muted"
           />
         }
@@ -96,21 +100,31 @@ export function AuthMenu() {
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8}>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-48">
         <DropdownMenuItem className="pointer-events-none opacity-100 focus:bg-transparent">
           <UserRoundIcon />
           <span>{user.name}</span>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {personalCenter ? (
+          <DropdownMenuItem
+            onClick={() => personalCenter.openPersonalCenter("profile")}
+          >
+            <UserRoundIcon />
+            <span>个人中心</span>
+          </DropdownMenuItem>
+        ) : null}
         {user.role === "admin" ? (
           <DropdownMenuItem render={<Link href="/admin/users" />}>
             <LayoutDashboardIcon />
             <span>控制台</span>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={busy}
           onClick={() => void logout()}
-          className="mt-1 text-destructive hover:bg-destructive/35 hover:text-destructive focus:bg-destructive/35 focus:text-destructive [&_svg]:text-destructive hover:[&_svg]:text-destructive focus:[&_svg]:text-destructive"
+          className="text-destructive hover:bg-destructive/35 hover:text-destructive focus:bg-destructive/35 focus:text-destructive [&_svg]:text-destructive hover:[&_svg]:text-destructive focus:[&_svg]:text-destructive"
         >
           <LogOutIcon />
           <span>{busy ? "注销中..." : "注销"}</span>
