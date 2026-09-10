@@ -15,6 +15,7 @@ import {
   FileTextIcon,
   MessageSquareIcon,
   SendIcon,
+  SquarePenIcon,
   UsersIcon,
 } from "@workspace/icons"
 import {
@@ -55,7 +56,11 @@ export type EditorToolbarProps = {
   canShare?: boolean
   canWrite?: boolean
   aiOpen?: boolean
-  onAiToggle?: () => void
+  aiPanelTab?: "assistant" | "agent"
+  onAiAssistantToggle?: () => void
+  onAiAgentToggle?: () => void
+  /** 知识库已选本地 Codex 时，在智能体按钮上显示标识 */
+  agentUsesLocalCodex?: boolean
   commentsOpen?: boolean
   onCommentsToggle?: () => void
   publicationStatus?: "draft" | "pending" | "published"
@@ -291,7 +296,10 @@ export function EditorToolbar({
   canShare = true,
   canWrite = true,
   aiOpen = false,
-  onAiToggle,
+  aiPanelTab = "assistant",
+  onAiAssistantToggle,
+  onAiAgentToggle,
+  agentUsesLocalCodex = false,
   commentsOpen = false,
   onCommentsToggle,
   publicationStatus = "draft",
@@ -342,18 +350,44 @@ export function EditorToolbar({
             <span className="font-medium">评论</span>
           </Button>
         ) : null}
-        <Button
-          aria-label="AI 协作助手"
-          title="AI 协作助手"
-          aria-expanded={aiOpen}
-          onClick={onAiToggle}
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 !text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
-        >
-          <PencilIcon icon={MessageSquareIcon} size={17} color="#615E58" />
-          <span className="font-medium">AI</span>
-        </Button>
+        {onAiAssistantToggle ? (
+          <Button
+            aria-label="AI 协作助手"
+            title="AI 协作助手"
+            aria-expanded={aiOpen && aiPanelTab === "assistant"}
+            onClick={onAiAssistantToggle}
+            variant={
+              aiOpen && aiPanelTab === "assistant" ? "secondary" : "ghost"
+            }
+            size="sm"
+            className="gap-1.5 !text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
+          >
+            <PencilIcon icon={MessageSquareIcon} size={17} color="#615E58" />
+            <span className="font-medium">AI</span>
+          </Button>
+        ) : null}
+        {onAiAgentToggle ? (
+          <Button
+            aria-label="AI 智能体"
+            title="AI 智能体：基于当前文档写作或新建文章"
+            aria-expanded={aiOpen && aiPanelTab === "agent"}
+            onClick={onAiAgentToggle}
+            variant={aiOpen && aiPanelTab === "agent" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1.5 !text-[#615E58] hover:!bg-[#F3F2EF] hover:!text-[#615E58]"
+          >
+            <PencilIcon icon={SquarePenIcon} size={17} color="#615E58" />
+            <span className="font-medium">智能体</span>
+            {agentUsesLocalCodex ? (
+              <Badge
+                variant="secondary"
+                className="!bg-[#EEF8F4] px-1.5 py-0 text-[10px] !text-[#24866B]"
+              >
+                Codex
+              </Badge>
+            ) : null}
+          </Button>
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={

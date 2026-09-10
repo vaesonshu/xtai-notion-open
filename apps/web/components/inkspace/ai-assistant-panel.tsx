@@ -12,7 +12,8 @@ import { apiRequest } from "@/lib/api-client"
 
 type Message = { role: "user" | "assistant"; content: string }
 
-function AssistantMarkdown({ content }: { content: string }) {
+/** 助手与智能体共用的 Markdown 渲染，保持输出样式一致。 */
+export function AiMarkdownContent({ content }: { content: string }) {
   return (
     <div className="prose prose-sm prose-headings:my-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-pre:my-2 prose-pre:overflow-x-auto prose-pre:rounded-lg prose-pre:bg-[#242321] prose-pre:p-3 prose-pre:text-[#F7F5EF] prose-a:text-[#24866B] prose-a:underline max-w-none text-[#373532]">
       <ReactMarkdown
@@ -63,7 +64,11 @@ function AssistantMarkdown({ content }: { content: string }) {
 }
 
 export type AiAssistantPanelProps = {
-  open: boolean
+  /** 独立侧栏模式；嵌入 AiCollaborationPanel 时设为 false。 */
+  open?: boolean
+  /** 嵌入模式下由父级控制可见性，保留会话状态。 */
+  active?: boolean
+  embedded?: boolean
   onClose: () => void
   apiUrl: string
   documentId: string
@@ -74,6 +79,8 @@ export type AiAssistantPanelProps = {
 const QUICK_ACTIONS = ["总结文档", "提取待办", "生成文档大纲"]
 
 export function AiAssistantPanel(props: AiAssistantPanelProps) {
+  const embedded = props.embedded ?? false
+  const panelOpen = embedded ? (props.active ?? true) : (props.open ?? false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
@@ -83,13 +90,21 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (props.open) inputRef.current?.focus()
-    else {
+    if (panelOpen) inputRef.current?.focus()
+    else if (!embedded) {
       abortRef.current?.abort()
       setMessages([])
       setInput("")
     }
-  }, [props.open])
+  }, [embedded, panelOpen])
+
+  useEffect(() => {
+    if (embedded && props.open === false) {
+      abortRef.current?.abort()
+      setMessages([])
+      setInput("")
+    }
+  }, [embedded, props.open])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({
@@ -98,7 +113,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     })
   }, [messages, streaming])
 
-  if (!props.open) return null
+  if (!embedded && !props.open) return null
+  if (embedded && !panelOpen) return null
 
   async function send(question: string) {
     const content = question.trim()
@@ -174,23 +190,8 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
     }
   }
 
-  return (
-    <aside
-      // Fill the workspace column; using viewport height here would collapse the editor sibling.
-      className="flex h-full min-h-0 w-[min(420px,100vw)] min-w-0 shrink-0 flex-col border-l border-[#E8E6E1] bg-white"
-      aria-label="AI 协作助手"
-    >
-      <div className="flex items-center justify-between border-b p-4">
-        <h2 className="font-semibold">AI 协作助手</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={props.onClose}
-          aria-label="关闭 AI 面板"
-        >
-          关闭
-        </Button>
-      </div>
+  const body = (
+    <>
       <div
         className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#FCFCFA] p-4"
         data-testid="ai-message-scroll"
@@ -223,7 +224,7 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
               }`}
             >
               {message.role === "assistant" ? (
-                <AssistantMarkdown content={message.content} />
+                <AiMarkdownContent content={message.content} />
               ) : (
                 message.content
               )}
@@ -272,6 +273,38 @@ export function AiAssistantPanel(props: AiAssistantPanelProps) {
           {streaming ? "停止生成" : "发送"}
         </Button>
       </div>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        aria-label="AI 协作助手"
+      >
+        {body}
+      </div>
+    )
+  }
+
+  return (
+    <aside
+      // Fill the workspace column; using viewport height here would collapse the editor sibling.
+      className="flex h-full min-h-0 w-[min(420px,100vw)] min-w-0 shrink-0 flex-col border-l border-[#E8E6E1] bg-white"
+      aria-label="AI 协作助手"
+    >
+      <div className="flex items-center justify-between border-b p-4">
+        <h2 className="font-semibold">AI 协作助手</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={props.onClose}
+          aria-label="关闭 AI 面板"
+        >
+          关闭
+        </Button>
+      </div>
+      {body}
     </aside>
   )
 }

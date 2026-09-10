@@ -1,7 +1,6 @@
 import type { Icon } from "@workspace/icons"
 import {
   ChevronDownIcon,
-  ChevronsUpDownIcon,
   EllipsisIcon,
   FileTextIcon,
   FolderIcon,
@@ -211,62 +210,28 @@ export function WorkspaceSidebar({
           <div
             className={`flex shrink-0 items-center ${collapsed ? "justify-center px-0 py-2" : "h-[60px] gap-[10px] px-1 py-2"}`}
           >
-            <Avatar className="size-[34px] rounded-[10px] bg-[#242321]">
-              <AvatarFallback className="rounded-[10px] bg-[#242321] text-white">
-                {(workspace?.name ?? "库").slice(0, 1).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <WorkspaceAvatarMenu
+              workspace={workspace}
+              workspaces={workspaces}
+              collapsed={collapsed}
+              onSwitchWorkspace={onSwitchWorkspace}
+              onOpenWorkspaces={onOpenWorkspaces}
+              onManageMembers={onManageMembers}
+              onCreateWorkspace={onCreateWorkspace}
+            />
             {collapsed ? null : (
-              <>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="truncate text-sm font-semibold">
-                    {workspace?.name ?? "知识库"}
-                  </span>
-                  <button
-                    type="button"
-                    className="text-left text-[10px] font-semibold tracking-[0.4px] text-[#78746C] hover:text-[#242321]"
-                    onClick={() => onManageMembers?.()}
-                  >
-                    {workspace?.memberCount ?? 0} 位成员
-                  </button>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label="切换知识库"
-                        className="size-7 shrink-0"
-                      />
-                    }
-                  >
-                    <PencilIcon icon={ChevronsUpDownIcon} />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    {workspaces.map((item) => (
-                      <DropdownMenuItem
-                        key={item.id}
-                        onClick={() => onSwitchWorkspace?.(item.id)}
-                      >
-                        <span className="truncate">{item.name}</span>
-                        <span className="ml-auto text-[10px] text-[#78746C]">
-                          {item.memberCount}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuItem onClick={() => onOpenWorkspaces?.()}>
-                      全部知识库
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onManageMembers?.()}>
-                      成员管理
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onCreateWorkspace?.()}>
-                      新建知识库
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-sm font-semibold">
+                  {workspace?.name ?? "知识库"}
+                </span>
+                <button
+                  type="button"
+                  className="text-left text-[10px] font-semibold tracking-[0.4px] text-[#78746C] hover:text-[#242321]"
+                  onClick={() => onManageMembers?.()}
+                >
+                  {workspace?.memberCount ?? 0} 位成员
+                </button>
+              </div>
             )}
           </div>
           <div className="flex flex-col gap-[3px]">
@@ -390,6 +355,74 @@ export function WorkspaceSidebar({
         </div>
       </aside>
     </TooltipProvider>
+  )
+}
+
+/** 点击知识库头像展开切换/管理菜单。 */
+function WorkspaceAvatarMenu({
+  workspace,
+  workspaces,
+  collapsed,
+  onSwitchWorkspace,
+  onOpenWorkspaces,
+  onManageMembers,
+  onCreateWorkspace,
+}: {
+  workspace?: WorkspaceHeader
+  workspaces: WorkspaceHeader[]
+  collapsed: boolean
+  onSwitchWorkspace?: (id: string) => void
+  onOpenWorkspaces?: () => void
+  onManageMembers?: () => void
+  onCreateWorkspace?: () => void
+}) {
+  const initial = (workspace?.name ?? "库").slice(0, 1).toUpperCase()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="知识库菜单"
+            className="size-[34px] shrink-0 rounded-[10px] p-0 hover:bg-[#F3F2EF]"
+          />
+        }
+      >
+        <Avatar className="size-[34px] rounded-[10px] bg-[#242321]">
+          <AvatarFallback className="rounded-[10px] bg-[#242321] text-white">
+            {initial}
+          </AvatarFallback>
+        </Avatar>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side={collapsed ? "right" : "bottom"}
+        className="w-56"
+      >
+        {workspaces.map((item) => (
+          <DropdownMenuItem
+            key={item.id}
+            onClick={() => onSwitchWorkspace?.(item.id)}
+          >
+            <span className="truncate">{item.name}</span>
+            <span className="ml-auto text-[10px] text-[#78746C]">
+              {item.memberCount}
+            </span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem onClick={() => onOpenWorkspaces?.()}>
+          全部知识库
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onManageMembers?.()}>
+          成员管理
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onCreateWorkspace?.()}>
+          新建知识库
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

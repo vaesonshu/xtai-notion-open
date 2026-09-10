@@ -220,9 +220,11 @@ describe("DocumentWorkspace", () => {
       )
     })
 
-    const proseMirror = container.querySelector(".ProseMirror")
-    expect(proseMirror).not.toBeNull()
-    expect(proseMirror).toHaveAttribute("contenteditable", "true")
+    await waitFor(() => {
+      const proseMirror = container.querySelector(".ProseMirror")
+      expect(proseMirror).not.toBeNull()
+      expect(proseMirror).toHaveAttribute("contenteditable", "true")
+    })
     expect(screen.queryByRole("status", { name: /连接中/ })).not.toBeInTheDocument()
   })
 
@@ -349,8 +351,12 @@ describe("DocumentWorkspace", () => {
     expect(layout).toHaveClass("flex-row")
     expect(screen.getByTestId("editor-workspace")).toBeInTheDocument()
     expect(
-      screen.getByRole("complementary", { name: "AI 协作助手" })
+      screen.getByRole("complementary", { name: "AI 协作" })
     ).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "助手" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    )
   })
 
   it("surfaces offline collaboration status", async () => {

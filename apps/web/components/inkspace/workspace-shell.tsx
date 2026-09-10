@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
-import { toast, toastError, getToastErrorMessage } from "@/lib/toast"
+import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
 import { apiRequest } from "@/lib/api-client"
+import { toast, toastError, getToastErrorMessage } from "@/lib/toast"
 import {
   DocumentWorkspace,
   type DocumentWorkspaceProps,
@@ -11,6 +12,8 @@ import {
 import { DocumentSearchDialog } from "./document-search-dialog"
 import { FavoritesPanel } from "./favorites-panel"
 import { TrashPanel } from "./trash-panel"
+import { PersonalCenterDialog } from "../personal-center-dialog"
+import { PersonalCenterProvider } from "../personal-center-context"
 import { CreateWorkspaceDialog } from "./create-workspace-dialog"
 import { WorkspaceHomePanel } from "./workspace-home-panel"
 import {
@@ -21,15 +24,23 @@ import { WorkspaceSidebar } from "./sidebar"
 
 const WORKSPACE_STORAGE_KEY = "inkspace:workspace:v1"
 
-type CreatedDocumentResponse = { id: string; title?: string; workspaceId?: string }
+type CreatedDocumentResponse = {
+  id: string
+  title?: string
+  workspaceId?: string
+}
 type DocumentRole = "owner" | "editor" | "viewer"
 type DocumentListItem = { id: string; title: string }
+
+const DEFAULT_AI_SETTINGS: WorkspaceAiSettings = { aiProvider: "cloud" }
+
 type WorkspaceSummary = {
   id: string
   name: string
   memberCount: number
   documentCount: number
   role: WorkspaceRole
+  aiSettings: WorkspaceAiSettings
   createdAt?: string
   updatedAt?: string
 }
@@ -191,7 +202,12 @@ export function WorkspaceShell({
     if (!apiUrl) return null
     const response = await apiRequest({ path: "/workspaces", userId: user.id })
     if (!response.ok) return null
-    const items = (await response.json()) as WorkspaceSummary[]
+    const items = ((await response.json()) as WorkspaceSummary[]).map(
+      (item) => ({
+        ...item,
+        aiSettings: item.aiSettings ?? DEFAULT_AI_SETTINGS,
+      })
+    )
     setWorkspaces(items)
     const stored = readStoredWorkspaceId()
     const nextId =
@@ -229,14 +245,14 @@ export function WorkspaceShell({
               }
           >)
         : []
-    const trashItems = trashResponse.ok
-      ? ((await trashResponse.json()) as Array<
-          Partial<SidebarDocument> & DocumentListItem
-        >)
-      : []
-    const normalized = normalizeDocumentHierarchy(activeItems)
-    documentsCache = { userId: user.id, items: normalized }
-    setDocuments(normalized)
+      const trashItems = trashResponse.ok
+        ? ((await trashResponse.json()) as Array<
+            Partial<SidebarDocument> & DocumentListItem
+          >)
+        : []
+      const normalized = normalizeDocumentHierarchy(activeItems)
+      documentsCache = { userId: user.id, items: normalized }
+      setDocuments(normalized)
       setTrashedDocuments(
         trashItems.map((item) => ({
           id: item.id,
@@ -430,10 +446,7 @@ export function WorkspaceShell({
       })
       if (!response.ok) return
       const metadata = (await response.json()) as { workspaceId?: string }
-      if (
-        metadata.workspaceId &&
-        metadata.workspaceId !== currentWorkspaceId
-      ) {
+      if (metadata.workspaceId && metadata.workspaceId !== currentWorkspaceId) {
         setCurrentWorkspaceId(metadata.workspaceId)
         persistWorkspaceId(metadata.workspaceId)
         await refreshDocuments(metadata.workspaceId)
@@ -519,166 +532,192 @@ export function WorkspaceShell({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 overflow-hidden">
-      <input
-        ref={importInputRef}
-        type="file"
-        accept=".md,text/markdown"
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) void importMarkdownFile(file)
-          event.target.value = ""
-        }}
-      />
-      <CreateWorkspaceDialog
-        open={createWorkspaceOpen}
-        onOpenChange={setCreateWorkspaceOpen}
-        onSubmit={createWorkspace}
-        submitting={creatingWorkspace}
-      />
-      <WorkspaceMembersDialog
-        open={membersOpen}
-        onOpenChange={setMembersOpen}
-        workspaceId={currentWorkspaceId}
-        workspaceName={currentWorkspace?.name ?? "知识库"}
-        currentUserId={user.id}
-        currentUserRole={currentWorkspace?.role}
-        userId={user.id}
-        onMembersChanged={() => void refreshWorkspaces()}
-      />
-      <DocumentSearchDialog
-        open={searchOpen}
-        onOpenChange={setSearchOpen}
-        documents={documents}
-        apiUrl={apiUrl}
-        userId={user.id}
-        onSelect={(id) => {
-          closeLibraryViews()
-          router.push(`/documents/${id}`)
-        }}
-      />
-      <WorkspaceSidebar
-        workspace={
-          currentWorkspace
-            ? {
-                id: currentWorkspace.id,
-                name: currentWorkspace.name,
-                memberCount: currentWorkspace.memberCount,
-              }
-            : undefined
-        }
-        workspaces={workspaces.map((item) => ({
-          id: item.id,
-          name: item.name,
-          memberCount: item.memberCount,
-        }))}
-        onSwitchWorkspace={(id) => void switchWorkspace(id)}
-        onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
-        onManageMembers={() => setMembersOpen(true)}
-        onOpenWorkspaces={
-          onOpenWorkspaces ?? (() => router.push("/workspaces"))
-        }
-        documents={personalDocuments}
-        collaborativeDocuments={collaborativeDocuments}
-        showFavorites={showFavorites}
-        showTrash={showTrash}
-        selectedDocumentId={documentId}
-        activeNav={activeNav}
-        onSelectDocument={(id) => {
-          closeLibraryViews()
-          router.push(`/documents/${id}`)
-        }}
-        onCreateDocument={() => {
-          closeLibraryViews()
-          void createDocument()
-        }}
-        creatingDocument={creating}
-        onRenameDocument={renameDocument}
-        onDeleteDocument={deleteDocument}
-        onCreateChildDocument={(id) => {
-          closeLibraryViews()
-          void createChildDocument(id)
-        }}
-        onOpenSquare={() => {
-          closeLibraryViews()
-          router.push("/square")
-        }}
-        onOpenGraph={() => {
-          closeLibraryViews()
-          router.push("/documents/graph")
-        }}
-        onOpenSearch={() => {
-          closeLibraryViews()
-          setSearchOpen(true)
-        }}
-        onToggleFavorites={() => {
-          setShowTrash(false)
-          setShowFavorites(true)
-        }}
-        onToggleTrash={() => {
-          setShowFavorites(false)
-          setShowTrash(true)
-        }}
-        onToggleFavorite={toggleFavorite}
-      />
-      <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FCFCFA] !text-[#242321]">
-        {children ??
-          (showFavorites ? (
-            <FavoritesPanel
-              documents={favoriteDocuments}
-              onSelectDocument={(id) => {
-                closeLibraryViews()
-                router.push(`/documents/${id}`)
-              }}
-            />
-          ) : showTrash ? (
-            <TrashPanel
-              documents={trashedDocuments}
-              onRestore={restoreDocument}
-              onPurge={purgeDocument}
-            />
-          ) : showWorkspaceHome && currentWorkspace ? (
-            <WorkspaceHomePanel
-              workspace={{
-                id: currentWorkspace.id,
-                name: currentWorkspace.name,
-                memberCount: currentWorkspace.memberCount,
-                documentCount:
-                  currentWorkspace.documentCount ?? documents.length,
-                role: currentWorkspace.role,
-                createdAt: currentWorkspace.createdAt ?? "",
-                updatedAt: currentWorkspace.updatedAt ?? "",
-              }}
-              documents={documents}
-              onCreateDocument={() => void createDocument()}
-              creatingDocument={creating}
-            />
-          ) : documentId ? (
-            <DocumentWorkspace
-              key={documentId}
-              documentId={documentId}
-              user={user}
-              apiUrl={apiUrl}
-              collaborationUrl={collaborationUrl}
-              mentionDocuments={documents.map((item) => ({
-                id: item.id,
-                title: item.title,
-              }))}
-              mentionNavigate={(href: string) => router.push(href)}
-              title={documents.find((item) => item.id === documentId)?.title}
-              parentTitle={(() => {
-                const current = documents.find((item) => item.id === documentId)
-                return current?.parentId
-                  ? documents.find((item) => item.id === current.parentId)
-                      ?.title
-                  : undefined
-              })()}
-              onImportMarkdown={() => importInputRef.current?.click()}
-              importingMarkdown={importingMarkdown}
-            />
-          ) : null)}
-      </main>
-    </div>
+    <PersonalCenterProvider
+      userId={user.id}
+      workspaces={workspaces.map((item) => ({
+        id: item.id,
+        name: item.name,
+        memberCount: item.memberCount,
+        documentCount: item.documentCount ?? 0,
+        role: item.role,
+        aiSettings: item.aiSettings,
+        createdAt: item.createdAt ?? "",
+        updatedAt: item.updatedAt ?? "",
+      }))}
+      currentWorkspaceId={currentWorkspaceId}
+      onRefreshWorkspaces={() => void refreshWorkspaces()}
+    >
+      <PersonalCenterDialog />
+      <div className="flex h-full min-h-0 w-full flex-1 overflow-hidden">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".md,text/markdown"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (file) void importMarkdownFile(file)
+            event.target.value = ""
+          }}
+        />
+        <CreateWorkspaceDialog
+          open={createWorkspaceOpen}
+          onOpenChange={setCreateWorkspaceOpen}
+          onSubmit={createWorkspace}
+          submitting={creatingWorkspace}
+        />
+        <WorkspaceMembersDialog
+          open={membersOpen}
+          onOpenChange={setMembersOpen}
+          workspaceId={currentWorkspaceId}
+          workspaceName={currentWorkspace?.name ?? "知识库"}
+          currentUserId={user.id}
+          currentUserRole={currentWorkspace?.role}
+          userId={user.id}
+          onMembersChanged={() => void refreshWorkspaces()}
+        />
+        <DocumentSearchDialog
+          open={searchOpen}
+          onOpenChange={setSearchOpen}
+          documents={documents}
+          apiUrl={apiUrl}
+          userId={user.id}
+          onSelect={(id) => {
+            closeLibraryViews()
+            router.push(`/documents/${id}`)
+          }}
+        />
+        <WorkspaceSidebar
+          workspace={
+            currentWorkspace
+              ? {
+                  id: currentWorkspace.id,
+                  name: currentWorkspace.name,
+                  memberCount: currentWorkspace.memberCount,
+                }
+              : undefined
+          }
+          workspaces={workspaces.map((item) => ({
+            id: item.id,
+            name: item.name,
+            memberCount: item.memberCount,
+          }))}
+          onSwitchWorkspace={(id) => void switchWorkspace(id)}
+          onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+          onManageMembers={() => setMembersOpen(true)}
+          onOpenWorkspaces={
+            onOpenWorkspaces ?? (() => router.push("/workspaces"))
+          }
+          documents={personalDocuments}
+          collaborativeDocuments={collaborativeDocuments}
+          showFavorites={showFavorites}
+          showTrash={showTrash}
+          selectedDocumentId={documentId}
+          activeNav={activeNav}
+          onSelectDocument={(id) => {
+            closeLibraryViews()
+            router.push(`/documents/${id}`)
+          }}
+          onCreateDocument={() => {
+            closeLibraryViews()
+            void createDocument()
+          }}
+          creatingDocument={creating}
+          onRenameDocument={renameDocument}
+          onDeleteDocument={deleteDocument}
+          onCreateChildDocument={(id) => {
+            closeLibraryViews()
+            void createChildDocument(id)
+          }}
+          onOpenSquare={() => {
+            closeLibraryViews()
+            router.push("/square")
+          }}
+          onOpenGraph={() => {
+            closeLibraryViews()
+            router.push("/documents/graph")
+          }}
+          onOpenSearch={() => {
+            closeLibraryViews()
+            setSearchOpen(true)
+          }}
+          onToggleFavorites={() => {
+            setShowTrash(false)
+            setShowFavorites(true)
+          }}
+          onToggleTrash={() => {
+            setShowFavorites(false)
+            setShowTrash(true)
+          }}
+          onToggleFavorite={toggleFavorite}
+        />
+        <main className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#FCFCFA] !text-[#242321]">
+          {children ??
+            (showFavorites ? (
+              <FavoritesPanel
+                documents={favoriteDocuments}
+                onSelectDocument={(id) => {
+                  closeLibraryViews()
+                  router.push(`/documents/${id}`)
+                }}
+              />
+            ) : showTrash ? (
+              <TrashPanel
+                documents={trashedDocuments}
+                onRestore={restoreDocument}
+                onPurge={purgeDocument}
+              />
+            ) : showWorkspaceHome && currentWorkspaceId ? (
+              <WorkspaceHomePanel
+                workspace={{
+                  id: currentWorkspaceId,
+                  name: currentWorkspace?.name ?? "知识库",
+                  memberCount: currentWorkspace?.memberCount ?? 0,
+                  documentCount:
+                    currentWorkspace?.documentCount ?? documents.length,
+                  role: currentWorkspace?.role ?? "owner",
+                  aiSettings:
+                    currentWorkspace?.aiSettings ?? DEFAULT_AI_SETTINGS,
+                  createdAt: currentWorkspace?.createdAt ?? "",
+                  updatedAt: currentWorkspace?.updatedAt ?? "",
+                }}
+                documents={documents}
+                onCreateDocument={() => void createDocument()}
+                creatingDocument={creating}
+              />
+            ) : documentId ? (
+              <DocumentWorkspace
+                key={documentId}
+                documentId={documentId}
+                user={user}
+                apiUrl={apiUrl}
+                collaborationUrl={collaborationUrl}
+                mentionDocuments={documents.map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                }))}
+                mentionNavigate={(href: string) => router.push(href)}
+                title={documents.find((item) => item.id === documentId)?.title}
+                parentTitle={(() => {
+                  const current = documents.find(
+                    (item) => item.id === documentId
+                  )
+                  return current?.parentId
+                    ? documents.find((item) => item.id === current.parentId)
+                        ?.title
+                    : undefined
+                })()}
+                onImportMarkdown={() => importInputRef.current?.click()}
+                importingMarkdown={importingMarkdown}
+                workspaceId={currentWorkspaceId ?? undefined}
+                workspaceName={currentWorkspace?.name}
+                aiSettings={
+                  currentWorkspace?.aiSettings ?? DEFAULT_AI_SETTINGS
+                }
+              />
+            ) : null)}
+        </main>
+      </div>
+    </PersonalCenterProvider>
   )
 }

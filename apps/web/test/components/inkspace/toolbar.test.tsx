@@ -14,10 +14,23 @@ vi.mock("@/components/inkspace/share-dialog", () => ({
 }))
 
 describe("EditorToolbar", () => {
-  it("shows a clearly labeled AI assistant button", () => {
-    const { getByRole } = render(<EditorToolbar />)
+  it("shows AI assistant and agent toolbar buttons", () => {
+    const onAiAssistantToggle = vi.fn()
+    const onAiAgentToggle = vi.fn()
+    const { getByRole } = render(
+      <EditorToolbar
+        onAiAssistantToggle={onAiAssistantToggle}
+        onAiAgentToggle={onAiAgentToggle}
+        agentUsesLocalCodex
+      />
+    )
 
     expect(getByRole("button", { name: "AI 协作助手" })).toHaveTextContent("AI")
+    expect(getByRole("button", { name: "AI 智能体" })).toHaveTextContent(
+      "Codex"
+    )
+    fireEvent.click(getByRole("button", { name: "AI 智能体" }))
+    expect(onAiAgentToggle).toHaveBeenCalledOnce()
   })
 
   it("does not nest buttons when collaborator avatars are visible", () => {

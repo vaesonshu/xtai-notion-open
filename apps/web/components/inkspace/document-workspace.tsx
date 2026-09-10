@@ -29,7 +29,16 @@ import {
   createDocumentCanvasImageFetcher,
   createDocumentImageUploader,
 } from "./image-upload"
-import { AiAssistantPanel } from "./ai-assistant-panel"
+import {
+  AiCollaborationPanel,
+  type AiCollaborationTab,
+} from "./ai-collaboration-panel"
+import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
+import {
+  getAgentUnavailableMessage,
+  isAgentAvailable,
+  resolveArticleAgentMode,
+} from "@/lib/article-agent"
 import { AiWritingHost } from "./ai-writing-host"
 import {
   DocumentCommentBridge,
@@ -61,6 +70,9 @@ export type DocumentWorkspaceProps = {
   onImportMarkdown?: () => void
   /** 导入进行中时禁用工具栏按钮，避免重复提交 */
   importingMarkdown?: boolean
+  workspaceId?: string
+  workspaceName?: string
+  aiSettings?: WorkspaceAiSettings
 }
 
 type DocumentRole = "owner" | "editor" | "viewer"
@@ -215,6 +227,9 @@ export function DocumentWorkspace({
   mentionNavigate,
   onImportMarkdown,
   importingMarkdown,
+  workspaceId,
+  workspaceName,
+  aiSettings,
 }: DocumentWorkspaceProps) {
   const [role, setRole] = useState<DocumentRole | null>(null)
   const [collaborationMode, setCollaborationMode] =
@@ -227,6 +242,32 @@ export function DocumentWorkspace({
   >("draft")
   const [loadError, setLoadError] = useState<string | null>(null)
   const [aiOpen, setAiOpen] = useState(false)
+  const [aiPanelTab, setAiPanelTab] = useState<AiCollaborationTab>("assistant")
+  const toggleAiAssistant = useCallback(() => {
+    setAiOpen((open) => {
+      if (open && aiPanelTab === "assistant") return false
+      return true
+    })
+    setAiPanelTab("assistant")
+  }, [aiPanelTab])
+  const toggleAiAgent = useCallback(() => {
+    void (async () => {
+      if (!workspaceId || !aiSettings) {
+        toast.error("当前文档未关联知识库，无法使用智能体。")
+        return
+      }
+      const mode = await resolveArticleAgentMode(aiSettings.aiProvider)
+      if (!isAgentAvailable(mode)) {
+        toast.error(getAgentUnavailableMessage(mode, aiSettings.aiProvider))
+        return
+      }
+      setAiOpen((open) => {
+        if (open && aiPanelTab === "agent") return false
+        return true
+      })
+      setAiPanelTab("agent")
+    })()
+  }, [aiPanelTab, aiSettings, workspaceId])
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentAnchor, setCommentAnchor] = useState<CommentTextAnchor | null>(
     null
@@ -523,13 +564,20 @@ export function DocumentWorkspace({
                 onCommentMarksChange={setCommentMarks}
                 onCommentDeleted={handleCommentDeleted}
               />
-              <AiAssistantPanel
+              <AiCollaborationPanel
                 open={aiOpen}
+                tab={aiPanelTab}
+                onTabChange={setAiPanelTab}
                 onClose={() => setAiOpen(false)}
                 apiUrl={apiUrl}
                 documentId={documentId}
                 userId={user.id}
                 getDocumentText={getDocumentText}
+                workspaceId={workspaceId}
+                workspaceName={workspaceName}
+                aiSettings={aiSettings}
+                documentTitle={title}
+                canWrite={editable}
               />
             </>
           )}
@@ -562,7 +610,10 @@ export function DocumentWorkspace({
             publicationStatus={publicationStatus}
             onPublish={editable ? () => void submitPublication() : undefined}
             aiOpen={aiOpen}
-            onAiToggle={() => setAiOpen((open) => !open)}
+            aiPanelTab={aiPanelTab}
+            onAiAssistantToggle={toggleAiAssistant}
+            onAiAgentToggle={toggleAiAgent}
+            agentUsesLocalCodex={aiSettings?.aiProvider === "local_codex"}
             commentsOpen={commentsOpen}
             onCommentsToggle={() => setCommentsOpen((open) => !open)}
             onVersionRestored={() => window.location.reload()}

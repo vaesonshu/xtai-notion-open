@@ -1,4 +1,5 @@
 import { apiRequest, apiRequestJson, readApiErrorMessage } from "@/lib/api-client"
+import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer"
 
@@ -8,6 +9,7 @@ export type WorkspaceSummary = {
   memberCount: number
   documentCount: number
   role: WorkspaceRole
+  aiSettings: WorkspaceAiSettings
   createdAt: string
   updatedAt: string
 }
@@ -62,6 +64,42 @@ export async function renameWorkspace(
     method: "PATCH",
     userId,
     json: { name },
+  })
+}
+
+export async function fetchWorkspaceAiSettings(
+  workspaceId: string,
+  userId: string
+): Promise<WorkspaceAiSettings> {
+  return apiRequestJson<WorkspaceAiSettings>({
+    path: `/workspaces/${workspaceId}/ai-settings`,
+    userId,
+  })
+}
+
+export async function updateWorkspaceAiSettings(
+  workspaceId: string,
+  userId: string,
+  patch: Partial<WorkspaceAiSettings>
+): Promise<WorkspaceAiSettings> {
+  return apiRequestJson<WorkspaceAiSettings>({
+    path: `/workspaces/${workspaceId}/ai-settings`,
+    method: "PATCH",
+    userId,
+    json: patch,
+  })
+}
+
+export async function importMarkdownToWorkspace(
+  workspaceId: string,
+  userId: string,
+  input: { title: string; markdown: string }
+): Promise<{ id: string; title: string }> {
+  return apiRequestJson<{ id: string; title: string }>({
+    path: `/workspaces/${workspaceId}/documents/import-markdown`,
+    method: "POST",
+    userId,
+    json: input,
   })
 }
 

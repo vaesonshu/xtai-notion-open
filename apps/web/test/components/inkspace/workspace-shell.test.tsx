@@ -37,6 +37,7 @@ const defaultWorkspace = {
   memberCount: 1,
   documentCount: 0,
   role: "owner",
+  aiSettings: { aiProvider: "cloud" as const },
 }
 
 function createShellFetchMock(
@@ -91,9 +92,22 @@ function createShellFetchMock(
   })
 }
 
-/** 侧边栏快捷「收藏」与文档星标按钮同名，取 DOM 中第一个快捷入口 */
-function clickFavoritesShortcut() {
-  fireEvent.click(screen.getAllByRole("button", { name: "收藏" })[0]!)
+/** 收藏/回收站已收进「浏览」下拉，先展开菜单再点对应项 */
+async function openBrowseMenu() {
+  fireEvent.click(screen.getByRole("button", { name: "浏览" }))
+  await waitFor(() => {
+    expect(screen.getByRole("menuitem", { name: "收藏" })).toBeInTheDocument()
+  })
+}
+
+async function clickFavoritesShortcut() {
+  await openBrowseMenu()
+  fireEvent.click(screen.getByRole("menuitem", { name: "收藏" }))
+}
+
+async function clickTrashShortcut() {
+  await openBrowseMenu()
+  fireEvent.click(screen.getByRole("menuitem", { name: "回收站" }))
 }
 
 afterEach(() => {
@@ -269,7 +283,7 @@ describe("WorkspaceShell", () => {
       expect(screen.getAllByText("Personal doc").length).toBeGreaterThan(0)
     )
 
-    clickFavoritesShortcut()
+    await clickFavoritesShortcut()
 
     await waitFor(() => {
       expect(screen.getByTestId("favorites-panel")).toBeInTheDocument()
@@ -304,12 +318,12 @@ describe("WorkspaceShell", () => {
       expect(screen.getAllByText("Favorite doc").length).toBeGreaterThan(0)
     )
 
-    clickFavoritesShortcut()
+    await clickFavoritesShortcut()
     await waitFor(() => {
       expect(screen.getByTestId("favorites-panel")).toBeInTheDocument()
     })
 
-    clickFavoritesShortcut()
+    await clickFavoritesShortcut()
     expect(screen.getByTestId("favorites-panel")).toBeInTheDocument()
     expect(screen.queryByTestId("workspace-document-id")).not.toBeInTheDocument()
   })
@@ -340,7 +354,7 @@ describe("WorkspaceShell", () => {
       expect(screen.getAllByText("Personal doc").length).toBeGreaterThan(0)
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "回收站" }))
+    await clickTrashShortcut()
     await waitFor(() => {
       expect(screen.getByTestId("trash-panel")).toBeInTheDocument()
     })
@@ -360,14 +374,16 @@ describe("WorkspaceShell", () => {
     )
 
     render(<WorkspaceShell {...props} />)
-    await waitFor(() => expect(screen.getByRole("button", { name: "回收站" })))
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "浏览" })).toBeInTheDocument()
+    )
 
-    fireEvent.click(screen.getByRole("button", { name: "回收站" }))
+    await clickTrashShortcut()
     await waitFor(() => {
       expect(screen.getByTestId("trash-panel")).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole("button", { name: "回收站" }))
+    await clickTrashShortcut()
     expect(screen.getByTestId("trash-panel")).toBeInTheDocument()
   })
 })
