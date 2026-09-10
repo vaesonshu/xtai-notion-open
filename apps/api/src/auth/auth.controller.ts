@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -11,7 +12,10 @@ import {
 type ExpressResponseLike = {
   cookie(name: string, value: string, opts?: Record<string, unknown>): void
   clearCookie(name: string, opts?: Record<string, unknown>): void
-  req: { headers?: Record<string, string | undefined>; cookies?: Record<string, string> }
+  req: {
+    headers?: Record<string, string | undefined>
+    cookies?: Record<string, string>
+  }
   status(code: number): ExpressResponseLike
   json(body: unknown): any
 }
@@ -37,19 +41,27 @@ export class AuthController {
 
   @Post("/register")
   async register(
-    @Body() body: { email: string; password: string; displayName: string }
+    @Body() body: { email?: string; password?: string; displayName?: string }
   ) {
-    const user = await this.auth.register(
-      body.email,
-      body.password,
-      body.displayName
-    )
+    const email = body.email?.trim() ?? ""
+    const password = body.password ?? ""
+    const displayName = body.displayName?.trim() ?? ""
+    if (!email || !password || !displayName) {
+      throw new BadRequestException("邮箱、密码和昵称不能为空")
+    }
+    if (password.length < 8) {
+      throw new BadRequestException("密码至少需要 8 个字符")
+    }
+    const user = await this.auth.register(email, password, displayName)
     return user
   }
 
   @Post("/login")
   @HttpCode(200)
-  async login(@Body() body: { email: string; password: string }, @Res() res: Response) {
+  async login(
+    @Body() body: { email: string; password: string },
+    @Res() res: Response
+  ) {
     const { token, user, expiresAt } = await this.auth.login(
       body.email,
       body.password
