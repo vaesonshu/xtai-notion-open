@@ -1,10 +1,30 @@
+import { execSync } from "node:child_process"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const monorepoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..")
 import { FusesPlugin } from "@electron-forge/plugin-fuses"
 import { VitePlugin } from "@electron-forge/plugin-vite"
 import type { ForgeConfig } from "@electron-forge/shared-types"
 import { MakerSquirrel } from "@electron-forge/maker-squirrel"
 import { FuseV1Options, FuseVersion } from "@electron/fuses"
 
+function buildCodexBridgeForPackage(): void {
+  execSync("pnpm --filter @xtai-notion/codex-bridge build", {
+    cwd: monorepoRoot,
+    stdio: "inherit",
+  })
+}
+
 const config: ForgeConfig = {
+  hooks: {
+    prePackage: async () => {
+      buildCodexBridgeForPackage()
+    },
+    preMake: async () => {
+      buildCodexBridgeForPackage()
+    },
+  },
   // Forge uses outDir (not packagerConfig.out) for electron-packager output.
   outDir: "release",
   packagerConfig: {

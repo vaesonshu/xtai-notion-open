@@ -11,6 +11,10 @@ import {
   shell,
   type MenuItemConstructorOptions,
 } from "electron"
+import {
+  startCodexBridgeHost,
+  stopCodexBridgeHost,
+} from "./lib/codex-bridge-host"
 import { sanitizeNotifyPayload } from "./lib/notify"
 import { shouldHideOnClose } from "./lib/window-policy"
 import {
@@ -102,6 +106,7 @@ function showMainWindow(): void {
 
 function quitApp(): void {
   isQuitting = true
+  void stopCodexBridgeHost()
   app.quit()
 }
 
@@ -223,7 +228,8 @@ app.on("window-all-closed", () => {
   // Tray keeps the process alive on Windows.
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await startCodexBridgeHost({ packagedAppUrl: packagedAppUrl() })
   Menu.setApplicationMenu(buildAppMenu())
   tray = createTray()
   ipcMain.handle("desktop:retry-load", async () => {

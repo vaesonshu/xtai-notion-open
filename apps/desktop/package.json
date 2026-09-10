@@ -15,6 +15,7 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
+    "@xtai-notion/codex-bridge": "workspace:*",
     "electron-squirrel-startup": "^1.0.1"
   },
   "devDependencies": {
