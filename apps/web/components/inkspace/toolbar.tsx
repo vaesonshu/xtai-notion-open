@@ -72,6 +72,8 @@ export type EditorToolbarProps = {
   importingMarkdown?: boolean
   collaborationMode?: "solo" | "realtime"
   soloSaveStatus?: SoloSaveStatus
+  /** 创建分享链接前 flush solo 内容 */
+  onPrepareShare?: () => Promise<void>
   /** 分享链接创建成功后回调（solo → realtime 切换） */
   onShareEnabled?: () => void
 }
@@ -309,6 +311,7 @@ export function EditorToolbar({
   importingMarkdown = false,
   collaborationMode,
   soloSaveStatus,
+  onPrepareShare,
   onShareEnabled,
 }: EditorToolbarProps) {
   const [versionOpen, setVersionOpen] = useState(false)
@@ -439,6 +442,7 @@ export function EditorToolbar({
             apiUrl={apiUrl}
             documentId={documentId}
             disabled={!canShare}
+            onPrepareShare={onPrepareShare}
             onShareEnabled={onShareEnabled}
           />
         ) : (

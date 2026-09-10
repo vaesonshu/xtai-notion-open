@@ -21,6 +21,8 @@ export type ShareDialogProps = {
   apiUrl?: string
   documentId: string
   disabled?: boolean
+  /** 创建分享链接前持久化 solo 草稿（须在服务端切到 realtime 之前） */
+  onPrepareShare?: () => Promise<void>
   /** 分享链接就绪后通知父级切换到 realtime 协作 */
   onShareEnabled?: () => void
 }
@@ -29,6 +31,7 @@ export function ShareDialog({
   apiUrl,
   documentId,
   disabled = false,
+  onPrepareShare,
   onShareEnabled,
 }: ShareDialogProps) {
   const [open, setOpen] = useState(false)
@@ -38,6 +41,10 @@ export function ShareDialog({
   async function createLink() {
     setLoading(true)
     try {
+      // Share link flips collaboration policy to realtime; flush solo edits first.
+      if (onPrepareShare) {
+        await onPrepareShare()
+      }
       const response = await apiRequest({
         path: `/api/documents/${encodeURIComponent(documentId)}/share-link`,
         method: "POST",

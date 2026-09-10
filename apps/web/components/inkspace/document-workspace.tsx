@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from "react"
 import type { Doc as YDoc } from "yjs"
 import { toast, toastError } from "@/lib/toast"
 import { apiRequest } from "@/lib/api-client"
+import { normalizeCollaborationWebSocketUrl } from "@/lib/collaboration-url"
 import { useSoloDocumentSave } from "@/lib/document-content"
 import { DocumentPane } from "./document"
 import { EditorToolbar } from "./toolbar"
@@ -304,6 +305,8 @@ export function DocumentWorkspace({
   }, [])
 
   const configured = isApiConfigured(apiUrl)
+  const collaborationWebSocketUrl =
+    normalizeCollaborationWebSocketUrl(collaborationUrl)
   const mentionProvider = useMentionProvider(
     mentionDocuments,
     apiUrl,
@@ -346,16 +349,21 @@ export function DocumentWorkspace({
     }
   }, [documentId, user.id])
 
-  const handleShareEnabled = useCallback(async () => {
+  const handlePrepareShare = useCallback(async () => {
+    if (collaborationMode === "solo" && editable) {
+      await flushSoloSave()
+    }
+  }, [collaborationMode, editable, flushSoloSave])
+
+  const handleShareEnabled = useCallback(() => {
     if (collaborationMode === "solo") {
-      await flushSoloSave().catch(() => undefined)
       soloYDoc?.destroy()
       setSoloYDoc(null)
       setCollaborationMode("realtime")
       setEditorEpoch((value) => value + 1)
       toast.success("已开启分享，正在切换到实时协作")
     }
-  }, [collaborationMode, flushSoloSave, soloYDoc])
+  }, [collaborationMode, soloYDoc])
 
   useEffect(() => {
     if (!configured || !documentId) return
@@ -484,7 +492,7 @@ export function DocumentWorkspace({
     )
   }
 
-  if (collaborationMode === "realtime" && !collaborationUrl.trim()) {
+  if (collaborationMode === "realtime" && !collaborationWebSocketUrl) {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
         <Alert variant="destructive" className="max-w-lg" role="alert">
@@ -516,7 +524,7 @@ export function DocumentWorkspace({
       : ({
           collaboration: {
             documentId,
-            websocketUrl: collaborationUrl,
+            websocketUrl: collaborationWebSocketUrl,
             token: user.id,
             user,
           },
@@ -624,7 +632,8 @@ export function DocumentWorkspace({
             soloSaveStatus={
               collaborationMode === "solo" ? soloSaveStatus : undefined
             }
-            onShareEnabled={() => void handleShareEnabled()}
+            onPrepareShare={handlePrepareShare}
+            onShareEnabled={handleShareEnabled}
           />
           {showBlockStructureDebugger ? <BlockStructureDebugger /> : null}
         </DocumentEditor>
