@@ -1,4 +1,9 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common"
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common"
 import { randomBytes } from "crypto"
 // Avoid depending on date-fns to keep dependencies minimal; addDays simple impl
 function addDays(date: Date, days: number): Date {
@@ -8,6 +13,7 @@ function addDays(date: Date, days: number): Date {
 }
 import { UserRepository } from "./user.repository"
 import { SessionRepository } from "./session.repository"
+import { UserOnboardingService } from "./user-onboarding.service"
 import { hashPassword, verifyPassword } from "./password"
 
 export type PublicUser = {
@@ -22,7 +28,9 @@ export type PublicUser = {
 export class AuthService {
   constructor(
     @Inject(UserRepository) private readonly users: UserRepository,
-    @Inject(SessionRepository) private readonly sessions: SessionRepository
+    @Inject(SessionRepository) private readonly sessions: SessionRepository,
+    @Inject(UserOnboardingService)
+    private readonly onboarding: UserOnboardingService
   ) {}
 
   // Register a new user. Throws on duplicate email.
@@ -33,14 +41,17 @@ export class AuthService {
   ): Promise<PublicUser> {
     const normalized = email.trim().toLowerCase()
     const existing = await this.users.findByEmail(normalized)
-    if (existing) throw new Error("Email already in use")
+    if (existing) {
+      // Nest maps plain Error to 500; use ConflictException for client feedback.
+      throw new ConflictException("该邮箱已被注册")
+    }
     const password_hash = await hashPassword(password)
     const color = this.pickColor()
-    if (!color) throw new Error("Failed to pick user color")
+    if (!color) throw new ConflictException("无法分配用户颜色")
     const user = await this.users.createUser(
       normalized,
       password_hash,
-      displayName,
+      displayName.trim(),
       color
     )
     return this.toPublic(user)
@@ -56,6 +67,12 @@ export class AuthService {
     const token = randomBytes(32).toString("hex")
     const expiresAt = addDays(new Date(), 30)
     await this.sessions.createSession(user.id, token, expiresAt)
+    // New accounts need a default library + document before /documents bootstrap.
+    try {
+      await this.onboarding.ensureDefaultWorkspaceAndDocument(user.id)
+    } catch (error) {
+      console.error("[AuthService] default workspace bootstrap failed", error)
+    }
     return { token, user: this.toPublic(user), expiresAt }
   }
 

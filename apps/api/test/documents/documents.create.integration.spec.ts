@@ -53,11 +53,27 @@ describe("documents create (integration)", () => {
     const match = /session_token=([^;\s]+)/.exec(cookie ?? "")
     expect(match).toBeTruthy()
     const token = decodeURIComponent(match?.[1] ?? "")
+    const authHeaders = { cookie: `session_token=${encodeURIComponent(token)}` }
+
+    const workspacesRes = await fetch(`${baseUrl}/workspaces`, {
+      headers: authHeaders,
+    })
+    expect(workspacesRes.status).toBe(200)
+    const workspaces = await workspacesRes.json()
+    expect(workspaces).toHaveLength(1)
+    expect(workspaces[0]?.name).toBe("我的知识库")
+
+    const listRes = await fetch(`${baseUrl}/documents`, {
+      headers: authHeaders,
+    })
+    expect(listRes.status).toBe(200)
+    const listed = await listRes.json()
+    expect(listed.length).toBeGreaterThanOrEqual(1)
 
     // Create document using cookie header so server will recognize session
     const createRes = await fetch(`${baseUrl}/documents`, {
       method: "POST",
-      headers: { cookie: `session_token=${encodeURIComponent(token)}` },
+      headers: authHeaders,
     })
     expect(createRes.status).toBe(201)
     const meta = await createRes.json()
