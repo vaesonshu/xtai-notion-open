@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    />
+    <title>XtAi Notion</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 2rem;
+        line-height: 1.5;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>无法打开工作台</h1>
+      <p id="hint">
+        开发环境请先运行 pnpm --filter web
+        dev，再点击重试。安装包请检查网络与站点。
+      </p>
+      <button id="retry" type="button">重试</button>
+    </main>
+    <script type="module" src="/src/renderer.ts"></script>
+  </body>
+</html>

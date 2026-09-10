@@ -8,3 +8,5 @@ allowBuilds:
   msw: false
   prisma: true
   "@prisma/engines": true
+  electron: true
+  electron-winstaller: true

@@ -24,6 +24,11 @@ dist
 # turbo
 .turbo
 
+# electron forge
+.vite/
+apps/desktop/out/
+apps/desktop/release/
+
 # local git worktrees
 .worktrees/
 

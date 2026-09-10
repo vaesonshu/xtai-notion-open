@@ -42,6 +42,14 @@
 - 编辑器测试台（无需完整后端）：`/editor-playground`
 - 知识广场：`/square`
 
+## 桌面端（Windows）
+
+开发：先配置好 `apps/web` 与 API，再执行 `pnpm dev:desktop`（或分别 `pnpm --filter web dev` 与 `pnpm --filter desktop start`）。窗口加载 `http://localhost:3000`。关闭窗口会缩到托盘，托盘或菜单「退出」才结束进程。
+
+打安装包：在 `apps/desktop/.env` 设置 `XT_DESKTOP_APP_URL` 为线上 Vercel 的 `https` 地址，然后 `pnpm --filter desktop package` 或 `pnpm --filter desktop make`。未配置该变量时构建会失败。默认 `pnpm dev` 不会启动 Electron。打包产物在 `apps/desktop/release/`（安装包在 `release/make/`）。打包前请**先退出**所有 Electron / 桌面端窗口；若仍报 `EBUSY`，结束相关进程后删除旧的 `apps/desktop/out` 或 `release` 再重试。
+
+根目录 `.npmrc` 使用 `node-linker=hoisted`（Electron Forge 对 pnpm 的要求）。若你刚克隆仓库或改过依赖，请重新执行一次 `pnpm install`。
+
 ## 文档工作区能力（P0）
 
 以下能力对标飞书 / Notion / 语雀的「文档日常闭环」，已在工作区落地，可直接使用。

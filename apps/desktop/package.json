@@ -1,0 +1,38 @@
+{
+  "name": "desktop",
+  "productName": "XtAi Notion",
+  "description": "XtAi Notion 桌面客户端（Windows）",
+  "version": "0.0.1",
+  "private": true,
+  "main": ".vite/build/main.js",
+  "scripts": {
+    "dev": "electron-forge start",
+    "start": "electron-forge start",
+    "package": "tsx scripts/assert-packaged-url.ts && node scripts/clean-out.mjs && electron-forge package",
+    "make": "tsx scripts/assert-packaged-url.ts && node scripts/clean-out.mjs && electron-forge make",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron-forge/shared-types": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "@types/node": "^20",
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/typescript-config": "workspace:*",
+    "electron": "^37.2.0",
+    "eslint": "^9",
+    "tsx": "^4.20.3",
+    "typescript": "^5",
+    "vite": "^6.2.0",
+    "vitest": "^4.1.10"
+  }
+}

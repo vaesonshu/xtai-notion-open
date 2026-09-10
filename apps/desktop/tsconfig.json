@@ -1,0 +1,19 @@
+{
+  "extends": "@workspace/typescript-config/base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": [
+    "src",
+    "test",
+    "scripts",
+    "forge.config.ts",
+    "vite.*.ts",
+    "vitest.config.ts"
+  ]
+}
