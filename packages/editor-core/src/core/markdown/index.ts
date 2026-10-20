@@ -1,4 +1,5 @@
 export { blocksToMarkdown } from "./serialize"
+export { blocksToHtml, wrapExportHtmlDocument } from "./html-serialize"
 export { markdownToBlocks } from "./parse"
 export { clipboardHtmlHasRichStructure, looksLikeMarkdown } from "./detect"
 export { handleMarkdownPaste } from "./paste"

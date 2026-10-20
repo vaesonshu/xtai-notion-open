@@ -1,5 +1,4 @@
-import { generateBlockId } from "../block-schema/ids"
-import type { Block, InlineContent } from "../block-schema/types"
+import type { Block, InlineContent, TableContent } from "../block-schema/types"
 
 /** 行内纯文本 → Markdown（粗体/斜体/代码） */
 function inlineToMarkdown(content: InlineContent[]): string {
@@ -25,6 +24,37 @@ function inlineToMarkdown(content: InlineContent[]): string {
 function blockText(block: Block): string {
   if (!Array.isArray(block.content)) return ""
   return inlineToMarkdown(block.content)
+}
+
+/** GFM 管道表格：与 parse.ts 中 tryParseTable 对称 */
+function tableToMarkdown(content: TableContent): string {
+  const { rows } = content
+  if (!rows.length) return ""
+
+  const colCount = Math.max(...rows.map((row) => row.cells.length), 0)
+  if (colCount === 0) return ""
+
+  const formatCell = (cellContent: InlineContent[]) =>
+    inlineToMarkdown(cellContent).replace(/\|/g, "\\|").replace(/\n/g, " ")
+
+  const formatRow = (row: (typeof rows)[number]) => {
+    const cells = Array.from({ length: colCount }, (_, index) => {
+      const cell = row.cells[index]
+      return formatCell(cell?.content ?? [])
+    })
+    return `| ${cells.join(" | ")} |`
+  }
+
+  const headerRow = rows[0]
+  if (!headerRow) return ""
+
+  const lines = [formatRow(headerRow)]
+  lines.push(`| ${Array.from({ length: colCount }, () => "---").join(" | ")} |`)
+  for (let index = 1; index < rows.length; index += 1) {
+    const row = rows[index]
+    if (row) lines.push(formatRow(row))
+  }
+  return lines.join("\n")
 }
 
 /** 将 Block[] 导出为 Markdown 文本（表格/画板等复杂块降级为占位） */
@@ -74,7 +104,10 @@ export function blocksToMarkdown(blocks: Block[]): string {
           break
         }
         case "table":
-          lines.push("<!-- table: export as plain text in future -->")
+          if (block.content && "rows" in block.content) {
+            const tableMarkdown = tableToMarkdown(block.content as TableContent)
+            if (tableMarkdown) lines.push(tableMarkdown)
+          }
           break
         case "canvas":
           lines.push("<!-- canvas -->")
@@ -90,5 +123,8 @@ export function blocksToMarkdown(blocks: Block[]): string {
   }
 
   visit(blocks)
-  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()
+  return lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
 }

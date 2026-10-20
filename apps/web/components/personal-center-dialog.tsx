@@ -140,6 +140,18 @@ function PersonalProfileSection({
   )
 }
 
+function resolveDefaultWorkspaceId(
+  currentWorkspaceId: string | null,
+  workspaces: ReturnType<typeof usePersonalCenter>["workspaces"]
+): string {
+  return (
+    currentWorkspaceId ??
+    workspaces.find((item) => canManageWorkspace(item.role))?.id ??
+    workspaces[0]?.id ??
+    ""
+  )
+}
+
 function PersonalAiSettingsSection({
   userId,
   workspaces,
@@ -151,17 +163,15 @@ function PersonalAiSettingsSection({
   currentWorkspaceId: string | null
   onRefreshWorkspaces?: () => void
 }) {
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
-    null
+  // 空字符串表示未选，避免 Select value 在 undefined 与 string 间切换（受控/非受控告警）
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(() =>
+    resolveDefaultWorkspaceId(currentWorkspaceId, workspaces)
   )
 
   useEffect(() => {
-    const fallback =
-      currentWorkspaceId ??
-      workspaces.find((item) => canManageWorkspace(item.role))?.id ??
-      workspaces[0]?.id ??
-      null
-    setSelectedWorkspaceId(fallback)
+    setSelectedWorkspaceId(
+      resolveDefaultWorkspaceId(currentWorkspaceId, workspaces)
+    )
   }, [currentWorkspaceId, workspaces])
 
   const selectedWorkspace = workspaces.find(
@@ -184,8 +194,8 @@ function PersonalAiSettingsSection({
           <div className="flex flex-col gap-2">
             <Label htmlFor="ai-workspace">知识库</Label>
             <Select
-              value={selectedWorkspaceId ?? undefined}
-              onValueChange={setSelectedWorkspaceId}
+              value={selectedWorkspaceId}
+              onValueChange={(value) => setSelectedWorkspaceId(value ?? "")}
             >
               <SelectTrigger id="ai-workspace" className="max-w-md">
                 <SelectValue placeholder="选择知识库" />
@@ -206,7 +216,7 @@ function PersonalAiSettingsSection({
             ) : null}
           </div>
 
-          {selectedWorkspace && selectedWorkspaceId ? (
+          {selectedWorkspace && selectedWorkspaceId !== "" ? (
             <WorkspaceAiSettingsPanel
               key={selectedWorkspaceId}
               workspaceId={selectedWorkspaceId}

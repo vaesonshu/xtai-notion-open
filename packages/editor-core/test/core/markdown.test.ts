@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { blocksToMarkdown, markdownToBlocks } from "@core/markdown"
+import {
+  blocksToHtml,
+  blocksToMarkdown,
+  markdownToBlocks,
+} from "@core/markdown"
 import {
   clipboardHtmlHasRichStructure,
   looksLikeMarkdown,
@@ -50,6 +54,14 @@ describe("markdown roundtrip", () => {
     expect(markdown).toContain("**bold**")
   })
 
+  it("serializes tables to GFM markdown", () => {
+    const source = "| Name | Count |\n| --- | --- |\n| **A** | 1 |"
+    const markdown = blocksToMarkdown(markdownToBlocks(source))
+    expect(markdown).toContain("| Name | Count |")
+    expect(markdown).toContain("| --- | --- |")
+    expect(markdown).toContain("**A**")
+  })
+
   it("parses bold links inside table cells", () => {
     const blocks = markdownToBlocks(
       "| Name |\n| --- |\n| **[Tiptap](https://tiptap.dev)** |"
@@ -70,6 +82,16 @@ describe("markdown roundtrip", () => {
             item.type === "text" && item.text === "Tiptap" && item.styles.bold
         )
     ).toBe(true)
+  })
+})
+
+describe("html export", () => {
+  it("renders headings and tables as html", () => {
+    const blocks = markdownToBlocks("# Title\n\n| A |\n| --- |\n| 1 |")
+    const html = blocksToHtml(blocks)
+    expect(html).toContain("<h1>Title</h1>")
+    expect(html).toContain("<table>")
+    expect(html).toContain("<td>1</td>")
   })
 })
 
