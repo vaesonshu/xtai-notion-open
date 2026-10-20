@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common"
+import { UserCloudAiService } from "../auth/user-cloud-ai.service"
 import { WorkspacesService } from "../workspaces/workspaces.service"
 import { DocumentsService } from "../documents/documents.service"
 import { AiAgent } from "./ai.agent"
@@ -23,6 +24,7 @@ export class AiService {
   constructor(
     @Inject(DocumentsService) private readonly documents: DocumentsService,
     @Inject(WorkspacesService) private readonly workspaces: WorkspacesService,
+    @Inject(UserCloudAiService) private readonly userCloudAi: UserCloudAiService,
     @Inject(AiAgent) private readonly agent: AiAgent,
     @Inject(AiWriteAgent) private readonly writeAgent: AiWriteAgent,
     @Inject(ArticleAgent) private readonly articleAgent: ArticleAgent
@@ -55,7 +57,12 @@ export class AiService {
     }
 
     try {
-      for await (const content of this.agent.stream({ ...request, signal })) {
+      const llm = await this.userCloudAi.requireLlmConfig(userId)
+      for await (const content of this.agent.stream({
+        ...request,
+        signal,
+        llm,
+      })) {
         yield { type: "token", content }
       }
       if (!signal?.aborted) yield { type: "done" }
@@ -90,9 +97,10 @@ export class AiService {
     }
 
     try {
+      const llm = await this.userCloudAi.requireLlmConfig(userId)
       let hasToolCall = false
       let hasNonEmptyPartial = false
-      for await (const event of this.writeAgent.stream(request, signal)) {
+      for await (const event of this.writeAgent.stream(request, signal, llm)) {
         if (event.type === "tool_partial") {
           // 仅有可展示文本的 partial 也视为成功流，避免打字机预览后误报无改动
           if (partialArgsHaveNonEmptyText(event.name, event.args)) {
@@ -152,12 +160,14 @@ export class AiService {
     }
 
     try {
+      const llm = await this.userCloudAi.requireLlmConfig(userId)
       for await (const content of this.articleAgent.stream({
         prompt: request.prompt,
         workspaceName: workspace.name,
         extraInstructions: workspace.aiSettings.localCodexPrompt,
         documentText: request.documentText,
         signal,
+        llm,
       })) {
         yield { type: "token", content }
       }

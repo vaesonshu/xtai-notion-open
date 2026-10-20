@@ -63,6 +63,21 @@ export class UserRepository {
     return user ? this.toRecord(user) : null
   }
 
+  async getAiSettings(userId: string): Promise<unknown | null> {
+    const user = await this.prisma.client.appUser.findUnique({
+      where: { id: userId },
+      select: { aiSettings: true },
+    })
+    return user?.aiSettings ?? null
+  }
+
+  async setAiSettings(userId: string, value: Record<string, unknown>): Promise<void> {
+    await this.prisma.client.appUser.update({
+      where: { id: userId },
+      data: { aiSettings: value, updatedAt: new Date() },
+    })
+  }
+
   async listUsers(): Promise<UserRecord[]> {
     const users = await this.prisma.client.appUser.findMany({
       orderBy: { createdAt: "desc" },

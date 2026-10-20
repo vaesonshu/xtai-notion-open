@@ -1,6 +1,7 @@
 import { Inject, Injectable, ServiceUnavailableException } from "@nestjs/common"
 import { HumanMessage, SystemMessage } from "@langchain/core/messages"
 import { ChatOpenAI } from "@langchain/openai"
+import type { LlmConnectionConfig } from "./llm-config.types"
 import type { Environment } from "../config/environment"
 import { ENVIRONMENT } from "../config/tokens"
 import {
@@ -30,12 +31,8 @@ export class ArticleAgent {
     extraInstructions?: string
     documentText?: string
     signal?: AbortSignal
+    llm: LlmConnectionConfig
   }): AsyncIterable<string> {
-    const { OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL } = this.environment
-    if (!OPENAI_API_KEY || !OPENAI_BASE_URL || !OPENAI_MODEL) {
-      throw new ServiceUnavailableException("AI 服务未配置")
-    }
-
     const documentContext = input.documentText?.trim()
     const systemParts = [
       documentContext
@@ -46,9 +43,9 @@ export class ArticleAgent {
     ].filter(Boolean)
 
     const model = new ChatOpenAI({
-      apiKey: OPENAI_API_KEY,
-      model: OPENAI_MODEL,
-      configuration: { baseURL: OPENAI_BASE_URL },
+      apiKey: input.llm.apiKey,
+      model: input.llm.model,
+      configuration: { baseURL: input.llm.baseUrl },
       streaming: true,
       timeout: 180_000,
       maxRetries: 0,

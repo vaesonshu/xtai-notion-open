@@ -20,6 +20,7 @@ import {
 import { cn } from "@workspace/ui/lib/utils"
 import { useAuthOptional } from "@/components/auth-provider"
 import { WorkspaceAiSettingsPanel } from "@/components/inkspace/workspace-ai-settings-panel"
+import { UserCloudAiSettingsPanel } from "@/components/personal-center/user-cloud-ai-settings-panel"
 import {
   usePersonalCenter,
   type PersonalCenterSection,
@@ -183,9 +184,11 @@ function PersonalAiSettingsSection({
       <div>
         <h2 className="text-lg font-semibold text-[#242321]">AI 设置</h2>
         <p className="mt-1 text-sm text-[#78746C]">
-          按知识库配置云端或本地 Codex；在文档页「智能体」中基于当前文档写作或新建文章。
+          先在下方配置云端 API；再按知识库选择写作引擎（云端或本地 Codex）。
         </p>
       </div>
+
+      <UserCloudAiSettingsPanel userId={userId} />
 
       {workspaces.length === 0 ? (
         <p className="text-sm text-[#78746C]">暂无知识库</p>

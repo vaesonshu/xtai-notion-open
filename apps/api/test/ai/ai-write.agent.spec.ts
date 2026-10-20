@@ -4,6 +4,12 @@ import type { AiWriteRequest } from "@api/ai/ai.types"
 
 const paraId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 
+const testLlm = {
+  apiKey: "sk-test",
+  baseUrl: "https://api.openai.com/v1",
+  model: "gpt-4o-mini",
+}
+
 const slashRequest: AiWriteRequest = {
   documentId: "doc-1",
   mode: "slash",
@@ -23,7 +29,7 @@ const slashRequest: AiWriteRequest = {
 
 describe("AiWriteAgent", () => {
   it("yields validated insert_blocks as AiWriteOp", async () => {
-    const agent = new AiWriteAgent({} as any, async function* () {
+    const agent = new AiWriteAgent({ NODE_ENV: "test" } as any, async function* () {
       yield {
         type: "insert_blocks",
         refId: paraId,
@@ -33,7 +39,7 @@ describe("AiWriteAgent", () => {
     })
 
     const events = []
-    for await (const event of agent.stream(slashRequest)) {
+    for await (const event of agent.stream(slashRequest, undefined, testLlm)) {
       events.push(event)
     }
 
@@ -53,7 +59,7 @@ describe("AiWriteAgent", () => {
   })
 
   it("yields tool_partial then validated tool_call from injected runner", async () => {
-    const agent = new AiWriteAgent({} as any, async function* () {
+    const agent = new AiWriteAgent({ NODE_ENV: "test" } as any, async function* () {
       yield {
         type: "tool_partial",
         toolIndex: 0,
@@ -72,7 +78,7 @@ describe("AiWriteAgent", () => {
       }
     })
     const events = []
-    for await (const event of agent.stream(slashRequest)) {
+    for await (const event of agent.stream(slashRequest, undefined, testLlm)) {
       events.push(event)
     }
     expect(events[0]).toMatchObject({
@@ -88,7 +94,7 @@ describe("AiWriteAgent", () => {
   })
 
   it("skips invalid tool calls such as nested placement", async () => {
-    const agent = new AiWriteAgent({} as any, async function* () {
+    const agent = new AiWriteAgent({ NODE_ENV: "test" } as any, async function* () {
       yield {
         type: "insert_blocks",
         refId: paraId,
@@ -98,7 +104,7 @@ describe("AiWriteAgent", () => {
     })
 
     const ops = []
-    for await (const event of agent.stream(slashRequest)) {
+    for await (const event of agent.stream(slashRequest, undefined, testLlm)) {
       if (event.type === "tool_call") {
         ops.push(event.op)
       }
@@ -108,21 +114,13 @@ describe("AiWriteAgent", () => {
   })
 
   it("yields nothing when runner produces no tool calls", async () => {
-    const agent = new AiWriteAgent({} as any, async function* () {})
+    const agent = new AiWriteAgent({ NODE_ENV: "test" } as any, async function* () {})
 
     const events = []
-    for await (const event of agent.stream(slashRequest)) {
+    for await (const event of agent.stream(slashRequest, undefined, testLlm)) {
       events.push(event)
     }
 
     expect(events).toHaveLength(0)
-  })
-
-  it("throws when OpenAI settings are missing and no runner is injected", async () => {
-    const agent = new AiWriteAgent({} as any)
-    await expect(async () => {
-      for await (const _op of agent.stream(slashRequest)) {
-      }
-    }).rejects.toThrow("AI 服务未配置")
   })
 })

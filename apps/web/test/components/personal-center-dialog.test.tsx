@@ -22,6 +22,10 @@ vi.mock("@/components/inkspace/workspace-ai-settings-panel", () => ({
   WorkspaceAiSettingsPanel: () => <div data-testid="ai-settings-panel" />,
 }))
 
+vi.mock("@/components/personal-center/user-cloud-ai-settings-panel", () => ({
+  UserCloudAiSettingsPanel: () => <div data-testid="user-cloud-ai-panel" />,
+}))
+
 function renderPersonalCenterShell() {
   return render(
     <PersonalCenterProvider

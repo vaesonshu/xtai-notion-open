@@ -9,6 +9,7 @@ import {
   sanitizePartialToolArgs,
   validateAiWriteOp,
 } from "@xtai-notion/editor-core/server"
+import type { LlmConnectionConfig } from "./llm-config.types"
 import type { Environment } from "../config/environment"
 import type { AiWriteAgentEvent, AiWriteRequest } from "./ai.types"
 import {
@@ -159,17 +160,15 @@ function readChunkIndex(part: { index?: number }): number {
   return typeof part.index === "number" ? part.index : 0
 }
 
-function createDefaultRunner(environment: Environment): AiWriteToolRunner {
+function createDefaultRunner(
+  llm: LlmConnectionConfig,
+  nodeEnv: Environment["NODE_ENV"]
+): AiWriteToolRunner {
   return async function* defaultRunner({ request, signal }) {
-    const { OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL } = environment
-    if (!OPENAI_API_KEY || !OPENAI_BASE_URL || !OPENAI_MODEL) {
-      throw new ServiceUnavailableException("AI 服务未配置")
-    }
-
     const model = new ChatOpenAI({
-      apiKey: OPENAI_API_KEY,
-      model: OPENAI_MODEL,
-      configuration: { baseURL: OPENAI_BASE_URL },
+      apiKey: llm.apiKey,
+      model: llm.model,
+      configuration: { baseURL: llm.baseUrl },
       streaming: true,
       timeout: 180_000,
       maxRetries: 0,
@@ -245,7 +244,7 @@ function createDefaultRunner(environment: Environment): AiWriteToolRunner {
           continue
         }
         throw new ServiceUnavailableException(
-          toLlmUnavailableMessage(error, environment.NODE_ENV)
+          toLlmUnavailableMessage(error, nodeEnv)
         )
       }
     }
@@ -253,25 +252,25 @@ function createDefaultRunner(environment: Environment): AiWriteToolRunner {
 }
 
 export class AiWriteAgent {
-  private readonly runner: AiWriteToolRunner
-
   constructor(
     private readonly environment: Environment,
-    runner?: AiWriteToolRunner
-  ) {
-    this.runner = runner ?? createDefaultRunner(environment)
-  }
+    /** 单测注入 mock runner，生产路径走 createDefaultRunner。 */
+    private readonly customRunner?: AiWriteToolRunner
+  ) {}
 
   /** 边流边校验：partial 浅过滤去重，完整调用走 validateAiWriteOp */
   async *stream(
     request: AiWriteRequest,
-    signal?: AbortSignal
+    signal: AbortSignal | undefined,
+    llm: LlmConnectionConfig
   ): AsyncIterable<AiWriteAgentEvent> {
+    const runner =
+      this.customRunner ?? createDefaultRunner(llm, this.environment.NODE_ENV)
     const context = buildValidationContext(request)
     const lastPartialJson = new Map<number, string>()
     let completedToolCalls = 0
 
-    for await (const raw of this.runner({ request, signal })) {
+    for await (const raw of runner({ request, signal })) {
       if (signal?.aborted) {
         return
       }

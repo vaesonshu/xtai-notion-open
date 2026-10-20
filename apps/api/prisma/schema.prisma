@@ -98,6 +98,7 @@ model AppUser {
   displayName  String            @map("display_name")
   color        String
   role         String            @default("user")
+  aiSettings   Json?             @map("ai_settings")
   createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
   sessions           UserSession[]

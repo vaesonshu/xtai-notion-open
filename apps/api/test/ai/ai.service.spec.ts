@@ -33,6 +33,15 @@ function createService(
   documents: { assertCanRead: ReturnType<typeof vi.fn> },
   agent: { stream: ReturnType<typeof vi.fn> },
   writeAgent: { stream: ReturnType<typeof vi.fn> } = { stream: vi.fn() },
+  userCloudAi: {
+    requireLlmConfig: ReturnType<typeof vi.fn>
+  } = {
+    requireLlmConfig: vi.fn().mockResolvedValue({
+      apiKey: "sk-test",
+      baseUrl: "https://api.openai.com/v1",
+      model: "gpt-4o-mini",
+    }),
+  },
   workspaces: { getWorkspace: ReturnType<typeof vi.fn> } = {
     getWorkspace: vi.fn().mockResolvedValue({
       id: "ws-1",
@@ -50,6 +59,7 @@ function createService(
   return new AiService(
     documents as any,
     workspaces as any,
+    userCloudAi as any,
     agent as any,
     writeAgent as any,
     articleAgent as any

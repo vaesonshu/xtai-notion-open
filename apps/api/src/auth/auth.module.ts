@@ -9,6 +9,8 @@ import { AuthService } from "./auth.service"
 import { AuthController } from "./auth.controller"
 import { SessionInitGuard } from "./session-init.guard"
 import { UserOnboardingService } from "./user-onboarding.service"
+import { UserCloudAiService } from "./user-cloud-ai.service"
+import { UsersController } from "./users.controller"
 
 @Module({
   imports: [ConfigModule, WorkspaceRepositoryModule, DocumentsRepositoryModule],
@@ -19,14 +21,16 @@ import { UserOnboardingService } from "./user-onboarding.service"
     AuthService,
     SessionInitGuard,
     UserOnboardingService,
+    UserCloudAiService,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController],
   // DocumentsService reads roles here rather than trusting a client-provided header.
   exports: [
     DevelopmentIdentityGuard,
     SessionInitGuard,
     AuthService,
     UserRepository,
+    UserCloudAiService,
   ],
 })
 export class AuthModule {}

@@ -125,7 +125,7 @@ export function WorkspaceAiSettingsPanel({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="cloud">云端 AI（服务器）</SelectItem>
+            <SelectItem value="cloud">云端 AI（个人 API 配置）</SelectItem>
             <SelectItem value="local_codex">
               本地 Codex（读取本机资料）
             </SelectItem>
