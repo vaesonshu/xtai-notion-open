@@ -310,6 +310,7 @@ import { Button } from "@workspace/ui/components/button"
 
 ## 相关文档
 
+- 面试复习提纲：[`docs/interview/高频面试题总结.md`](./docs/interview/高频面试题总结.md)（专题见 `docs/interview/`）
 - 技术参考：[Tiptap](https://tiptap.dev) · [BlockNote](https://www.blocknotejs.org)
 - 块文档架构设计：[`docs/superpowers/specs/2026-08-28-block-document-architecture-design.md`](./docs/superpowers/specs/2026-08-28-block-document-architecture-design.md)
 - 编辑器 SDK 开源拆分：[`openspec/changes/open-source-editor-sdk/`](./openspec/changes/open-source-editor-sdk/)
