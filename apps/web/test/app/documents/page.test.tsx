@@ -33,35 +33,25 @@ describe("DocumentsIndexPage", () => {
   it("routes authenticated users to their first personal document", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [{ id: "ws-1" }],
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [
-            { id: "shared", role: "editor" },
-            { id: "personal", role: "owner" },
-          ],
-        })
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          { id: "shared", role: "editor" },
+          { id: "personal", role: "owner" },
+        ],
+      })
     )
 
     render(<DocumentsIndexPage />)
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("/documents/personal")
+      expect(replace).toHaveBeenCalledWith("/documents/shared")
     })
   })
 
   it("creates a default document when the user has no documents yet", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ id: "ws-1" }],
-      })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => [],
@@ -77,8 +67,8 @@ describe("DocumentsIndexPage", () => {
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith("/documents/fresh-document")
     })
-    expect(fetchMock).toHaveBeenCalledTimes(3)
-    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: "POST" })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "POST" })
   })
 
   it("shows a creation button when bootstrap fails", async () => {
@@ -104,41 +94,20 @@ describe("resolveDocumentsEntryTarget", () => {
     vi.unstubAllGlobals()
   })
 
-  it("returns the first owned document without creating a new one", async () => {
+  it("returns the first document without creating a new one", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [{ id: "ws-1" }],
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => [
-            { id: "shared", role: "editor" },
-            { id: "personal", role: "owner" },
-          ],
-        })
-    )
-
-    await expect(resolveDocumentsEntryTarget("demo-owner")).resolves.toBe(
-      "personal"
-    )
-    expect(fetch).toHaveBeenCalledTimes(2)
-  })
-
-  it("returns /workspaces when the user belongs to multiple libraries", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
+      vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => [{ id: "ws-1" }, { id: "ws-2" }],
+        json: async () => [
+          { id: "first", role: "owner" },
+          { id: "second", role: "owner" },
+        ],
       })
     )
 
     await expect(resolveDocumentsEntryTarget("demo-owner")).resolves.toBe(
-      "/workspaces"
+      "first"
     )
     expect(fetch).toHaveBeenCalledTimes(1)
   })

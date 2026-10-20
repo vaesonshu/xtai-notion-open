@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common"
 import type { Prisma, Workspace } from "../generated/prisma/client"
 import { PrismaService } from "../database/prisma.module"
+import { slugifyWorkspaceName } from "./workspace-slug.util"
 import {
   isWorkspaceRole,
   isWorkspaceVisibility,
@@ -21,6 +22,7 @@ export class WorkspaceRepository {
     return {
       id: workspace.id,
       name: workspace.name,
+      slug: workspace.slug,
       visibility,
       settings: workspace.settings,
       createdBy: workspace.createdBy,
@@ -29,11 +31,25 @@ export class WorkspaceRepository {
     }
   }
 
-  async create(name: string, createdBy: string): Promise<WorkspaceRow> {
+  /**  onboarding / 默认库：从名称生成唯一 slug，避免调用方漏传。 */
+  async createForUser(
+    name: string,
+    createdBy: string
+  ): Promise<WorkspaceRow> {
+    const slug = await this.allocateUniqueSlug(slugifyWorkspaceName(name))
+    return this.create(name, createdBy, slug)
+  }
+
+  async create(
+    name: string,
+    createdBy: string,
+    slug: string
+  ): Promise<WorkspaceRow> {
     return this.prisma.client.$transaction(async (tx) => {
       const workspace = await tx.workspace.create({
         data: {
           name,
+          slug,
           createdBy,
           updatedAt: new Date(),
         },
@@ -54,6 +70,47 @@ export class WorkspaceRepository {
       where: { id: workspaceId },
     })
     return workspace ? this.toRow(workspace) : null
+  }
+
+  async findBySlug(slug: string): Promise<WorkspaceRow | null> {
+    const workspace = await this.prisma.client.workspace.findUnique({
+      where: { slug },
+    })
+    return workspace ? this.toRow(workspace) : null
+  }
+
+  async isSlugTaken(slug: string, excludeWorkspaceId?: string): Promise<boolean> {
+    const existing = await this.prisma.client.workspace.findUnique({
+      where: { slug },
+      select: { id: true },
+    })
+    if (!existing) return false
+    if (excludeWorkspaceId && existing.id === excludeWorkspaceId) {
+      return false
+    }
+    return true
+  }
+
+  async allocateUniqueSlug(base: string): Promise<string> {
+    let candidate = base
+    let suffix = 2
+    while (await this.isSlugTaken(candidate)) {
+      const trimmedBase = base.slice(0, Math.max(2, 48 - String(suffix).length - 1))
+      candidate = `${trimmedBase}-${suffix}`
+      suffix += 1
+    }
+    return candidate
+  }
+
+  async updateSlug(
+    workspaceId: string,
+    slug: string | null
+  ): Promise<WorkspaceRow | null> {
+    const workspace = await this.prisma.client.workspace.update({
+      where: { id: workspaceId },
+      data: { slug, updatedAt: new Date() },
+    })
+    return this.toRow(workspace)
   }
 
   async rename(

@@ -14,17 +14,17 @@ export class PublicWorkspacesController {
     @Inject(DocumentsService) private readonly documents: DocumentsService
   ) {}
 
-  @Get(":workspaceId")
+  @Get(":workspaceKey")
   getWorkspace(
-    @Param("workspaceId") workspaceId: string
+    @Param("workspaceKey") workspaceKey: string
   ): Promise<PublicWorkspaceView> {
-    return this.workspaces.getPublicWorkspace(workspaceId)
+    return this.workspaces.getPublicWorkspace(workspaceKey)
   }
 
-  @Get(":workspaceId/documents")
+  @Get(":workspaceKey/documents")
   listPublishedDocuments(
-    @Param("workspaceId") workspaceId: string
+    @Param("workspaceKey") workspaceKey: string
   ): Promise<PublicWorkspaceDocumentSummary[]> {
-    return this.documents.listPublicWorkspaceDocuments(workspaceId)
+    return this.documents.listPublicWorkspaceDocuments(workspaceKey)
   }
 }

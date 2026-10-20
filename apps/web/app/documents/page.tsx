@@ -17,27 +17,15 @@ type DocumentListItem = {
 // user so an empty account does not POST two default documents.
 const bootstrapDocumentByUser = new Map<string, Promise<string>>()
 
-/** 打开首篇文档；若无任何文档则为新用户创建默认工作区文档。 */
-type WorkspaceListItem = { id: string }
-
+/** 打开首篇文档；若无任何文档则自动创建一篇（服务端会确保默认知识库）。 */
 export async function resolveDocumentsEntryTarget(
   userId: string
-): Promise<string | "/workspaces"> {
-  const workspaces = await apiRequestJson<WorkspaceListItem[]>({
-    path: "/workspaces",
-    userId,
-  })
-  // 多库团队场景：登录后先进知识库总览，便于选库管理。
-  if (workspaces.length >= 2) {
-    return "/workspaces"
-  }
-
+): Promise<string> {
   const documents = await apiRequestJson<DocumentListItem[]>({
     path: "/documents",
     userId,
   })
-  const firstDocument =
-    documents.find((item) => item.role === "owner") ?? documents[0]
+  const firstDocument = documents[0]
   if (firstDocument?.id) return firstDocument.id
 
   const document = await apiRequestJson<{ id?: string }>({
@@ -88,9 +76,7 @@ export default function DocumentsIndexPage() {
       try {
         const target = await bootstrapDocumentsEntry(currentUserId)
         if (cancelled) return
-        router.replace(
-          target === "/workspaces" ? target : `/documents/${target}`
-        )
+        router.replace(`/documents/${target}`)
       } catch (caught) {
         if (!cancelled) {
           toastError(caught, "加载文档失败")

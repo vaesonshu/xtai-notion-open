@@ -3,6 +3,7 @@ import { apiRequestJson } from "@/lib/api-client"
 export type PublicWorkspaceView = {
   id: string
   name: string
+  slug: string | null
   visibility: "public"
   publishedDocumentCount: number
 }
@@ -14,17 +15,17 @@ export type PublicWorkspaceDocumentSummary = {
 }
 
 export async function fetchPublicWorkspace(
-  workspaceId: string
+  workspaceKey: string
 ): Promise<PublicWorkspaceView> {
   return apiRequestJson<PublicWorkspaceView>({
-    path: `/public/workspaces/${workspaceId}`,
+    path: `/public/workspaces/${encodeURIComponent(workspaceKey)}`,
   })
 }
 
 export async function fetchPublicWorkspaceDocuments(
-  workspaceId: string
+  workspaceKey: string
 ): Promise<PublicWorkspaceDocumentSummary[]> {
   return apiRequestJson<PublicWorkspaceDocumentSummary[]>({
-    path: `/public/workspaces/${workspaceId}/documents`,
+    path: `/public/workspaces/${encodeURIComponent(workspaceKey)}/documents`,
   })
 }

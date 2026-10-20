@@ -197,6 +197,7 @@ export function WorkspaceListPage({ userId }: { userId: string }) {
         }}
         workspaceId={membersWorkspace?.id ?? null}
         workspaceName={membersWorkspace?.name ?? "知识库"}
+        workspaceSlug={membersWorkspace?.slug ?? null}
         workspaceVisibility={membersWorkspace?.visibility ?? "private"}
         currentUserId={userId}
         currentUserRole={membersWorkspace?.role}
@@ -223,12 +224,19 @@ function WorkspaceListCard({
         {workspace.name.slice(0, 1).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <Link
-          href={`/workspaces/${workspace.id}`}
-          className="truncate text-base font-semibold hover:underline"
-        >
-          {workspace.name}
-        </Link>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href={`/workspaces/${workspace.id}`}
+            className="truncate text-base font-semibold hover:underline"
+          >
+            {workspace.name}
+          </Link>
+          {workspace.visibility === "public" ? (
+            <span className="shrink-0 rounded-md bg-[#E8F5F0] px-1.5 py-0.5 text-[10px] font-medium text-[#24866B]">
+              公开
+            </span>
+          ) : null}
+        </div>
         <div className="mt-1 flex flex-wrap gap-3 text-xs text-[#78746C]">
           <span>{WORKSPACE_ROLE_LABELS[workspace.role]}</span>
           <span className="inline-flex items-center gap-1">

@@ -20,7 +20,7 @@ export class UserOnboardingService {
   async ensureDefaultWorkspaceAndDocument(userId: string): Promise<void> {
     const workspace =
       (await this.workspaces.findDefaultForUser(userId)) ??
-      (await this.workspaces.create(DEFAULT_WORKSPACE_NAME, userId))
+      (await this.workspaces.createForUser(DEFAULT_WORKSPACE_NAME, userId))
 
     const existingDocuments = await this.documents.listForUser(userId)
     if (existingDocuments.length > 0) {

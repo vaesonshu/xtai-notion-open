@@ -1,4 +1,8 @@
-import { apiRequest, apiRequestJson, readApiErrorMessage } from "@/lib/api-client"
+import {
+  apiRequest,
+  apiRequestJson,
+  readApiErrorMessage,
+} from "@/lib/api-client"
 import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer"
@@ -8,6 +12,7 @@ export type WorkspaceVisibility = "private" | "public"
 export type WorkspaceSummary = {
   id: string
   name: string
+  slug: string | null
   visibility: WorkspaceVisibility
   memberCount: number
   documentCount: number
@@ -17,10 +22,11 @@ export type WorkspaceSummary = {
   updatedAt: string
 }
 
-export const WORKSPACE_VISIBILITY_LABELS: Record<WorkspaceVisibility, string> = {
-  private: "私有",
-  public: "公开",
-}
+export const WORKSPACE_VISIBILITY_LABELS: Record<WorkspaceVisibility, string> =
+  {
+    private: "私有",
+    public: "公开",
+  }
 
 export const WORKSPACE_ROLE_LABELS: Record<WorkspaceRole, string> = {
   owner: "所有者",
@@ -33,7 +39,9 @@ export function canManageWorkspace(role: WorkspaceRole): boolean {
   return role === "owner" || role === "admin"
 }
 
-export async function fetchWorkspaces(userId: string): Promise<WorkspaceSummary[]> {
+export async function fetchWorkspaces(
+  userId: string
+): Promise<WorkspaceSummary[]> {
   return apiRequestJson<WorkspaceSummary[]>({
     path: "/workspaces",
     userId,
@@ -75,10 +83,24 @@ export async function renameWorkspace(
   })
 }
 
+/** 公开知识库对外路径：优先短链 /w/:slug。 */
+export function buildPublicWorkspacePath(workspace: {
+  id: string
+  slug: string | null
+}): string {
+  return workspace.slug
+    ? `/w/${workspace.slug}`
+    : `/public/workspaces/${workspace.id}`
+}
+
 export async function updateWorkspaceSettings(
   workspaceId: string,
   userId: string,
-  patch: { name?: string; visibility?: WorkspaceVisibility }
+  patch: {
+    name?: string
+    visibility?: WorkspaceVisibility
+    slug?: string | null
+  }
 ): Promise<WorkspaceSummary> {
   return apiRequestJson<WorkspaceSummary>({
     path: `/workspaces/${workspaceId}`,

@@ -84,7 +84,12 @@ export class WorkspacesController {
   updateWorkspace(
     @Param("workspaceId") workspaceId: string,
     @CurrentUser() user: DevUser,
-    @Body() body: { name?: string; visibility?: WorkspaceVisibility }
+    @Body()
+    body: {
+      name?: string
+      visibility?: WorkspaceVisibility
+      slug?: string | null
+    }
   ): Promise<WorkspaceSummary> {
     if (
       body.visibility !== undefined &&
@@ -95,6 +100,7 @@ export class WorkspacesController {
     return this.workspaces.updateWorkspace(workspaceId, user.id, {
       name: body.name,
       visibility: body.visibility,
+      slug: body.slug,
     })
   }
 

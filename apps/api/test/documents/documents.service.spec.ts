@@ -14,6 +14,7 @@ import type { WorkspaceRepository } from "@api/workspaces/workspace.repository"
 const defaultWorkspace = {
   id: "ws-1",
   name: "我的知识库",
+  slug: null as string | null,
   visibility: "private" as const,
   settings: {},
   createdBy: "user-1",
@@ -46,6 +47,7 @@ function createWorkspaces(
   return {
     getMemberRole: vi.fn().mockResolvedValue("owner"),
     findById: vi.fn().mockResolvedValue(defaultWorkspace),
+    findBySlug: vi.fn().mockResolvedValue(null),
     findDefaultForUser: vi.fn().mockResolvedValue(defaultWorkspace),
     create: vi.fn().mockResolvedValue(defaultWorkspace),
     ...overrides,

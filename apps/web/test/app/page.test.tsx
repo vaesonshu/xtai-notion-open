@@ -10,7 +10,7 @@ const redirect = vi.hoisted(() =>
 vi.mock("next/navigation", () => ({ redirect }))
 
 describe("home page", () => {
-  it("redirects to the authenticated documents entry point", () => {
+  it("redirects to the documents entry point", () => {
     expect(() => Page()).toThrow("NEXT_REDIRECT")
     expect(redirect).toHaveBeenCalledWith("/documents")
   })

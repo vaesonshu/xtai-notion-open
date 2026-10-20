@@ -29,6 +29,7 @@ export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
 export interface WorkspaceRow {
   id: string
   name: string
+  slug: string | null
   visibility: WorkspaceVisibility
   settings: unknown
   createdBy: string | null
@@ -39,6 +40,7 @@ export interface WorkspaceRow {
 export interface PublicWorkspaceView {
   id: string
   name: string
+  slug: string | null
   visibility: "public"
   publishedDocumentCount: number
 }
@@ -58,6 +60,7 @@ export interface WorkspaceListRow extends WorkspaceRow {
 export interface WorkspaceSummary {
   id: string
   name: string
+  slug: string | null
   visibility: WorkspaceVisibility
   memberCount: number
   documentCount: number

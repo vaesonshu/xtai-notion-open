@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -18,12 +19,17 @@ function formatPublishedAt(value: string) {
 }
 
 /** 公开知识库只读目录：仅展示已发布文档。 */
-export function PublicWorkspacePage({ workspaceId }: { workspaceId: string }) {
+export function PublicWorkspacePage({
+  workspaceKey,
+}: {
+  workspaceKey: string
+}) {
   const [workspace, setWorkspace] = useState<PublicWorkspaceView | null>(null)
   const [documents, setDocuments] = useState<PublicWorkspaceDocumentSummary[]>(
     []
   )
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     let cancelled = false
@@ -32,10 +38,19 @@ export function PublicWorkspacePage({ workspaceId }: { workspaceId: string }) {
       setLoading(true)
       try {
         const [ws, docs] = await Promise.all([
-          fetchPublicWorkspace(workspaceId),
-          fetchPublicWorkspaceDocuments(workspaceId),
+          fetchPublicWorkspace(workspaceKey),
+          fetchPublicWorkspaceDocuments(workspaceKey),
         ])
         if (cancelled) return
+        // UUID 旧链接在设置 slug 后跳转到 /w/:slug，便于分享与 SEO。
+        if (
+          ws.slug &&
+          workspaceKey === ws.id &&
+          workspaceKey !== ws.slug
+        ) {
+          router.replace(`/w/${ws.slug}`)
+          return
+        }
         setWorkspace(ws)
         setDocuments(docs)
       } catch (error) {
@@ -49,7 +64,7 @@ export function PublicWorkspacePage({ workspaceId }: { workspaceId: string }) {
     return () => {
       cancelled = true
     }
-  }, [workspaceId])
+  }, [workspaceKey])
 
   if (loading) {
     return (
@@ -63,7 +78,11 @@ export function PublicWorkspacePage({ workspaceId }: { workspaceId: string }) {
     return (
       <main className="mx-auto max-w-2xl px-6 py-16">
         <p className="text-sm text-[#78746C]">该知识库不存在或未公开。</p>
-        <Button variant="link" className="mt-4 px-0" render={<Link href="/" />}>
+        <Button
+          variant="link"
+          className="mt-4 px-0"
+          render={<Link href="/square" />}
+        >
           返回首页
         </Button>
       </main>

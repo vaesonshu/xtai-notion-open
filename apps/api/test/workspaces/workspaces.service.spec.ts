@@ -11,6 +11,7 @@ import { WorkspacesService } from "@api/workspaces/workspaces.service"
 const defaultWorkspace = {
   id: "ws-1",
   name: "产品知识库",
+  slug: "product-knowledge" as string | null,
   visibility: "private" as const,
   settings: {},
   createdBy: "owner-user",
@@ -27,6 +28,10 @@ function createWorkspaces(
     ]),
     getMemberRole: vi.fn().mockResolvedValue("owner"),
     findById: vi.fn().mockResolvedValue(defaultWorkspace),
+    findBySlug: vi.fn().mockResolvedValue(null),
+    isSlugTaken: vi.fn().mockResolvedValue(false),
+    allocateUniqueSlug: vi.fn().mockResolvedValue("product-knowledge"),
+    updateSlug: vi.fn().mockResolvedValue(defaultWorkspace),
     countMembers: vi.fn().mockResolvedValue(1),
     create: vi.fn().mockResolvedValue(defaultWorkspace),
     rename: vi.fn().mockResolvedValue({

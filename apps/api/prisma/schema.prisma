@@ -17,6 +17,7 @@ datasource db {
 model Workspace {
   id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name       String
+  slug       String?           @unique
   visibility String            @default("private")
   settings   Json              @default("{}")
   createdBy String?           @map("created_by") @db.Uuid

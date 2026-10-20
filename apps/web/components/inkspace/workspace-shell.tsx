@@ -21,6 +21,7 @@ import {
   type WorkspaceRole,
 } from "./workspace-members-dialog"
 import { WorkspaceSidebar } from "./sidebar"
+import type { WorkspaceSummary } from "@/lib/workspace-api"
 
 const WORKSPACE_STORAGE_KEY = "inkspace:workspace:v1"
 
@@ -34,16 +35,6 @@ type DocumentListItem = { id: string; title: string }
 
 const DEFAULT_AI_SETTINGS: WorkspaceAiSettings = { aiProvider: "cloud" }
 
-type WorkspaceSummary = {
-  id: string
-  name: string
-  memberCount: number
-  documentCount: number
-  role: WorkspaceRole
-  aiSettings: WorkspaceAiSettings
-  createdAt?: string
-  updatedAt?: string
-}
 type SidebarDocument = DocumentListItem & {
   role: DocumentRole
   parentId: string | null
@@ -535,12 +526,8 @@ export function WorkspaceShell({
     <PersonalCenterProvider
       userId={user.id}
       workspaces={workspaces.map((item) => ({
-        id: item.id,
-        name: item.name,
-        memberCount: item.memberCount,
+        ...item,
         documentCount: item.documentCount ?? 0,
-        role: item.role,
-        aiSettings: item.aiSettings,
         createdAt: item.createdAt ?? "",
         updatedAt: item.updatedAt ?? "",
       }))}
@@ -571,6 +558,7 @@ export function WorkspaceShell({
           onOpenChange={setMembersOpen}
           workspaceId={currentWorkspaceId}
           workspaceName={currentWorkspace?.name ?? "知识库"}
+          workspaceSlug={currentWorkspace?.slug ?? null}
           workspaceVisibility={currentWorkspace?.visibility ?? "private"}
           currentUserId={user.id}
           currentUserRole={currentWorkspace?.role}
@@ -674,6 +662,8 @@ export function WorkspaceShell({
                 workspace={{
                   id: currentWorkspaceId,
                   name: currentWorkspace?.name ?? "知识库",
+                  slug: currentWorkspace?.slug ?? null,
+                  visibility: currentWorkspace?.visibility ?? "private",
                   memberCount: currentWorkspace?.memberCount ?? 0,
                   documentCount:
                     currentWorkspace?.documentCount ?? documents.length,

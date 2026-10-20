@@ -20,6 +20,7 @@ import {
 import { apiRequest, readApiErrorMessage } from "@/lib/api-client"
 import { toast, toastError } from "@/lib/toast"
 import {
+  buildPublicWorkspacePath,
   updateWorkspaceSettings,
   type WorkspaceVisibility,
 } from "@/lib/workspace-api"
@@ -71,6 +72,7 @@ export function WorkspaceMembersDialog({
   onOpenChange,
   workspaceId,
   workspaceName,
+  workspaceSlug = null,
   workspaceVisibility = "private",
   currentUserId,
   currentUserRole,
@@ -82,6 +84,7 @@ export function WorkspaceMembersDialog({
   onOpenChange: (open: boolean) => void
   workspaceId: string | null
   workspaceName: string
+  workspaceSlug?: string | null
   workspaceVisibility?: WorkspaceVisibility
   currentUserId: string
   currentUserRole?: WorkspaceRole
@@ -94,6 +97,8 @@ export function WorkspaceMembersDialog({
   const [visibility, setVisibility] =
     useState<WorkspaceVisibility>(workspaceVisibility)
   const [savingVisibility, setSavingVisibility] = useState(false)
+  const [slugDraft, setSlugDraft] = useState(workspaceSlug ?? "")
+  const [savingSlug, setSavingSlug] = useState(false)
   const [inviteQuery, setInviteQuery] = useState("")
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>("editor")
   const [candidates, setCandidates] = useState<InviteCandidate[]>([])
@@ -104,6 +109,10 @@ export function WorkspaceMembersDialog({
   useEffect(() => {
     setVisibility(workspaceVisibility)
   }, [workspaceVisibility, workspaceId])
+
+  useEffect(() => {
+    setSlugDraft(workspaceSlug ?? "")
+  }, [workspaceSlug, workspaceId])
 
   async function handleVisibilityChange(next: WorkspaceVisibility | null) {
     if (!workspaceId || !next || next === visibility) return
@@ -122,12 +131,35 @@ export function WorkspaceMembersDialog({
     }
   }
 
+  const publicPath =
+    workspaceId != null
+      ? buildPublicWorkspacePath({
+          id: workspaceId,
+          slug: slugDraft.trim() || workspaceSlug,
+        })
+      : ""
   const publicPageUrl =
-    workspaceId && typeof window !== "undefined"
-      ? `${window.location.origin}/public/workspaces/${workspaceId}`
-      : workspaceId
-        ? `/public/workspaces/${workspaceId}`
-        : ""
+    publicPath && typeof window !== "undefined"
+      ? `${window.location.origin}${publicPath}`
+      : publicPath
+
+  async function handleSaveSlug() {
+    if (!workspaceId) return
+    const normalized = slugDraft.trim().toLowerCase()
+    const nextSlug = normalized === "" ? null : normalized
+    const current = workspaceSlug ?? null
+    if (nextSlug === current) return
+    setSavingSlug(true)
+    try {
+      await updateWorkspaceSettings(workspaceId, userId, { slug: nextSlug })
+      onWorkspaceUpdated?.()
+      toast.success(nextSlug ? "短链已更新" : "短链已清除")
+    } catch (error) {
+      toastError(error, "更新短链失败")
+    } finally {
+      setSavingSlug(false)
+    }
+  }
 
   const refreshMembers = useCallback(async () => {
     if (!workspaceId) return
@@ -285,6 +317,35 @@ export function WorkspaceMembersDialog({
                 ))}
               </SelectContent>
             </Select>
+            <div className="space-y-1.5 pt-1">
+              <p className="text-xs font-medium text-[#78746C]">
+                公开短链（/w/…）
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="例如 product-docs"
+                  value={slugDraft}
+                  disabled={savingSlug}
+                  onChange={(event) => setSlugDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void handleSaveSlug()
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={savingSlug}
+                  onClick={() => void handleSaveSlug()}
+                >
+                  保存
+                </Button>
+              </div>
+              <p className="text-[11px] text-[#78746C]">
+                小写字母、数字与连字符，2–48 字符；留空则使用 UUID 链接。
+              </p>
+            </div>
             {visibility === "public" && publicPageUrl ? (
               <p className="text-xs text-[#78746C]">
                 公开主页：

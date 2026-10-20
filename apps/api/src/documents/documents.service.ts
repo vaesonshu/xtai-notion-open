@@ -30,6 +30,7 @@ import type {
   PublishedArticleDetail,
 } from "./document-types"
 import { WorkspaceRepository } from "../workspaces/workspace.repository"
+import { isUuid } from "../workspaces/workspace-slug.util"
 import {
   mapWorkspaceRoleToDocumentRole,
   type PublicWorkspaceDocumentSummary,
@@ -199,9 +200,26 @@ export class DocumentsService {
     return this.listDocuments(userId, workspaceId)
   }
 
+  private async resolvePublicWorkspaceId(
+    key: string
+  ): Promise<string | null> {
+    const trimmed = key.trim()
+    if (!trimmed) return null
+    if (isUuid(trimmed)) {
+      const row = await this.workspaces.findById(trimmed)
+      return row?.id ?? null
+    }
+    const bySlug = await this.workspaces.findBySlug(trimmed.toLowerCase())
+    return bySlug?.id ?? null
+  }
+
   async listPublicWorkspaceDocuments(
-    workspaceId: string
+    workspaceKey: string
   ): Promise<PublicWorkspaceDocumentSummary[]> {
+    const workspaceId = await this.resolvePublicWorkspaceId(workspaceKey)
+    if (!workspaceId) {
+      throw new NotFoundException("知识库不存在或未公开")
+    }
     const workspace = await this.workspaces.findById(workspaceId)
     if (!workspace || workspace.visibility !== "public") {
       throw new NotFoundException("知识库不存在或未公开")
@@ -495,7 +513,7 @@ export class DocumentsService {
   private async resolveDefaultWorkspace(userId: string) {
     const existing = await this.workspaces.findDefaultForUser(userId)
     if (existing) return existing
-    return this.workspaces.create("我的知识库", userId)
+    return this.workspaces.createForUser("我的知识库", userId)
   }
 
   async renameDocument(

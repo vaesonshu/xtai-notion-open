@@ -30,6 +30,8 @@ function renderPersonalCenterShell() {
         {
           id: "ws-1",
           name: "我的知识库",
+          slug: null,
+          visibility: "private",
           memberCount: 1,
           documentCount: 2,
           role: "owner",

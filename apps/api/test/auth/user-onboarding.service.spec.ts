@@ -5,7 +5,7 @@ describe("UserOnboardingService", () => {
   it("creates a default workspace and starter document for empty accounts", async () => {
     const workspaces = {
       findDefaultForUser: vi.fn().mockResolvedValue(null),
-      create: vi.fn().mockResolvedValue({ id: "ws-1" }),
+      createForUser: vi.fn().mockResolvedValue({ id: "ws-1" }),
     }
     const documents = {
       listForUser: vi.fn().mockResolvedValue([]),
@@ -18,14 +18,14 @@ describe("UserOnboardingService", () => {
 
     await service.ensureDefaultWorkspaceAndDocument("user-1")
 
-    expect(workspaces.create).toHaveBeenCalledWith("我的知识库", "user-1")
+    expect(workspaces.createForUser).toHaveBeenCalledWith("我的知识库", "user-1")
     expect(documents.createInWorkspace).toHaveBeenCalledWith("ws-1", "user-1")
   })
 
   it("skips document creation when the user already has documents", async () => {
     const workspaces = {
       findDefaultForUser: vi.fn().mockResolvedValue({ id: "ws-1" }),
-      create: vi.fn(),
+      createForUser: vi.fn(),
     }
     const documents = {
       listForUser: vi.fn().mockResolvedValue([{ id: "doc-1" }]),
@@ -38,7 +38,7 @@ describe("UserOnboardingService", () => {
 
     await service.ensureDefaultWorkspaceAndDocument("user-1")
 
-    expect(workspaces.create).not.toHaveBeenCalled()
+    expect(workspaces.createForUser).not.toHaveBeenCalled()
     expect(documents.createInWorkspace).not.toHaveBeenCalled()
   })
 })

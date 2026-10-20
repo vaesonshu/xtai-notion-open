@@ -22,6 +22,11 @@ import {
   type WorkspaceSummary,
   type WorkspaceVisibility,
 } from "./workspace.types"
+import {
+  isUuid,
+  isWorkspaceSlug,
+  slugifyWorkspaceName,
+} from "./workspace-slug.util"
 
 @Injectable()
 export class WorkspacesService {
@@ -35,6 +40,7 @@ export class WorkspacesService {
     row: {
       id: string
       name: string
+      slug: string | null
       visibility: WorkspaceVisibility
       settings?: unknown
       createdAt: Date
@@ -47,6 +53,7 @@ export class WorkspacesService {
     return {
       id: row.id,
       name: row.name,
+      slug: row.slug,
       visibility: row.visibility,
       memberCount: row.memberCount,
       documentCount: row.documentCount,
@@ -96,7 +103,10 @@ export class WorkspacesService {
     if (!trimmed) {
       throw new ConflictException("知识库名称不能为空")
     }
-    const row = await this.workspaces.create(trimmed, userId)
+    const slug = await this.workspaces.allocateUniqueSlug(
+      slugifyWorkspaceName(trimmed)
+    )
+    const row = await this.workspaces.create(trimmed, userId, slug)
     return this.toSummary({
       ...row,
       role: "owner",
@@ -108,7 +118,11 @@ export class WorkspacesService {
   async updateWorkspace(
     workspaceId: string,
     userId: string,
-    patch: { name?: string; visibility?: WorkspaceVisibility }
+    patch: {
+      name?: string
+      visibility?: WorkspaceVisibility
+      slug?: string | null
+    }
   ): Promise<WorkspaceSummary> {
     await this.assertCanManage(
       await this.workspaces.getMemberRole(workspaceId, userId)
@@ -138,6 +152,25 @@ export class WorkspacesService {
         )) ?? row
     }
 
+    if (patch.slug !== undefined) {
+      const normalized =
+        patch.slug === null || patch.slug.trim() === ""
+          ? null
+          : patch.slug.trim().toLowerCase()
+      if (normalized !== null && !isWorkspaceSlug(normalized)) {
+        throw new ConflictException(
+          "短链仅支持小写字母、数字与连字符（2–48 字符）"
+        )
+      }
+      if (
+        normalized !== null &&
+        (await this.workspaces.isSlugTaken(normalized, workspaceId))
+      ) {
+        throw new ConflictException("该短链已被占用")
+      }
+      row = (await this.workspaces.updateSlug(workspaceId, normalized)) ?? row
+    }
+
     const role = await this.workspaces.getMemberRole(workspaceId, userId)
     const [memberCount, documentCount] = await Promise.all([
       this.workspaces.countMembers(workspaceId),
@@ -151,10 +184,23 @@ export class WorkspacesService {
     })
   }
 
+  async resolveWorkspaceId(key: string): Promise<string | null> {
+    const trimmed = key.trim()
+    if (!trimmed) return null
+    if (isUuid(trimmed)) {
+      const row = await this.workspaces.findById(trimmed)
+      return row?.id ?? null
+    }
+    const bySlug = await this.workspaces.findBySlug(trimmed.toLowerCase())
+    return bySlug?.id ?? null
+  }
+
   /** 对外公开页：非 public 库统一 404，避免泄露私有库存在。 */
-  async getPublicWorkspace(
-    workspaceId: string
-  ): Promise<PublicWorkspaceView> {
+  async getPublicWorkspace(key: string): Promise<PublicWorkspaceView> {
+    const workspaceId = await this.resolveWorkspaceId(key)
+    if (!workspaceId) {
+      throw new NotFoundException("知识库不存在或未公开")
+    }
     const row = await this.workspaces.findById(workspaceId)
     if (!row || row.visibility !== "public") {
       throw new NotFoundException("知识库不存在或未公开")
@@ -164,6 +210,7 @@ export class WorkspacesService {
     return {
       id: row.id,
       name: row.name,
+      slug: row.slug,
       visibility: "public",
       publishedDocumentCount,
     }

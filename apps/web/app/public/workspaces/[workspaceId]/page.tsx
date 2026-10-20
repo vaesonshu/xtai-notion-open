@@ -6,5 +6,5 @@ export default async function Page({
   params: Promise<{ workspaceId: string }>
 }) {
   const { workspaceId } = await params
-  return <PublicWorkspacePage workspaceId={workspaceId} />
+  return <PublicWorkspacePage workspaceKey={workspaceId} />
 }
