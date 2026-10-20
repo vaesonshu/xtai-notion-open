@@ -197,10 +197,12 @@ export function WorkspaceListPage({ userId }: { userId: string }) {
         }}
         workspaceId={membersWorkspace?.id ?? null}
         workspaceName={membersWorkspace?.name ?? "知识库"}
+        workspaceVisibility={membersWorkspace?.visibility ?? "private"}
         currentUserId={userId}
         currentUserRole={membersWorkspace?.role}
         userId={userId}
         onMembersChanged={() => void loadWorkspaces()}
+        onWorkspaceUpdated={() => void loadWorkspaces()}
       />
     </main>
   )

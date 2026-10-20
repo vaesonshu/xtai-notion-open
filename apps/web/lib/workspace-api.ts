@@ -3,15 +3,23 @@ import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer"
 
+export type WorkspaceVisibility = "private" | "public"
+
 export type WorkspaceSummary = {
   id: string
   name: string
+  visibility: WorkspaceVisibility
   memberCount: number
   documentCount: number
   role: WorkspaceRole
   aiSettings: WorkspaceAiSettings
   createdAt: string
   updatedAt: string
+}
+
+export const WORKSPACE_VISIBILITY_LABELS: Record<WorkspaceVisibility, string> = {
+  private: "私有",
+  public: "公开",
 }
 
 export const WORKSPACE_ROLE_LABELS: Record<WorkspaceRole, string> = {
@@ -64,6 +72,19 @@ export async function renameWorkspace(
     method: "PATCH",
     userId,
     json: { name },
+  })
+}
+
+export async function updateWorkspaceSettings(
+  workspaceId: string,
+  userId: string,
+  patch: { name?: string; visibility?: WorkspaceVisibility }
+): Promise<WorkspaceSummary> {
+  return apiRequestJson<WorkspaceSummary>({
+    path: `/workspaces/${workspaceId}`,
+    method: "PATCH",
+    userId,
+    json: patch,
   })
 }
 

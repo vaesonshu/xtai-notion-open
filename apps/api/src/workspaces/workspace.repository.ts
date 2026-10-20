@@ -3,9 +3,11 @@ import type { Prisma, Workspace } from "../generated/prisma/client"
 import { PrismaService } from "../database/prisma.module"
 import {
   isWorkspaceRole,
+  isWorkspaceVisibility,
   type WorkspaceListRow,
   type WorkspaceRole,
   type WorkspaceRow,
+  type WorkspaceVisibility,
 } from "./workspace.types"
 
 @Injectable()
@@ -13,9 +15,13 @@ export class WorkspaceRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   private toRow(workspace: Workspace): WorkspaceRow {
+    const visibility = isWorkspaceVisibility(workspace.visibility)
+      ? workspace.visibility
+      : "private"
     return {
       id: workspace.id,
       name: workspace.name,
+      visibility,
       settings: workspace.settings,
       createdBy: workspace.createdBy,
       createdAt: workspace.createdAt,
@@ -57,6 +63,17 @@ export class WorkspaceRepository {
     const workspace = await this.prisma.client.workspace.update({
       where: { id: workspaceId },
       data: { name, updatedAt: new Date() },
+    })
+    return this.toRow(workspace)
+  }
+
+  async updateVisibility(
+    workspaceId: string,
+    visibility: WorkspaceVisibility
+  ): Promise<WorkspaceRow | null> {
+    const workspace = await this.prisma.client.workspace.update({
+      where: { id: workspaceId },
+      data: { visibility, updatedAt: new Date() },
     })
     return this.toRow(workspace)
   }
@@ -196,6 +213,16 @@ export class WorkspaceRepository {
   async countActiveDocuments(workspaceId: string): Promise<number> {
     return this.prisma.client.document.count({
       where: { workspaceId, deletedAt: null },
+    })
+  }
+
+  async countPublishedDocuments(workspaceId: string): Promise<number> {
+    return this.prisma.client.document.count({
+      where: {
+        workspaceId,
+        deletedAt: null,
+        publicationStatus: "published",
+      },
     })
   }
 

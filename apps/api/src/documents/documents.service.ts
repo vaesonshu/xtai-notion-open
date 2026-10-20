@@ -30,7 +30,10 @@ import type {
   PublishedArticleDetail,
 } from "./document-types"
 import { WorkspaceRepository } from "../workspaces/workspace.repository"
-import { mapWorkspaceRoleToDocumentRole } from "../workspaces/workspace.types"
+import {
+  mapWorkspaceRoleToDocumentRole,
+  type PublicWorkspaceDocumentSummary,
+} from "../workspaces/workspace.types"
 import { DocumentsRepository } from "./documents.repository"
 import { ShareLinkRepository } from "./share-link.repository"
 
@@ -94,7 +97,18 @@ export class DocumentsService {
       return mapWorkspaceRoleToDocumentRole(workspaceRole)
     }
     // 兼容迁移前写入 document_member 的历史数据（P2 后新分享不再写该表）
-    return this.documents.getMemberRole(documentId, userId)
+    const legacyRole = await this.documents.getMemberRole(documentId, userId)
+    if (legacyRole) {
+      return legacyRole
+    }
+    const workspace = await this.workspaces.findById(row.workspace_id)
+    if (
+      workspace?.visibility === "public" &&
+      row.publication_status === "published"
+    ) {
+      return "viewer"
+    }
+    return null
   }
 
   async assertCanRead(
@@ -183,6 +197,27 @@ export class DocumentsService {
       throw new ForbiddenException("不是该知识库成员")
     }
     return this.listDocuments(userId, workspaceId)
+  }
+
+  async listPublicWorkspaceDocuments(
+    workspaceId: string
+  ): Promise<PublicWorkspaceDocumentSummary[]> {
+    const workspace = await this.workspaces.findById(workspaceId)
+    if (!workspace || workspace.visibility !== "public") {
+      throw new NotFoundException("知识库不存在或未公开")
+    }
+    const rows = await this.documents.listPublishedInWorkspace(workspaceId)
+    return rows.flatMap((row) =>
+      row.published_at
+        ? [
+            {
+              id: row.id,
+              title: row.title,
+              publishedAt: row.published_at.toISOString(),
+            },
+          ]
+        : []
+    )
   }
 
   async listTrashedDocuments(userId: string): Promise<DocumentMetadata[]> {

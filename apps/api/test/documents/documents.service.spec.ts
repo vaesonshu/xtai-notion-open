@@ -14,6 +14,8 @@ import type { WorkspaceRepository } from "@api/workspaces/workspace.repository"
 const defaultWorkspace = {
   id: "ws-1",
   name: "我的知识库",
+  visibility: "private" as const,
+  settings: {},
   createdBy: "user-1",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -29,6 +31,7 @@ function createRepo(
       workspace_id: "ws-1",
       title: "Demo",
       depth: 1,
+      publication_status: "draft",
       created_at: new Date("2026-01-01T00:00:00.000Z"),
       updated_at: new Date("2026-01-02T00:00:00.000Z"),
     }),
@@ -42,6 +45,7 @@ function createWorkspaces(
 ): WorkspaceRepository {
   return {
     getMemberRole: vi.fn().mockResolvedValue("owner"),
+    findById: vi.fn().mockResolvedValue(defaultWorkspace),
     findDefaultForUser: vi.fn().mockResolvedValue(defaultWorkspace),
     create: vi.fn().mockResolvedValue(defaultWorkspace),
     ...overrides,
@@ -104,6 +108,35 @@ describe("DocumentsService", () => {
     await expect(
       service.assertCanRead("doc-1", "stranger")
     ).rejects.toBeInstanceOf(ForbiddenException)
+  })
+
+  it("assertCanRead grants viewer on public workspace published documents", async () => {
+    const repo = createRepo({
+      getMemberRole: vi.fn().mockResolvedValue(null),
+      findById: vi.fn().mockResolvedValue({
+        id: "doc-1",
+        workspace_id: "ws-1",
+        title: "Published",
+        depth: 1,
+        publication_status: "published",
+        created_at: new Date("2026-01-01T00:00:00.000Z"),
+        updated_at: new Date("2026-01-02T00:00:00.000Z"),
+      }),
+    })
+    const service = makeService(
+      repo,
+      createWorkspaces({
+        getMemberRole: vi.fn().mockResolvedValue(null),
+        findById: vi.fn().mockResolvedValue({
+          ...defaultWorkspace,
+          visibility: "public",
+        }),
+      })
+    )
+
+    await expect(service.assertCanRead("doc-1", "stranger")).resolves.toBe(
+      "viewer"
+    )
   })
 
   it("assertCanWrite allows owner and editor", async () => {

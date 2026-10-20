@@ -11,6 +11,7 @@ import { WorkspacesService } from "@api/workspaces/workspaces.service"
 const defaultWorkspace = {
   id: "ws-1",
   name: "产品知识库",
+  visibility: "private" as const,
   settings: {},
   createdBy: "owner-user",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -32,6 +33,11 @@ function createWorkspaces(
       ...defaultWorkspace,
       name: "新名字",
     }),
+    updateVisibility: vi.fn().mockResolvedValue({
+      ...defaultWorkspace,
+      visibility: "public",
+    }),
+    countPublishedDocuments: vi.fn().mockResolvedValue(0),
     listMembers: vi.fn().mockResolvedValue([
       {
         userId: "owner-user",
@@ -87,7 +93,7 @@ describe("WorkspacesService", () => {
     const service = makeService(workspaces)
 
     await expect(
-      service.renameWorkspace("ws-1", "viewer-user", "新名字")
+      service.updateWorkspace("ws-1", "viewer-user", { name: "新名字" })
     ).rejects.toMatchObject({ status: 403 })
   })
 

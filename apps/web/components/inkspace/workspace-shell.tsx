@@ -571,10 +571,12 @@ export function WorkspaceShell({
           onOpenChange={setMembersOpen}
           workspaceId={currentWorkspaceId}
           workspaceName={currentWorkspace?.name ?? "知识库"}
+          workspaceVisibility={currentWorkspace?.visibility ?? "private"}
           currentUserId={user.id}
           currentUserRole={currentWorkspace?.role}
           userId={user.id}
           onMembersChanged={() => void refreshWorkspaces()}
+          onWorkspaceUpdated={() => void refreshWorkspaces()}
         />
         <DocumentSearchDialog
           open={searchOpen}

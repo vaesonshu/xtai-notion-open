@@ -14,10 +14,13 @@ import {
 } from "./workspace-ai.types"
 import {
   isWorkspaceRole,
+  isWorkspaceVisibility,
+  type PublicWorkspaceView,
   type WorkspaceInviteCandidate,
   type WorkspaceMemberView,
   type WorkspaceRole,
   type WorkspaceSummary,
+  type WorkspaceVisibility,
 } from "./workspace.types"
 
 @Injectable()
@@ -32,6 +35,7 @@ export class WorkspacesService {
     row: {
       id: string
       name: string
+      visibility: WorkspaceVisibility
       settings?: unknown
       createdAt: Date
       updatedAt: Date
@@ -43,6 +47,7 @@ export class WorkspacesService {
     return {
       id: row.id,
       name: row.name,
+      visibility: row.visibility,
       memberCount: row.memberCount,
       documentCount: row.documentCount,
       role: row.role,
@@ -100,22 +105,39 @@ export class WorkspacesService {
     })
   }
 
-  async renameWorkspace(
+  async updateWorkspace(
     workspaceId: string,
     userId: string,
-    name: string
+    patch: { name?: string; visibility?: WorkspaceVisibility }
   ): Promise<WorkspaceSummary> {
     await this.assertCanManage(
       await this.workspaces.getMemberRole(workspaceId, userId)
     )
-    const trimmed = name.trim()
-    if (!trimmed) {
-      throw new ConflictException("知识库名称不能为空")
-    }
-    const row = await this.workspaces.rename(workspaceId, trimmed)
+    let row = await this.workspaces.findById(workspaceId)
     if (!row) {
       throw new NotFoundException("知识库不存在")
     }
+
+    if (patch.name !== undefined) {
+      const trimmed = patch.name.trim()
+      if (!trimmed) {
+        throw new ConflictException("知识库名称不能为空")
+      }
+      row =
+        (await this.workspaces.rename(workspaceId, trimmed)) ?? row
+    }
+
+    if (patch.visibility !== undefined) {
+      if (!isWorkspaceVisibility(patch.visibility)) {
+        throw new ConflictException("无效的知识库可见性")
+      }
+      row =
+        (await this.workspaces.updateVisibility(
+          workspaceId,
+          patch.visibility
+        )) ?? row
+    }
+
     const role = await this.workspaces.getMemberRole(workspaceId, userId)
     const [memberCount, documentCount] = await Promise.all([
       this.workspaces.countMembers(workspaceId),
@@ -127,6 +149,24 @@ export class WorkspacesService {
       memberCount,
       documentCount,
     })
+  }
+
+  /** 对外公开页：非 public 库统一 404，避免泄露私有库存在。 */
+  async getPublicWorkspace(
+    workspaceId: string
+  ): Promise<PublicWorkspaceView> {
+    const row = await this.workspaces.findById(workspaceId)
+    if (!row || row.visibility !== "public") {
+      throw new NotFoundException("知识库不存在或未公开")
+    }
+    const publishedDocumentCount =
+      await this.workspaces.countPublishedDocuments(workspaceId)
+    return {
+      id: row.id,
+      name: row.name,
+      visibility: "public",
+      publishedDocumentCount,
+    }
   }
 
   async listMembers(

@@ -2,6 +2,14 @@ import type { WorkspaceAiSettings } from "./workspace-ai.types"
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer"
 
+export type WorkspaceVisibility = "private" | "public"
+
+export function isWorkspaceVisibility(
+  value: unknown
+): value is WorkspaceVisibility {
+  return value === "private" || value === "public"
+}
+
 export const WORKSPACE_ROLES: readonly WorkspaceRole[] = [
   "owner",
   "admin",
@@ -21,10 +29,24 @@ export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
 export interface WorkspaceRow {
   id: string
   name: string
+  visibility: WorkspaceVisibility
   settings: unknown
   createdBy: string | null
   createdAt: Date
   updatedAt: Date
+}
+
+export interface PublicWorkspaceView {
+  id: string
+  name: string
+  visibility: "public"
+  publishedDocumentCount: number
+}
+
+export interface PublicWorkspaceDocumentSummary {
+  id: string
+  title: string
+  publishedAt: string
 }
 
 export interface WorkspaceListRow extends WorkspaceRow {
@@ -36,6 +58,7 @@ export interface WorkspaceListRow extends WorkspaceRow {
 export interface WorkspaceSummary {
   id: string
   name: string
+  visibility: WorkspaceVisibility
   memberCount: number
   documentCount: number
   role: WorkspaceRole

@@ -19,6 +19,10 @@ import {
 } from "@workspace/ui/components/select"
 import { apiRequest, readApiErrorMessage } from "@/lib/api-client"
 import { toast, toastError } from "@/lib/toast"
+import {
+  updateWorkspaceSettings,
+  type WorkspaceVisibility,
+} from "@/lib/workspace-api"
 
 export type WorkspaceRole = "owner" | "admin" | "editor" | "viewer"
 
@@ -54,33 +58,76 @@ function canManageMembers(role: WorkspaceRole | undefined): boolean {
   return role === "owner" || role === "admin"
 }
 
+const VISIBILITY_OPTIONS: Array<{
+  value: WorkspaceVisibility
+  label: string
+}> = [
+  { value: "private", label: "私有（仅成员）" },
+  { value: "public", label: "公开（仅已发布文档）" },
+]
+
 export function WorkspaceMembersDialog({
   open,
   onOpenChange,
   workspaceId,
   workspaceName,
+  workspaceVisibility = "private",
   currentUserId,
   currentUserRole,
   userId,
   onMembersChanged,
+  onWorkspaceUpdated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   workspaceId: string | null
   workspaceName: string
+  workspaceVisibility?: WorkspaceVisibility
   currentUserId: string
   currentUserRole?: WorkspaceRole
   userId: string
   onMembersChanged?: () => void
+  onWorkspaceUpdated?: () => void
 }) {
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [loading, setLoading] = useState(false)
+  const [visibility, setVisibility] =
+    useState<WorkspaceVisibility>(workspaceVisibility)
+  const [savingVisibility, setSavingVisibility] = useState(false)
   const [inviteQuery, setInviteQuery] = useState("")
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>("editor")
   const [candidates, setCandidates] = useState<InviteCandidate[]>([])
   const [searching, setSearching] = useState(false)
   const [inviting, setInviting] = useState(false)
   const manageable = canManageMembers(currentUserRole)
+
+  useEffect(() => {
+    setVisibility(workspaceVisibility)
+  }, [workspaceVisibility, workspaceId])
+
+  async function handleVisibilityChange(next: WorkspaceVisibility | null) {
+    if (!workspaceId || !next || next === visibility) return
+    setSavingVisibility(true)
+    try {
+      await updateWorkspaceSettings(workspaceId, userId, {
+        visibility: next,
+      })
+      setVisibility(next)
+      onWorkspaceUpdated?.()
+      toast.success(next === "public" ? "知识库已设为公开" : "知识库已设为私有")
+    } catch (error) {
+      toastError(error, "更新可见性失败")
+    } finally {
+      setSavingVisibility(false)
+    }
+  }
+
+  const publicPageUrl =
+    workspaceId && typeof window !== "undefined"
+      ? `${window.location.origin}/public/workspaces/${workspaceId}`
+      : workspaceId
+        ? `/public/workspaces/${workspaceId}`
+        : ""
 
   const refreshMembers = useCallback(async () => {
     if (!workspaceId) return
@@ -91,9 +138,7 @@ export function WorkspaceMembersDialog({
         userId,
       })
       if (!response.ok) {
-        throw new Error(
-          await readApiErrorMessage(response, "加载成员列表失败")
-        )
+        throw new Error(await readApiErrorMessage(response, "加载成员列表失败"))
       }
       const items = (await response.json()) as WorkspaceMember[]
       setMembers(items)
@@ -220,6 +265,44 @@ export function WorkspaceMembersDialog({
 
         {manageable ? (
           <div className="space-y-2 border-b border-[#ECEAE4] pb-4">
+            <p className="text-xs font-medium text-[#78746C]">可见性</p>
+            <Select
+              items={VISIBILITY_OPTIONS}
+              value={visibility}
+              disabled={savingVisibility}
+              onValueChange={(value) =>
+                void handleVisibilityChange(value as WorkspaceVisibility)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VISIBILITY_OPTIONS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {visibility === "public" && publicPageUrl ? (
+              <p className="text-xs text-[#78746C]">
+                公开主页：
+                <a
+                  href={publicPageUrl}
+                  className="ml-1 text-[#24866B] underline-offset-2 hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {publicPageUrl}
+                </a>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {manageable ? (
+          <div className="space-y-2 border-b border-[#ECEAE4] pb-4">
             <p className="text-xs font-medium text-[#78746C]">邀请成员</p>
             <div className="flex gap-2">
               <Input
@@ -235,9 +318,7 @@ export function WorkspaceMembersDialog({
               <Select
                 items={ASSIGNABLE_ROLES}
                 value={inviteRole}
-                onValueChange={(value) =>
-                  setInviteRole(value as WorkspaceRole)
-                }
+                onValueChange={(value) => setInviteRole(value as WorkspaceRole)}
               >
                 <SelectTrigger size="sm" className="w-[100px] shrink-0">
                   <SelectValue />
@@ -300,9 +381,7 @@ export function WorkspaceMembersDialog({
 
         <div className="max-h-[50vh] space-y-1 overflow-y-auto">
           {loading ? (
-            <p className="py-4 text-center text-sm text-[#78746C]">
-              加载成员…
-            </p>
+            <p className="py-4 text-center text-sm text-[#78746C]">加载成员…</p>
           ) : members.length === 0 ? (
             <p className="py-4 text-center text-sm text-[#78746C]">暂无成员</p>
           ) : (

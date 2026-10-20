@@ -23,7 +23,12 @@ import type {
   WorkspaceMemberView,
   WorkspaceSummary,
 } from "./workspace.types"
-import { isWorkspaceRole, type WorkspaceRole } from "./workspace.types"
+import {
+  isWorkspaceRole,
+  isWorkspaceVisibility,
+  type WorkspaceRole,
+  type WorkspaceVisibility,
+} from "./workspace.types"
 
 @Controller("workspaces")
 @UseGuards(AuthenticatedIdentityGuard)
@@ -76,16 +81,21 @@ export class WorkspacesController {
   }
 
   @Patch(":workspaceId")
-  renameWorkspace(
+  updateWorkspace(
     @Param("workspaceId") workspaceId: string,
     @CurrentUser() user: DevUser,
-    @Body() body: { name: string }
+    @Body() body: { name?: string; visibility?: WorkspaceVisibility }
   ): Promise<WorkspaceSummary> {
-    return this.workspaces.renameWorkspace(
-      workspaceId,
-      user.id,
-      body.name ?? ""
-    )
+    if (
+      body.visibility !== undefined &&
+      !isWorkspaceVisibility(body.visibility)
+    ) {
+      throw new BadRequestException("无效的知识库可见性")
+    }
+    return this.workspaces.updateWorkspace(workspaceId, user.id, {
+      name: body.name,
+      visibility: body.visibility,
+    })
   }
 
   @Get(":workspaceId/members")

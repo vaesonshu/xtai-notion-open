@@ -149,6 +149,18 @@ export class DocumentsRepository {
     }))
   }
 
+  async listPublishedInWorkspace(workspaceId: string): Promise<DocumentRow[]> {
+    const documents = await this.prisma.client.document.findMany({
+      where: {
+        workspaceId,
+        deletedAt: null,
+        publicationStatus: "published",
+      },
+      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    })
+    return documents.map((document) => this.toDocumentRow(document))
+  }
+
   private mapWorkspaceMemberRole(role: string | undefined): DocumentRole {
     if (role === "owner") return "owner"
     if (role === "viewer") return "viewer"
