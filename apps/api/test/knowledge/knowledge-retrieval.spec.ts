@@ -158,13 +158,14 @@ describe("buildKnowledgePrompt", () => {
           sourceTitle: "手册",
           heading: "概述",
           page: null,
-          content: "概述正文",
+          // 摘录不含「概述」，避免定位行漏标题时仍靠正文混过断言。
+          content: "产品范围与适用条款",
         }),
       ],
       LIBRARY_ID
     )
 
-    expect(buildKnowledgePrompt(hits)).toContain("概述")
+    expect(buildKnowledgePrompt(hits)).toContain("（概述）")
   })
 
   it("caps the assembled prompt at 12000 characters", () => {
