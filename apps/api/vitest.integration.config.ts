@@ -4,6 +4,8 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
   resolve: {
     alias: {
+      // 与单元测试配置一致，否则 @api/* 无法解析。
+      "@api": path.resolve(__dirname, "src"),
       "@excalidraw/excalidraw": path.resolve(
         __dirname,
         "../../packages/editor-core/test/mocks/excalidraw.ts"
