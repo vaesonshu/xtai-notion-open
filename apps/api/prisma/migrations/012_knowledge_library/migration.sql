@@ -1,5 +1,5 @@
 -- 资料库向量检索：启用 pgvector，并建立库、成员、来源、分块四张表。
--- 第一期不建全局 HNSW，查询先按 library_id 过滤再做精确余弦距离。
+-- 第一期不做近似向量索引，查询先按 library_id 过滤再做精确余弦距离。
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
