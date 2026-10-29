@@ -13,6 +13,7 @@ import { HealthController } from "./health/health.controller"
 import { ImageUploadModule } from "./images/image-upload.module"
 import { AiModule } from "./ai/ai.module"
 import { AdminModule } from "./admin/admin.module"
+import { KnowledgeModule } from "./knowledge/knowledge.module"
 import { WorkspacesModule } from "./workspaces/workspaces.module"
 
 @Module({
@@ -29,6 +30,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module"
     ImageUploadModule,
     AiModule,
     AdminModule,
+    KnowledgeModule,
   ],
   providers: [
     // Register SessionInitGuard globally so every request will attempt to

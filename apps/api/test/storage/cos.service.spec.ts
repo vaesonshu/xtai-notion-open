@@ -96,6 +96,25 @@ describe("CosService", () => {
     })
   })
 
+  it("deletes an object through the server-side COS client", async () => {
+    const deleteObject = vi.fn().mockResolvedValue({})
+    const service = new CosService(
+      { ...environment, COS_PUBLIC_BASE_URL: undefined },
+      { getAuthorization: () => "q-sign=signature" },
+      undefined,
+      { putObject: vi.fn(), deleteObject }
+    )
+
+    await expect(
+      service.deleteObject("knowledge/lib-1/src-1/notes.txt")
+    ).resolves.toBeUndefined()
+    expect(deleteObject).toHaveBeenCalledWith({
+      Bucket: environment.COS_BUCKET,
+      Region: environment.COS_REGION,
+      Key: "knowledge/lib-1/src-1/notes.txt",
+    })
+  })
+
   it("does not expose secrets in errors or logs", () => {
     const logger = { error: vi.fn() }
     const getAuthorization = vi.fn(() => {

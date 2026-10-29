@@ -19,6 +19,12 @@ type CosSigner = {
 
 type CosLogger = Pick<Logger, "error">
 
+type CosObjectLocation = {
+  Bucket: string
+  Region: string
+  Key: string
+}
+
 type CosUploader = {
   putObject: (options: {
     Bucket: string
@@ -28,6 +34,10 @@ type CosUploader = {
     ContentLength: number
     ContentType: string
   }) => Promise<unknown>
+  deleteObject?: (options: CosObjectLocation) => Promise<unknown>
+  getObject?: (
+    options: CosObjectLocation
+  ) => Promise<{ Body?: Buffer | string }>
 }
 
 const PRESIGN_EXPIRES_SECONDS = 300
@@ -93,6 +103,16 @@ export class CosService {
             SecretId: requireValue(this.source, "COS_SECRET_ID"),
             SecretKey: requireValue(this.source, "COS_SECRET_KEY"),
           }).putObject(options),
+        deleteObject: (options) =>
+          new COS({
+            SecretId: requireValue(this.source, "COS_SECRET_ID"),
+            SecretKey: requireValue(this.source, "COS_SECRET_KEY"),
+          }).deleteObject(options),
+        getObject: (options) =>
+          new COS({
+            SecretId: requireValue(this.source, "COS_SECRET_ID"),
+            SecretKey: requireValue(this.source, "COS_SECRET_KEY"),
+          }).getObject(options),
       } satisfies CosUploader)
   }
 
@@ -160,8 +180,7 @@ export class CosService {
         const objectPath = parsed.pathname.replace(/\/+$/, "")
         if (
           parsed.host === base.host &&
-          (objectPath === basePath ||
-            objectPath.startsWith(`${basePath}/`))
+          (objectPath === basePath || objectPath.startsWith(`${basePath}/`))
         ) {
           const objectKey = objectPath
             .slice(basePath.length)
@@ -206,6 +225,52 @@ export class CosService {
       }
     } catch (error) {
       this.logger.error("COS object upload failed")
+      throw error
+    }
+  }
+
+  async deleteObject(objectKey: string): Promise<void> {
+    // Bucket/Region 来自环境读取；日志只写固定句，避免把密钥打进错误输出。
+    const bucket = requireValue(this.source, "COS_BUCKET")
+    const region = requireValue(this.source, "COS_REGION")
+    const key = objectKey.replace(/^\/+/, "")
+    if (!this.uploader.deleteObject) {
+      throw new Error("COS deleteObject is not configured")
+    }
+    try {
+      await this.uploader.deleteObject({
+        Bucket: bucket,
+        Region: region,
+        Key: key,
+      })
+    } catch (error) {
+      this.logger.error("COS object delete failed")
+      throw error
+    }
+  }
+
+  async getObject(objectKey: string): Promise<Buffer> {
+    const bucket = requireValue(this.source, "COS_BUCKET")
+    const region = requireValue(this.source, "COS_REGION")
+    const key = objectKey.replace(/^\/+/, "")
+    if (!this.uploader.getObject) {
+      throw new Error("COS getObject is not configured")
+    }
+    try {
+      const result = await this.uploader.getObject({
+        Bucket: bucket,
+        Region: region,
+        Key: key,
+      })
+      if (Buffer.isBuffer(result.Body)) {
+        return result.Body
+      }
+      if (typeof result.Body === "string") {
+        return Buffer.from(result.Body)
+      }
+      throw new Error("COS object body is empty")
+    } catch (error) {
+      this.logger.error("COS object download failed")
       throw error
     }
   }

@@ -41,6 +41,7 @@ export type KnowledgeQaEvent =
 export type KnowledgeStreamChat = (input: {
   system: string
   messages: { role: string; content: string }[]
+  llm?: unknown
 }) => AsyncIterable<string>
 
 export type KnowledgeQaDeps = {
@@ -110,7 +111,8 @@ export class KnowledgeQaService {
     messages: KnowledgeChatMessage[]
   ): AsyncIterable<KnowledgeQaEvent> {
     const membership = await this.requireMemberAndEmbedding(userId, libraryId)
-    await this.deps.requireLlmConfig(userId)
+    // streamChat 拿不到 userId，把校验得到的 llm 传下去以免改用环境密钥。
+    const llm = await this.deps.requireLlmConfig(userId)
     assertMessages(messages)
     const question = messages[messages.length - 1]?.content ?? ""
     const retrieved = await this.search(
@@ -134,6 +136,7 @@ export class KnowledgeQaService {
     for await (const content of this.deps.streamChat({
       system: KNOWLEDGE_QA_SYSTEM_PROMPT,
       messages: [{ role: "user", content: context }, ...messages],
+      llm,
     })) {
       yield { type: "token", content }
     }
