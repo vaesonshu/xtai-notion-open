@@ -169,6 +169,20 @@ export class KnowledgeLibraryService {
     await this.libraries.removeMember(libraryId, memberUserId)
   }
 
+  /**
+   * editor 不足用「查看者无法修改资料库」；更高门槛沿用 Task 6 管理文案。
+   * 库不存在 / 非成员仍走 requireMembership 的 404 / 403。
+   */
+  async requireRole(userId: string, libraryId: string, minimum: LibraryRole) {
+    const membership = await this.libraries.requireMembership(libraryId, userId)
+    if (!roleAtLeast(membership.role, minimum)) {
+      throw new ForbiddenException(
+        minimum === "editor" ? "查看者无法修改资料库" : "无权管理该资料库"
+      )
+    }
+    return membership
+  }
+
   private assertLibraryName(name: string): string {
     const trimmed = name.trim()
     if (!trimmed) {
@@ -187,19 +201,11 @@ export class KnowledgeLibraryService {
   }
 
   private async requireOwner(userId: string, libraryId: string) {
-    const membership = await this.libraries.requireMembership(libraryId, userId)
-    if (!roleAtLeast(membership.role, "owner")) {
-      throw new ForbiddenException("无权管理该资料库")
-    }
-    return membership
+    return this.requireRole(userId, libraryId, "owner")
   }
 
   private async requireAdmin(userId: string, libraryId: string) {
-    const membership = await this.libraries.requireMembership(libraryId, userId)
-    if (!roleAtLeast(membership.role, "admin")) {
-      throw new ForbiddenException("无权管理该资料库")
-    }
-    return membership
+    return this.requireRole(userId, libraryId, "admin")
   }
 
   private async requireExistingMember(
