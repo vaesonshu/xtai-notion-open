@@ -13,6 +13,7 @@ import {
   documentToPlainText,
   collectMentionIds,
   createBlockSchemaYDoc,
+  blocksToMarkdown,
   markdownToBlocks,
 } from "@xtai-notion/editor-core/server"
 import type { Block } from "@xtai-notion/editor-core/server"
@@ -159,6 +160,18 @@ export class DocumentsService {
   ): Promise<Block[]> {
     await this.assertCanRead(documentId, userId)
     return this.loadDocumentBlocks(documentId)
+  }
+
+  async exportMarkdown(documentId: string, userId: string): Promise<string> {
+    // 先做阅读鉴权再加载 Yjs，避免未授权请求打到协作持久层。
+    await this.assertCanRead(documentId, userId)
+    const markdown = blocksToMarkdown(
+      await this.loadDocumentBlocks(documentId)
+    ).trim()
+    if (!markdown) {
+      throw new BadRequestException("文档没有可索引的正文")
+    }
+    return markdown
   }
 
   async saveDocumentContent(
