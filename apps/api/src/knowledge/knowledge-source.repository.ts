@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common"
 import { PrismaService } from "../database/prisma.module"
+import { type KnowledgeHitRow } from "./knowledge-retrieval"
 import { type EmbeddingSettings, type SourceStatus } from "./knowledge.types"
 
 export type KnowledgeSourceKind = "file" | "document_snapshot"
@@ -80,6 +81,21 @@ export type KnowledgeIngestStore = {
   ): Promise<number | null>
 }
 
+export type KnowledgeNearestQuery = {
+  libraryId: string
+  embeddingRevision: number
+  embedding: number[]
+}
+
+/** 问答检索只依赖这组方法，距离阈值仍由 selectKnowledgeHits 过滤。 */
+export type KnowledgeRetrievalStore = {
+  findNearestChunks(input: KnowledgeNearestQuery): Promise<KnowledgeHitRow[]>
+  countPendingSources(
+    libraryId: string,
+    embeddingRevision: number
+  ): Promise<number>
+}
+
 export const CLAIM_NEXT_SQL = `UPDATE knowledge_source
 SET status = 'processing', locked_at = now()
 WHERE id = (
@@ -90,6 +106,39 @@ WHERE id = (
   LIMIT 1
 )
 RETURNING *`
+
+// 距离过滤留在 selectKnowledgeHits，这里只按库、当前代和版本取最近 6 条。
+export const FIND_NEAREST_CHUNKS_SQL = `SELECT
+  chunk.library_id,
+  chunk.source_id,
+  source.title AS source_title,
+  chunk.generation,
+  source.active_generation,
+  chunk.embedding_revision,
+  chunk.content,
+  chunk.heading,
+  chunk.page,
+  (embedding <=> $3::vector) AS distance
+FROM knowledge_chunk AS chunk
+INNER JOIN knowledge_source AS source ON source.id = chunk.source_id
+WHERE chunk.library_id = $1
+  AND generation = active_generation
+  AND active_generation > 0
+  AND embedding_revision = $2
+ORDER BY embedding <=> $3
+LIMIT 6`
+
+const COUNT_PENDING_SOURCES_SQL = `SELECT COUNT(*)::int AS count
+FROM knowledge_source AS source
+WHERE source.library_id = $1
+AND NOT EXISTS (
+  SELECT 1
+  FROM knowledge_chunk AS chunk
+  WHERE chunk.source_id = source.id
+    AND chunk.generation = source.active_generation
+    AND source.active_generation > 0
+    AND chunk.embedding_revision = $2
+)`
 
 const SOURCE_STATUSES = new Set<SourceStatus>([
   "queued",
@@ -184,6 +233,30 @@ function toRecord(row: {
   }
 }
 
+function toHitRow(
+  row: Record<string, unknown>,
+  libraryRevision: number
+): KnowledgeHitRow {
+  const page = pick(row, "page")
+  return {
+    distance: Number(pick(row, "distance") ?? 0),
+    libraryId: String(pick(row, "libraryId", "library_id") ?? ""),
+    generation: Number(pick(row, "generation") ?? 0),
+    activeGeneration: Number(
+      pick(row, "activeGeneration", "active_generation") ?? 0
+    ),
+    embeddingRevision: Number(
+      pick(row, "embeddingRevision", "embedding_revision") ?? 0
+    ),
+    libraryRevision,
+    content: String(pick(row, "content") ?? ""),
+    sourceId: String(pick(row, "sourceId", "source_id") ?? ""),
+    sourceTitle: String(pick(row, "sourceTitle", "source_title") ?? ""),
+    heading: (pick(row, "heading") as string | null) ?? null,
+    page: page == null ? null : Number(page),
+  }
+}
+
 function toRecordFromClaim(
   row: Record<string, unknown>
 ): KnowledgeSourceRecord {
@@ -218,7 +291,7 @@ function toRecordFromClaim(
 
 @Injectable()
 export class KnowledgeSourceRepository
-  implements KnowledgeSourceStore, KnowledgeIngestStore
+  implements KnowledgeSourceStore, KnowledgeIngestStore, KnowledgeRetrievalStore
 {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
@@ -426,5 +499,30 @@ export class KnowledgeSourceRepository
       select: { embeddingRevision: true },
     })
     return chunk?.embeddingRevision ?? null
+  }
+
+  async findNearestChunks(
+    input: KnowledgeNearestQuery
+  ): Promise<KnowledgeHitRow[]> {
+    const vectorLiteral = `[${input.embedding.join(",")}]`
+    const rows = await this.prisma.client.$queryRawUnsafe<
+      Record<string, unknown>[]
+    >(
+      FIND_NEAREST_CHUNKS_SQL,
+      input.libraryId,
+      input.embeddingRevision,
+      vectorLiteral
+    )
+    return rows.map((row) => toHitRow(row, input.embeddingRevision))
+  }
+
+  async countPendingSources(
+    libraryId: string,
+    embeddingRevision: number
+  ): Promise<number> {
+    const rows = await this.prisma.client.$queryRawUnsafe<
+      Array<{ count: number | bigint }>
+    >(COUNT_PENDING_SOURCES_SQL, libraryId, embeddingRevision)
+    return Number(rows[0]?.count ?? 0)
   }
 }
