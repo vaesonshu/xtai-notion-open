@@ -106,8 +106,8 @@ export type WorkspaceShellProps = {
   collaborationUrl: string
   /** 覆盖主内容区，用于文档图谱等全页视图 */
   children?: ReactNode
-  /** 侧边栏高亮：文档编辑 / 图谱 / 广场 / 知识库 */
-  activeNav?: "editor" | "graph" | "square" | "workspaces"
+  /** 侧边栏高亮：文档编辑 / 图谱 / 广场 / 知识库 / 资料库 */
+  activeNav?: "editor" | "graph" | "square" | "workspaces" | "libraries"
   onOpenWorkspaces?: () => void
   onWorkspaceSwitch?: (workspaceId: string) => void
 }
@@ -598,6 +598,11 @@ export function WorkspaceShell({
           onOpenWorkspaces={
             onOpenWorkspaces ?? (() => router.push("/workspaces"))
           }
+          onOpenLibraries={() => {
+            // 浏览菜单「资料库」进入 /libraries，并高亮 libraries。
+            closeLibraryViews()
+            router.push("/libraries")
+          }}
           documents={personalDocuments}
           collaborativeDocuments={collaborativeDocuments}
           showFavorites={showFavorites}
@@ -703,9 +708,7 @@ export function WorkspaceShell({
                 importingMarkdown={importingMarkdown}
                 workspaceId={currentWorkspaceId ?? undefined}
                 workspaceName={currentWorkspace?.name}
-                aiSettings={
-                  currentWorkspace?.aiSettings ?? DEFAULT_AI_SETTINGS
-                }
+                aiSettings={currentWorkspace?.aiSettings ?? DEFAULT_AI_SETTINGS}
               />
             ) : null)}
         </main>

@@ -112,6 +112,7 @@ export function WorkspaceSidebar({
   onCreateWorkspace,
   onManageMembers,
   onOpenWorkspaces,
+  onOpenLibraries,
   onCreateDocument,
   creatingDocument = false,
   documents = [],
@@ -137,6 +138,7 @@ export function WorkspaceSidebar({
   onCreateWorkspace?: () => void
   onManageMembers?: () => void
   onOpenWorkspaces?: () => void
+  onOpenLibraries?: () => void
   onCreateDocument?: () => void
   onCreateChildDocument?: (id: string) => void
   creatingDocument?: boolean
@@ -145,7 +147,7 @@ export function WorkspaceSidebar({
   showFavorites?: boolean
   showTrash?: boolean
   selectedDocumentId?: string
-  activeNav?: "editor" | "graph" | "square" | "workspaces"
+  activeNav?: "editor" | "graph" | "square" | "workspaces" | "libraries"
   onSelectDocument?: (id: string) => void
   onRenameDocument?: (id: string, title: string) => Promise<void>
   onDeleteDocument?: (id: string) => Promise<void>
@@ -193,6 +195,7 @@ export function WorkspaceSidebar({
     activeNav === "square" ||
     activeNav === "graph" ||
     activeNav === "workspaces" ||
+    activeNav === "libraries" ||
     showFavorites ||
     showTrash
   return (
@@ -264,6 +267,7 @@ export function WorkspaceSidebar({
               showTrash={showTrash}
               compact={collapsed}
               onOpenWorkspaces={onOpenWorkspaces}
+              onOpenLibraries={onOpenLibraries}
               onOpenSquare={onOpenSquare}
               onOpenGraph={onOpenGraph}
               onToggleFavorites={onToggleFavorites}
@@ -433,17 +437,19 @@ function SideBrowseMenu({
   showTrash,
   compact,
   onOpenWorkspaces,
+  onOpenLibraries,
   onOpenSquare,
   onOpenGraph,
   onToggleFavorites,
   onToggleTrash,
 }: {
   active: boolean
-  activeNav: "editor" | "graph" | "square" | "workspaces"
+  activeNav: "editor" | "graph" | "square" | "workspaces" | "libraries"
   showFavorites: boolean
   showTrash: boolean
   compact: boolean
   onOpenWorkspaces?: () => void
+  onOpenLibraries?: () => void
   onOpenSquare?: () => void
   onOpenGraph?: () => void
   onToggleFavorites?: () => void
@@ -475,6 +481,12 @@ function SideBrowseMenu({
         label="全部知识库"
         active={activeNav === "workspaces"}
         onClick={onOpenWorkspaces}
+      />
+      {/* 产品名是资料库；不要改动或挪走「全部知识库」。 */}
+      <BrowseMenuItem
+        label="资料库"
+        active={activeNav === "libraries"}
+        onClick={onOpenLibraries}
       />
       <BrowseMenuItem
         label="写作广场"
