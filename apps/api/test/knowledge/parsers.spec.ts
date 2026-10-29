@@ -1,7 +1,12 @@
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { BadRequestException, PayloadTooLargeException } from "@nestjs/common"
 import { describe, expect, it } from "vitest"
 import { MAX_KNOWLEDGE_FILE_BYTES } from "@api/knowledge/knowledge.types"
 import { knowledgeFileKind, parseKnowledgeFile } from "@api/knowledge/parsers"
+
+const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures")
 
 describe("knowledgeFileKind", () => {
   it("maps Report.MD to md regardless of case", () => {
@@ -67,6 +72,26 @@ describe("parseKnowledgeFile", () => {
     )
     expect(result.pages).toEqual([{ page: 2, text: "正文" }])
     expect(result.text).toContain("正文")
+  })
+
+  // 不注入 extractor，确认默认 mammoth / unpdf 能从真实小文件抽出文本层。
+  it("extracts 资料库 from a real docx via default mammoth", async () => {
+    const bytes = readFileSync(join(fixtureDir, "sample.docx"))
+    const result = await parseKnowledgeFile({
+      filename: "sample.docx",
+      bytes,
+    })
+    expect(result.text).toContain("资料库")
+  })
+
+  it("extracts Library and page 1 from a real pdf via default unpdf", async () => {
+    const bytes = readFileSync(join(fixtureDir, "sample.pdf"))
+    const result = await parseKnowledgeFile({
+      filename: "sample.pdf",
+      bytes,
+    })
+    expect(result.text).toContain("Library")
+    expect(result.pages?.some((page) => page.page === 1)).toBe(true)
   })
 
   it("rejects PDFs whose pages have no text", async () => {
