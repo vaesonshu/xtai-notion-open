@@ -110,6 +110,9 @@ model AppUser {
   articleComments    ArticleComment[]
   documentComments   DocumentComment[]
   documentPrefs      UserDocumentPref[]
+  createdKnowledgeLibraries KnowledgeLibrary[] @relation("KnowledgeLibraryCreator")
+  knowledgeLibraryMembers   KnowledgeLibraryMember[]
+  createdKnowledgeSources   KnowledgeSource[]  @relation("KnowledgeSourceCreator")
 
   @@map("app_user")
 }
@@ -220,4 +223,81 @@ model YjsUpdate {
 
   @@unique([documentId, sequence])
   @@map("yjs_update")
+}
+
+// 独立资料库：与 workspace 知识库并列，成员与嵌入配置都挂在本表。
+model KnowledgeLibrary {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  createdBy         String?                  @map("created_by") @db.Uuid
+  embeddingSettings Json                     @default("{}") @map("embedding_settings")
+  embeddingRevision Int                      @default(1) @map("embedding_revision")
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                 @default(now()) @map("updated_at") @db.Timestamptz(6)
+  creator           AppUser?                 @relation("KnowledgeLibraryCreator", fields: [createdBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  members           KnowledgeLibraryMember[]
+  sources           KnowledgeSource[]
+
+  @@map("knowledge_library")
+}
+
+model KnowledgeLibraryMember {
+  libraryId String           @map("library_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  role      String
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  library   KnowledgeLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user      AppUser          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([libraryId, userId])
+  @@index([userId])
+  @@map("knowledge_library_member")
+}
+
+model KnowledgeSource {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId          String           @map("library_id") @db.Uuid
+  kind               String
+  title              String
+  status             String
+  errorMessage       String?          @map("error_message")
+  activeGeneration   Int              @default(0) @map("active_generation")
+  indexedContentHash String?          @map("indexed_content_hash")
+  bodyText           String?          @map("body_text")
+  // 站内文档快照不建外键：源文档删除后已导入内容仍保留。
+  sourceDocumentId   String?          @map("source_document_id") @db.Uuid
+  storageKey         String?          @map("storage_key")
+  mimeType           String?          @map("mime_type")
+  byteSize           Int?             @map("byte_size")
+  lockedAt           DateTime?        @map("locked_at") @db.Timestamptz(6)
+  createdBy          String?          @map("created_by") @db.Uuid
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  library            KnowledgeLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  creator            AppUser?         @relation("KnowledgeSourceCreator", fields: [createdBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  chunks             KnowledgeChunk[]
+
+  @@index([libraryId, status])
+  @@map("knowledge_source")
+}
+
+model KnowledgeChunk {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // library_id 是按库过滤的冗余列，不建外键；删库经来源级联清分块。
+  libraryId         String          @map("library_id") @db.Uuid
+  sourceId          String          @map("source_id") @db.Uuid
+  generation        Int
+  ordinal           Int
+  content           String
+  heading           String?
+  page              Int?
+  // Prisma 不读写 embedding，相似度查询走参数化 SQL。
+  embedding         Unsupported("vector(1536)")
+  embeddingRevision Int             @map("embedding_revision")
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  source            KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([libraryId])
+  @@index([sourceId, generation])
+  @@map("knowledge_chunk")
 }

@@ -1,8 +1,9 @@
 # 本地开发 PostgreSQL，用于对比 Neon 远程库的加载延迟。
+# 资料库分块需要 pgvector 的 vector(1536)，因此改用官方 pgvector 镜像。
 # 使用前请先启动 Docker Desktop，再执行：pnpm db:local:up
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: xtai-notion-postgres
     restart: unless-stopped
     ports:
