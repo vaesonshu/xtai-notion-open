@@ -111,6 +111,13 @@ WHERE id = (
 )
 RETURNING *`
 
+// 发布前先锁资料库行，避免 saveEmbedding 在已读版本号之后提交新
+// revision，把过期向量标成可检索。
+export const LOCK_LIBRARY_REVISION_SQL = `SELECT embedding_revision
+FROM knowledge_library
+WHERE id = $1::uuid
+FOR UPDATE`
+
 // 距离过滤留在 selectKnowledgeHits，这里只按库、当前代和版本取最近 6 条。
 export const FIND_NEAREST_CHUNKS_SQL = `SELECT
   chunk.library_id,
@@ -179,6 +186,23 @@ function pick(row: Record<string, unknown>, ...keys: string[]): unknown {
     }
   }
   return undefined
+}
+
+async function lockLibraryRevision(
+  tx: {
+    $queryRawUnsafe: <T = unknown>(
+      query: string,
+      ...values: unknown[]
+    ) => Promise<T>
+  },
+  libraryId: string
+): Promise<number | null> {
+  const rows = await tx.$queryRawUnsafe<Record<string, unknown>[]>(
+    LOCK_LIBRARY_REVISION_SQL,
+    libraryId
+  )
+  const raw = pick(rows[0] ?? {}, "embeddingRevision", "embedding_revision")
+  return raw == null ? null : Number(raw)
 }
 
 function asEmbeddingSettings(value: unknown): EmbeddingSettings {
@@ -414,16 +438,13 @@ export class KnowledgeSourceRepository
       if (!source) {
         return
       }
-      const library = await tx.knowledgeLibrary.findUnique({
-        where: { id: source.libraryId },
-        select: { embeddingRevision: true },
-      })
+      const libraryRevision = await lockLibraryRevision(tx, source.libraryId)
       const commitRevision = input.chunks[0]?.embeddingRevision
-      // 库已换模型：旧向量不能成为可检索代，来源回到排队并保留上一成功代。
+      // 锁内版本已前进：旧向量不能成为可检索代，来源回到排队并保留上一成功代。
       if (
-        library == null ||
+        libraryRevision == null ||
         commitRevision === undefined ||
-        library.embeddingRevision !== commitRevision
+        libraryRevision !== commitRevision
       ) {
         await tx.knowledgeSource.update({
           where: { id: input.sourceId },
@@ -503,10 +524,7 @@ export class KnowledgeSourceRepository
       if (!source) {
         return
       }
-      const library = await tx.knowledgeLibrary.findUnique({
-        where: { id: source.libraryId },
-        select: { embeddingRevision: true },
-      })
+      const libraryRevision = await lockLibraryRevision(tx, source.libraryId)
       const chunk = await tx.knowledgeChunk.findFirst({
         where: {
           sourceId: id,
@@ -516,9 +534,9 @@ export class KnowledgeSourceRepository
       })
       // 跳过嵌入的 ready 路径同样不能把过期向量标成可检索。
       if (
-        library == null ||
+        libraryRevision == null ||
         chunk == null ||
-        library.embeddingRevision !== chunk.embeddingRevision
+        libraryRevision !== chunk.embeddingRevision
       ) {
         await tx.knowledgeSource.update({
           where: { id },

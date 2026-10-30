@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from "@nestjs/common"
 import { describe, expect, it, vi } from "vitest"
 import type { EmbeddingConfig } from "@api/knowledge/embedding-client"
 import {
+  CITATION_EXCERPT_CHARS,
   KNOWLEDGE_QA_SYSTEM_PROMPT,
   NO_HIT_ANSWER,
   type KnowledgeHitRow,
@@ -234,6 +235,31 @@ describe("KnowledgeQaService.answer", () => {
     expect(userPrompt).toContain("[1]")
     expect(events[0]).toMatchObject({ type: "citations" })
     expect(events.at(-1)).toEqual({ type: "done" })
+  })
+
+  it("omits content from citations SSE and keeps excerpt at most 500 chars", async () => {
+    // SSE 只发摘录：完整 content 留给提示词，避免引用事件泄漏整段正文。
+    const longContent = `前${"摘".repeat(CITATION_EXCERPT_CHARS)}尾`
+    const { service } = makeHarness({
+      hits: [hitRow({ content: longContent })],
+    })
+
+    const events = await collect(
+      service.answer(USER_ID, LIBRARY_ID, [
+        { role: "user", content: "定价是多少" },
+      ])
+    )
+
+    const citationsEvent = events[0]
+    expect(citationsEvent).toMatchObject({ type: "citations" })
+    if (citationsEvent?.type !== "citations") {
+      throw new Error("expected citations event")
+    }
+    const citation = citationsEvent.citations[0]
+    expect(citation).toBeDefined()
+    expect(citation).not.toHaveProperty("content")
+    expect(citation?.excerpt.length).toBeLessThanOrEqual(CITATION_EXCERPT_CHARS)
+    expect(citation?.excerpt).toBe(longContent.slice(0, CITATION_EXCERPT_CHARS))
   })
 
   it("embeds only the latest user question and keeps earlier turns for chat", async () => {

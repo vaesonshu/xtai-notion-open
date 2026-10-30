@@ -8,6 +8,7 @@ import { hashKnowledgeBody } from "@api/knowledge/content-hash"
 import { KnowledgeIngestWorker } from "@api/knowledge/knowledge-ingest.worker"
 import {
   CLAIM_NEXT_SQL,
+  LOCK_LIBRARY_REVISION_SQL,
   type KnowledgeIngestStore,
   type KnowledgeSourceRecord,
 } from "@api/knowledge/knowledge-source.repository"
@@ -292,6 +293,14 @@ describe("CLAIM_NEXT_SQL", () => {
   })
 })
 
+describe("LOCK_LIBRARY_REVISION_SQL", () => {
+  it("locks the library row with FOR UPDATE before publishing", () => {
+    expect(LOCK_LIBRARY_REVISION_SQL).toContain("FOR UPDATE")
+    expect(LOCK_LIBRARY_REVISION_SQL).toContain("embedding_revision")
+    expect(LOCK_LIBRARY_REVISION_SQL).toContain("knowledge_library")
+  })
+})
+
 describe("KnowledgeIngestWorker.processNext", () => {
   it("skips embedding when hash and library revision both match", async () => {
     const hash = hashKnowledgeBody(BODY)
@@ -337,6 +346,36 @@ describe("KnowledgeIngestWorker.processNext", () => {
     expect(sources.rows[0]?.lockedAt).toBeNull()
     expect(sources.rows[0]?.activeGeneration).toBe(1)
     expect(sources.chunks).toEqual([oldChunk()])
+  })
+
+  it("stays queued when markReady sees a newer library revision", async () => {
+    const hash = hashKnowledgeBody(BODY)
+    const { worker, sources, embedTexts } = makeHarness({
+      source: sourceRecord({
+        activeGeneration: 1,
+        indexedContentHash: hash,
+      }),
+      chunks: [oldChunk({ embeddingRevision: 1 })],
+      revision: 1,
+    })
+    const originalFind = sources.findLibraryEmbedding.bind(sources)
+    sources.findLibraryEmbedding = async (libraryId) => {
+      const snapshot = await originalFind(libraryId)
+      const library = sources.libraries.get(libraryId)
+      // 模拟 skip 决定之后、markReady 之前 saveEmbedding 已提交新版本。
+      if (library) {
+        library.revision = 2
+      }
+      return snapshot
+    }
+
+    await worker.processNext()
+
+    expect(embedTexts).toHaveBeenCalledTimes(0)
+    expect(sources.rows[0]?.status).toBe("queued")
+    expect(sources.rows[0]?.lockedAt).toBeNull()
+    expect(sources.rows[0]?.activeGeneration).toBe(1)
+    expect(sources.chunks).toEqual([oldChunk({ embeddingRevision: 1 })])
   })
 
   it("embeds again when the library revision is newer", async () => {
