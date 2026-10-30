@@ -23,11 +23,6 @@ const viewerLibrary: LibrarySummary = {
   role: "viewer",
 }
 
-const configuredViewerLibrary: LibrarySummary = {
-  ...viewerLibrary,
-  embeddingConfigured: true,
-}
-
 const queuedSource: LibrarySource = {
   id: "src-1",
   title: "手册.txt",
@@ -236,7 +231,7 @@ describe("LibraryDetailPage", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("shows the contact-owner hint when embedding is missing", async () => {
+  it("links viewers to the standalone ask page", async () => {
     render(
       <LibraryDetailPage
         libraryId="lib-1"
@@ -246,24 +241,10 @@ describe("LibraryDetailPage", () => {
       />
     )
 
-    expect(
-      await screen.findByText("请联系资料库所有者配置嵌入模型")
-    ).toBeInTheDocument()
-  })
-
-  it("hides the contact-owner hint when embedding is configured", async () => {
-    render(
-      <LibraryDetailPage
-        libraryId="lib-1"
-        userId="user-1"
-        fetchLibrary={vi.fn().mockResolvedValue(configuredViewerLibrary)}
-        listSources={vi.fn().mockResolvedValue([])}
-      />
-    )
-
     expect(await screen.findByText("产品资料库")).toBeInTheDocument()
-    expect(
-      screen.queryByText("请联系资料库所有者配置嵌入模型")
-    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "去问答" })).toHaveAttribute(
+      "href",
+      "/libraries/ask/lib-1"
+    )
   })
 })

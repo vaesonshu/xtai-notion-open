@@ -107,7 +107,13 @@ export type WorkspaceShellProps = {
   /** 覆盖主内容区，用于文档图谱等全页视图 */
   children?: ReactNode
   /** 侧边栏高亮：文档编辑 / 图谱 / 广场 / 知识库 / 资料库 */
-  activeNav?: "editor" | "graph" | "square" | "workspaces" | "libraries"
+  activeNav?:
+    | "editor"
+    | "graph"
+    | "square"
+    | "workspaces"
+    | "libraries"
+    | "library-ask"
   onOpenWorkspaces?: () => void
   onWorkspaceSwitch?: (workspaceId: string) => void
 }
@@ -602,6 +608,10 @@ export function WorkspaceShell({
             // 浏览菜单「资料库」进入 /libraries，并高亮 libraries。
             closeLibraryViews()
             router.push("/libraries")
+          }}
+          onOpenLibraryAsk={() => {
+            closeLibraryViews()
+            router.push("/libraries/ask")
           }}
           documents={personalDocuments}
           collaborativeDocuments={collaborativeDocuments}

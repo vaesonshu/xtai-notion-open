@@ -32,6 +32,10 @@ export default function LibrariesLayout({
     )
   }
 
+  const activeNav = pathname.startsWith("/libraries/ask")
+    ? "library-ask"
+    : "libraries"
+
   return (
     <div
       data-pencil-page
@@ -41,7 +45,7 @@ export default function LibrariesLayout({
         user={{ ...user, color: user.color ?? "#24866B" }}
         apiUrl={process.env.NEXT_PUBLIC_API_URL ?? ""}
         collaborationUrl={process.env.NEXT_PUBLIC_COLLABORATION_URL ?? ""}
-        activeNav="libraries"
+        activeNav={activeNav}
       >
         {children}
       </WorkspaceShell>

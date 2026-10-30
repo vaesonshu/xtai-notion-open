@@ -9,7 +9,7 @@ import {
 } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeftIcon, UsersIcon } from "@workspace/icons"
+import { ArrowLeftIcon, MessageSquareIcon, UsersIcon } from "@workspace/icons"
 import { LibrarySourcePanel } from "@/components/libraries/library-source-panel"
 import { Button } from "@workspace/ui/components/button"
 import {
@@ -29,7 +29,6 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select"
 import { Spinner } from "@workspace/ui/components/spinner"
-import { LibraryAskPanel } from "@/components/libraries/library-ask-panel"
 import {
   canEditLibrarySources,
   canManageLibraryMembers,
@@ -263,10 +262,6 @@ export function LibraryDetailPage({
 
   const canEdit = canEditLibrarySources(library.role)
   const isOwner = library.role === "owner"
-  const readySourceCount = sources.filter(
-    (source) => source.status === "ready"
-  ).length
-
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#FCFCFA]">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-[#ECEAE4] bg-white px-4 py-3 sm:px-5">
@@ -290,6 +285,16 @@ export function LibraryDetailPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 gap-1.5"
+            render={<Link href={`/libraries/ask/${libraryId}`} />}
+            nativeButton={false}
+          >
+            <MessageSquareIcon className="size-3.5" />
+            去问答
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -322,7 +327,7 @@ export function LibraryDetailPage({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6">
         <LibrarySourcePanel
           canEdit={canEdit}
           sources={sources}
@@ -335,16 +340,6 @@ export function LibraryDetailPage({
           onPickDocument={(documentId) => void handlePickDocument(documentId)}
           onReindex={(sourceId) => void handleReindex(sourceId)}
           onDeleteSource={(source) => void handleDeleteSource(source)}
-        />
-        <LibraryAskPanel
-          libraryId={libraryId}
-          userId={userId}
-          readySourceCount={readySourceCount}
-          embeddingHint={
-            library.role !== "owner" && !library.embeddingConfigured
-              ? "请联系资料库所有者配置嵌入模型"
-              : null
-          }
         />
       </div>
 

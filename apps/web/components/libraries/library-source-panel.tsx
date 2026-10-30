@@ -21,7 +21,7 @@ type LibrarySourcePanelProps = {
   onDeleteSource: (source: LibrarySource) => void
 }
 
-/** 左侧知识来源面板：上传、文档导入与来源列表（主流 RAG 产品常见布局）。 */
+/** 资料库详情：知识来源的上传、导入与列表（问答在独立 /libraries/ask 页）。 */
 export function LibrarySourcePanel({
   canEdit,
   sources,
@@ -38,7 +38,7 @@ export function LibrarySourcePanel({
   const readyCount = sources.filter((item) => item.status === "ready").length
 
   return (
-    <aside className="flex h-full min-h-0 w-full flex-col border-[#ECEAE4] bg-white lg:w-[min(100%,360px)] lg:shrink-0 lg:border-r">
+    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-[#ECEAE4] bg-white shadow-sm">
       <div className="shrink-0 border-b border-[#ECEAE4] px-4 py-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-[#242321]">知识来源</h2>
@@ -154,6 +154,6 @@ export function LibrarySourcePanel({
           </ul>
         )}
       </div>
-    </aside>
+    </section>
   )
 }

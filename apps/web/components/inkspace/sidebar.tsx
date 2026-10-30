@@ -113,6 +113,7 @@ export function WorkspaceSidebar({
   onManageMembers,
   onOpenWorkspaces,
   onOpenLibraries,
+  onOpenLibraryAsk,
   onCreateDocument,
   creatingDocument = false,
   documents = [],
@@ -139,6 +140,7 @@ export function WorkspaceSidebar({
   onManageMembers?: () => void
   onOpenWorkspaces?: () => void
   onOpenLibraries?: () => void
+  onOpenLibraryAsk?: () => void
   onCreateDocument?: () => void
   onCreateChildDocument?: (id: string) => void
   creatingDocument?: boolean
@@ -147,7 +149,13 @@ export function WorkspaceSidebar({
   showFavorites?: boolean
   showTrash?: boolean
   selectedDocumentId?: string
-  activeNav?: "editor" | "graph" | "square" | "workspaces" | "libraries"
+  activeNav?:
+    | "editor"
+    | "graph"
+    | "square"
+    | "workspaces"
+    | "libraries"
+    | "library-ask"
   onSelectDocument?: (id: string) => void
   onRenameDocument?: (id: string, title: string) => Promise<void>
   onDeleteDocument?: (id: string) => Promise<void>
@@ -196,6 +204,7 @@ export function WorkspaceSidebar({
     activeNav === "graph" ||
     activeNav === "workspaces" ||
     activeNav === "libraries" ||
+    activeNav === "library-ask" ||
     showFavorites ||
     showTrash
   return (
@@ -268,6 +277,7 @@ export function WorkspaceSidebar({
               compact={collapsed}
               onOpenWorkspaces={onOpenWorkspaces}
               onOpenLibraries={onOpenLibraries}
+              onOpenLibraryAsk={onOpenLibraryAsk}
               onOpenSquare={onOpenSquare}
               onOpenGraph={onOpenGraph}
               onToggleFavorites={onToggleFavorites}
@@ -438,18 +448,26 @@ function SideBrowseMenu({
   compact,
   onOpenWorkspaces,
   onOpenLibraries,
+  onOpenLibraryAsk,
   onOpenSquare,
   onOpenGraph,
   onToggleFavorites,
   onToggleTrash,
 }: {
   active: boolean
-  activeNav: "editor" | "graph" | "square" | "workspaces" | "libraries"
+  activeNav:
+    | "editor"
+    | "graph"
+    | "square"
+    | "workspaces"
+    | "libraries"
+    | "library-ask"
   showFavorites: boolean
   showTrash: boolean
   compact: boolean
   onOpenWorkspaces?: () => void
   onOpenLibraries?: () => void
+  onOpenLibraryAsk?: () => void
   onOpenSquare?: () => void
   onOpenGraph?: () => void
   onToggleFavorites?: () => void
@@ -487,6 +505,11 @@ function SideBrowseMenu({
         label="资料库"
         active={activeNav === "libraries"}
         onClick={onOpenLibraries}
+      />
+      <BrowseMenuItem
+        label="资料库问答"
+        active={activeNav === "library-ask"}
+        onClick={onOpenLibraryAsk}
       />
       <BrowseMenuItem
         label="写作广场"
