@@ -35,12 +35,13 @@ import {
   fetchLibrary as defaultFetchLibrary,
   fetchLibraryMembers,
   fetchLibrarySources as defaultListSources,
-  importLibraryDocument,
+  importLibraryDocument as defaultImportDocument,
   inviteLibraryMember,
   isAllowedLibraryFileName,
   LIBRARY_ROLE_LABELS,
   reindexLibrarySource,
   removeLibraryMember,
+  searchReadableDocuments as defaultSearchDocuments,
   updateLibraryEmbedding,
   updateLibraryMemberRole,
   uploadLibrarySourceFile as defaultUploadSourceFile,
@@ -48,11 +49,13 @@ import {
   type LibraryRole,
   type LibrarySource,
   type LibrarySummary,
+  type ReadableDocumentHit,
 } from "@/lib/library-api"
 import { toast, toastError } from "@/lib/toast"
 
 const DEFAULT_EMBEDDING_BASE_URL = "https://api.openai.com/v1"
 const SOURCE_POLL_MS = 3000
+const DOCUMENT_SEARCH_DEBOUNCE_MS = 200
 const ASSIGNABLE_ROLES: Array<{
   value: Exclude<LibraryRole, "owner">
   label: string
@@ -72,6 +75,15 @@ type LibraryDetailPageProps = {
     userId: string,
     file: File
   ) => Promise<{ id: string }>
+  searchDocuments?: (
+    query: string,
+    userId: string
+  ) => Promise<ReadableDocumentHit[]>
+  importDocument?: (
+    libraryId: string,
+    userId: string,
+    documentId: string
+  ) => Promise<{ id: string }>
 }
 
 export function LibraryDetailPage({
@@ -80,6 +92,8 @@ export function LibraryDetailPage({
   fetchLibrary = defaultFetchLibrary,
   listSources = defaultListSources,
   uploadSourceFile = defaultUploadSourceFile,
+  searchDocuments = defaultSearchDocuments,
+  importDocument = defaultImportDocument,
 }: LibraryDetailPageProps) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -87,7 +101,8 @@ export function LibraryDetailPage({
   const [sources, setSources] = useState<LibrarySource[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const [documentId, setDocumentId] = useState("")
+  const [documentQuery, setDocumentQuery] = useState("")
+  const [documentHits, setDocumentHits] = useState<ReadableDocumentHit[]>([])
   const [membersOpen, setMembersOpen] = useState(false)
   const [embeddingOpen, setEmbeddingOpen] = useState(false)
 
@@ -135,6 +150,34 @@ export function LibraryDetailPage({
     return () => window.clearInterval(timer)
   }, [refreshSources, sources])
 
+  useEffect(() => {
+    const trimmed = documentQuery.trim()
+    if (!trimmed) {
+      setDocumentHits([])
+      return
+    }
+    // 按标题搜索当前用户可读文档，选中后再导入，避免粘贴 UUID。
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      void searchDocuments(trimmed, userId)
+        .then((items) => {
+          if (!controller.signal.aborted) {
+            setDocumentHits(items)
+          }
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) {
+            setDocumentHits([])
+            toastError(error, "搜索文档失败")
+          }
+        })
+    }, DOCUMENT_SEARCH_DEBOUNCE_MS)
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [documentQuery, searchDocuments, userId])
+
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ""
@@ -153,12 +196,11 @@ export function LibraryDetailPage({
     }
   }
 
-  async function handleImportDocument() {
-    const trimmed = documentId.trim()
-    if (!trimmed) return
+  async function handlePickDocument(documentId: string) {
     try {
-      await importLibraryDocument(libraryId, userId, trimmed)
-      setDocumentId("")
+      await importDocument(libraryId, userId, documentId)
+      setDocumentQuery("")
+      setDocumentHits([])
       toast.success("文档已导入")
       await refreshSources()
     } catch (error) {
@@ -266,18 +308,30 @@ export function LibraryDetailPage({
               >
                 上传文件
               </Button>
-              <Input
-                className="w-[180px]"
-                placeholder="文档 ID"
-                value={documentId}
-                onChange={(event) => setDocumentId(event.target.value)}
-              />
-              <Button
-                variant="outline"
-                onClick={() => void handleImportDocument()}
-              >
-                导入文档
-              </Button>
+              <div className="relative">
+                {/* 用标题搜索代替粘贴 UUID，结果来自当前用户可读文档。 */}
+                <Input
+                  className="w-[220px]"
+                  placeholder="搜索文档标题"
+                  value={documentQuery}
+                  onChange={(event) => setDocumentQuery(event.target.value)}
+                />
+                {documentHits.length > 0 ? (
+                  <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-[#ECEAE4] bg-white shadow-sm">
+                    {documentHits.map((doc) => (
+                      <li key={doc.id}>
+                        <button
+                          type="button"
+                          className="w-full truncate px-3 py-2 text-left text-sm hover:bg-[#F7F6F3]"
+                          onClick={() => void handlePickDocument(doc.id)}
+                        >
+                          {doc.title || "未命名文档"}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
             </div>
           ) : null}
           {uploadError ? (
@@ -357,6 +411,7 @@ export function LibraryDetailPage({
           onOpenChange={setEmbeddingOpen}
           libraryId={libraryId}
           userId={userId}
+          onModelChanged={refreshSources}
         />
       ) : null}
     </div>
@@ -548,11 +603,13 @@ function LibraryEmbeddingDialog({
   onOpenChange,
   libraryId,
   userId,
+  onModelChanged,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   libraryId: string
   userId: string
+  onModelChanged: () => Promise<LibrarySource[]>
 }) {
   const [apiKey, setApiKey] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
@@ -584,11 +641,14 @@ function LibraryEmbeddingDialog({
     if (nextKey) patch.openAiApiKey = nextKey
     setSaving(true)
     try {
-      await updateLibraryEmbedding(libraryId, userId, patch)
+      const saved = await updateLibraryEmbedding(libraryId, userId, patch)
       if (nextModel) setSavedModel(nextModel)
       if (nextBase) setSavedBaseUrl(nextBase)
       setApiKey("")
       toast.success("嵌入配置已保存")
+      if (saved.modelChanged) {
+        await onModelChanged()
+      }
       onOpenChange(false)
     } catch (error) {
       toastError(error, "保存嵌入配置失败")

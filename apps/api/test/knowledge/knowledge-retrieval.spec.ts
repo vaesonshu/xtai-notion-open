@@ -165,7 +165,21 @@ describe("buildKnowledgePrompt", () => {
       LIBRARY_ID
     )
 
+    expect(hits[0]?.excerpt).not.toContain("概述")
     expect(buildKnowledgePrompt(hits)).toContain("（概述）")
+  })
+
+  it("puts text past 500 characters into the prompt but not the excerpt", () => {
+    const uniqueTail = "尾部独有依据XYZ"
+    const content = `${"前".repeat(CITATION_EXCERPT_CHARS)}${uniqueTail}`
+    const hits = selectKnowledgeHits(
+      [hitRow({ content, sourceId: "long-src" })],
+      LIBRARY_ID
+    )
+
+    expect(hits[0]?.excerpt).toHaveLength(CITATION_EXCERPT_CHARS)
+    expect(hits[0]?.excerpt).not.toContain(uniqueTail)
+    expect(buildKnowledgePrompt(hits)).toContain(uniqueTail)
   })
 
   it("caps the assembled prompt at 12000 characters", () => {
@@ -173,18 +187,14 @@ describe("buildKnowledgePrompt", () => {
       Array.from({ length: 6 }, (_, index) =>
         hitRow({
           sourceId: `src-${index + 1}`,
-          content: "长".repeat(CITATION_EXCERPT_CHARS),
+          content: "长".repeat(3000),
           distance: 0.1 + index * 0.01,
         })
       ),
       LIBRARY_ID
     )
-    const padded = hits.map((hit) => ({
-      ...hit,
-      excerpt: "超".repeat(RETRIEVAL_MAX_CONTEXT_CHARS),
-    }))
 
-    expect(buildKnowledgePrompt(padded).length).toBeLessThanOrEqual(
+    expect(buildKnowledgePrompt(hits).length).toBeLessThanOrEqual(
       RETRIEVAL_MAX_CONTEXT_CHARS
     )
   })

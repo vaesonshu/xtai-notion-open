@@ -407,6 +407,34 @@ export class KnowledgeSourceRepository
   async commitGeneration(input: KnowledgeGenerationCommit): Promise<void> {
     // 换代和删除旧分块必须同一事务：崩溃时不能留下半套可被问答读到的向量。
     await this.prisma.client.$transaction(async (tx) => {
+      const source = await tx.knowledgeSource.findUnique({
+        where: { id: input.sourceId },
+        select: { libraryId: true },
+      })
+      if (!source) {
+        return
+      }
+      const library = await tx.knowledgeLibrary.findUnique({
+        where: { id: source.libraryId },
+        select: { embeddingRevision: true },
+      })
+      const commitRevision = input.chunks[0]?.embeddingRevision
+      // 库已换模型：旧向量不能成为可检索代，来源回到排队并保留上一成功代。
+      if (
+        library == null ||
+        commitRevision === undefined ||
+        library.embeddingRevision !== commitRevision
+      ) {
+        await tx.knowledgeSource.update({
+          where: { id: input.sourceId },
+          data: {
+            status: "queued",
+            lockedAt: null,
+            updatedAt: new Date(),
+          },
+        })
+        return
+      }
       for (const chunk of input.chunks) {
         const vectorLiteral = `[${chunk.embedding.join(",")}]`
         await tx.$executeRaw`
@@ -467,14 +495,50 @@ export class KnowledgeSourceRepository
   }
 
   async markReady(id: string): Promise<void> {
-    await this.prisma.client.knowledgeSource.update({
-      where: { id },
-      data: {
-        status: "ready",
-        errorMessage: null,
-        lockedAt: null,
-        updatedAt: new Date(),
-      },
+    await this.prisma.client.$transaction(async (tx) => {
+      const source = await tx.knowledgeSource.findUnique({
+        where: { id },
+        select: { libraryId: true, activeGeneration: true },
+      })
+      if (!source) {
+        return
+      }
+      const library = await tx.knowledgeLibrary.findUnique({
+        where: { id: source.libraryId },
+        select: { embeddingRevision: true },
+      })
+      const chunk = await tx.knowledgeChunk.findFirst({
+        where: {
+          sourceId: id,
+          generation: source.activeGeneration,
+        },
+        select: { embeddingRevision: true },
+      })
+      // 跳过嵌入的 ready 路径同样不能把过期向量标成可检索。
+      if (
+        library == null ||
+        chunk == null ||
+        library.embeddingRevision !== chunk.embeddingRevision
+      ) {
+        await tx.knowledgeSource.update({
+          where: { id },
+          data: {
+            status: "queued",
+            lockedAt: null,
+            updatedAt: new Date(),
+          },
+        })
+        return
+      }
+      await tx.knowledgeSource.update({
+        where: { id },
+        data: {
+          status: "ready",
+          errorMessage: null,
+          lockedAt: null,
+          updatedAt: new Date(),
+        },
+      })
     })
   }
 

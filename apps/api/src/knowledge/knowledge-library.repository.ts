@@ -41,9 +41,9 @@ export type KnowledgeLibraryStore = {
   saveEmbedding(
     libraryId: string,
     settings: EmbeddingSettings,
-    revision: number
+    revision: number,
+    requeueSources?: boolean
   ): Promise<void>
-  markAllSourcesQueued(libraryId: string): Promise<void>
   listFileStorageKeys(libraryId: string): Promise<string[]>
   upsertMember(
     libraryId: string,
@@ -181,22 +181,29 @@ export class KnowledgeLibraryRepository implements KnowledgeLibraryStore {
   async saveEmbedding(
     libraryId: string,
     settings: EmbeddingSettings,
-    revision: number
+    revision: number,
+    requeueSources = false
   ): Promise<void> {
-    await this.prisma.client.knowledgeLibrary.update({
-      where: { id: libraryId },
-      data: {
-        embeddingSettings: settings as Prisma.InputJsonValue,
-        embeddingRevision: revision,
-        updatedAt: new Date(),
-      },
-    })
-  }
-
-  async markAllSourcesQueued(libraryId: string): Promise<void> {
-    await this.prisma.client.knowledgeSource.updateMany({
-      where: { libraryId },
-      data: { status: "queued", updatedAt: new Date() },
+    // 改模型时版本号和排队必须同一事务，避免来源仍显示 ready 却指向旧向量。
+    await this.prisma.client.$transaction(async (tx) => {
+      await tx.knowledgeLibrary.update({
+        where: { id: libraryId },
+        data: {
+          embeddingSettings: settings as Prisma.InputJsonValue,
+          embeddingRevision: revision,
+          updatedAt: new Date(),
+        },
+      })
+      if (requeueSources) {
+        await tx.knowledgeSource.updateMany({
+          where: { libraryId },
+          data: {
+            status: "queued",
+            lockedAt: null,
+            updatedAt: new Date(),
+          },
+        })
+      }
     })
   }
 

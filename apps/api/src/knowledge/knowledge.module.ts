@@ -1,4 +1,4 @@
-import { HumanMessage, SystemMessage } from "@langchain/core/messages"
+import { SystemMessage } from "@langchain/core/messages"
 import { ChatOpenAI } from "@langchain/openai"
 import { Inject, Module, OnModuleDestroy, OnModuleInit } from "@nestjs/common"
 import type { LlmConnectionConfig } from "../ai/llm-config.types"
@@ -8,6 +8,7 @@ import { DocumentsModule } from "../documents/documents.module"
 import { CosModule } from "../storage/cos.module"
 import { CosService } from "../storage/cos.service"
 import { embedKnowledgeTexts } from "./embedding-client"
+import { toKnowledgeLangChainMessage } from "./knowledge-chat-messages"
 import { KnowledgeIngestWorker } from "./knowledge-ingest.worker"
 import { KnowledgeLibraryRepository } from "./knowledge-library.repository"
 import { KnowledgeLibraryService } from "./knowledge-library.service"
@@ -30,6 +31,8 @@ const streamKnowledgeChat: KnowledgeStreamChat = async function* (input) {
   if (!llm?.apiKey || !llm.model) {
     return
   }
+  // 助手历史走 AIMessage；标成 System 会让模型把旧回答当成指令。
+  const history = input.messages.map(toKnowledgeLangChainMessage)
   const model = new ChatOpenAI({
     apiKey: llm.apiKey,
     model: llm.model,
@@ -38,15 +41,10 @@ const streamKnowledgeChat: KnowledgeStreamChat = async function* (input) {
     timeout: 180_000,
     maxRetries: 0,
   })
-  const messages = [
+  const stream = await model.stream([
     new SystemMessage(input.system),
-    ...input.messages.map((message) =>
-      message.role === "user"
-        ? new HumanMessage(message.content)
-        : new SystemMessage(message.content)
-    ),
-  ]
-  const stream = await model.stream(messages)
+    ...history,
+  ])
   for await (const chunk of stream) {
     const content = typeof chunk.content === "string" ? chunk.content : ""
     if (content) {

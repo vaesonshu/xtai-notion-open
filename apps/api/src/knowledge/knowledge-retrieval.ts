@@ -16,6 +16,11 @@ export type KnowledgeCitation = {
   similarity: number
 }
 
+/** 提示词用完整分块；SSE 引用事件只发 excerpt，不含 content。 */
+export type KnowledgePromptHit = KnowledgeCitation & {
+  content: string
+}
+
 export type KnowledgeHitRow = {
   distance: number
   libraryId: string
@@ -35,7 +40,7 @@ const DISTANCE_MAX = 1 - RETRIEVAL_MIN_SIMILARITY
 export function selectKnowledgeHits(
   rows: KnowledgeHitRow[],
   libraryId: string
-): KnowledgeCitation[] {
+): KnowledgePromptHit[] {
   const kept = rows
     .filter((row) => {
       if (row.libraryId !== libraryId) {
@@ -65,6 +70,21 @@ export function selectKnowledgeHits(
     page: row.page,
     excerpt: row.content.slice(0, CITATION_EXCERPT_CHARS),
     similarity: 1 - row.distance,
+    content: row.content,
+  }))
+}
+
+export function toKnowledgeCitations(
+  hits: KnowledgePromptHit[]
+): KnowledgeCitation[] {
+  return hits.map((hit) => ({
+    index: hit.index,
+    sourceId: hit.sourceId,
+    sourceTitle: hit.sourceTitle,
+    heading: hit.heading,
+    page: hit.page,
+    excerpt: hit.excerpt,
+    similarity: hit.similarity,
   }))
 }
 
@@ -78,16 +98,17 @@ function citationLocator(citation: KnowledgeCitation): string | null {
   return null
 }
 
-export function buildKnowledgePrompt(citations: KnowledgeCitation[]): string {
+export function buildKnowledgePrompt(hits: KnowledgePromptHit[]): string {
   const pieces: string[] = []
   let used = 0
 
-  for (const citation of citations) {
-    const locator = citationLocator(citation)
+  for (const hit of hits) {
+    const locator = citationLocator(hit)
     const header = locator
-      ? `[${citation.index}] ${citation.sourceTitle}（${locator}）`
-      : `[${citation.index}] ${citation.sourceTitle}`
-    const block = `${header}\n${citation.excerpt}`
+      ? `[${hit.index}] ${hit.sourceTitle}（${locator}）`
+      : `[${hit.index}] ${hit.sourceTitle}`
+    // 引用摘录只有 500 字；提示词必须带完整分块，否则模型看不到后半段依据。
+    const block = `${header}\n${hit.content}`
     const prefix = pieces.length === 0 ? "" : "\n\n"
     const available = RETRIEVAL_MAX_CONTEXT_CHARS - used - prefix.length
     if (available <= 0) {

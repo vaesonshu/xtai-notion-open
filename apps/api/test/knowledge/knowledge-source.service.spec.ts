@@ -97,14 +97,13 @@ class FakeKnowledgeLibraryRepository implements KnowledgeLibraryStore {
   async saveEmbedding(
     libraryId: string,
     settings: EmbeddingSettings,
-    revision: number
+    revision: number,
+    _requeueSources = false
   ) {
     const library = this.requireLibrary(libraryId)
     library.embeddingSettings = settings
     library.embeddingRevision = revision
   }
-
-  async markAllSourcesQueued(_libraryId: string) {}
 
   async listFileStorageKeys(libraryId: string) {
     return [...this.requireLibrary(libraryId).storageKeys]

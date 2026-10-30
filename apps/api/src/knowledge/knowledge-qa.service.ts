@@ -6,7 +6,9 @@ import {
   NO_HIT_ANSWER,
   buildKnowledgePrompt,
   selectKnowledgeHits,
+  toKnowledgeCitations,
   type KnowledgeCitation,
+  type KnowledgePromptHit,
 } from "./knowledge-retrieval"
 import type { KnowledgeRetrievalStore } from "./knowledge-source.repository"
 import {
@@ -97,12 +99,16 @@ export class KnowledgeQaService {
   ): Promise<KnowledgeRetrieveResult> {
     const membership = await this.requireMemberAndEmbedding(userId, libraryId)
     assertQuestion(query)
-    return this.search(
+    const retrieved = await this.search(
       membership.embeddingRevision,
       libraryId,
       query,
       embeddingConfigFrom(membership.embeddingSettings)
     )
+    return {
+      citations: toKnowledgeCitations(retrieved.hits),
+      pendingSourceCount: retrieved.pendingSourceCount,
+    }
   }
 
   async *answer(
@@ -123,16 +129,16 @@ export class KnowledgeQaService {
     )
     yield {
       type: "citations",
-      citations: retrieved.citations,
+      citations: toKnowledgeCitations(retrieved.hits),
       pendingSourceCount: retrieved.pendingSourceCount,
     }
-    if (retrieved.citations.length === 0) {
+    if (retrieved.hits.length === 0) {
       // 没有达到相似度的片段时调用模型只会编造，因此跳过聊天模型、直接返回固定句。
       yield { type: "token", content: NO_HIT_ANSWER }
       yield { type: "done" }
       return
     }
-    const context = buildKnowledgePrompt(retrieved.citations)
+    const context = buildKnowledgePrompt(retrieved.hits)
     for await (const content of this.deps.streamChat({
       system: KNOWLEDGE_QA_SYSTEM_PROMPT,
       messages: [{ role: "user", content: context }, ...messages],
@@ -158,7 +164,10 @@ export class KnowledgeQaService {
     libraryId: string,
     query: string,
     config: EmbeddingConfig
-  ): Promise<KnowledgeRetrieveResult> {
+  ): Promise<{
+    hits: KnowledgePromptHit[]
+    pendingSourceCount: number
+  }> {
     // 只嵌入最新问题：历史只给生成模型，避免把追问改写成另一句检索词。
     const embedPromise = this.deps.embedTexts(config, [query])
     const pendingPromise = this.sources.countPendingSources(
@@ -171,7 +180,7 @@ export class KnowledgeQaService {
     ])
     const embedding = vectors[0]
     if (!embedding) {
-      return { citations: [], pendingSourceCount }
+      return { hits: [], pendingSourceCount }
     }
     const rows = await this.sources.findNearestChunks({
       libraryId,
@@ -179,7 +188,7 @@ export class KnowledgeQaService {
       embedding,
     })
     return {
-      citations: selectKnowledgeHits(
+      hits: selectKnowledgeHits(
         rows.map((row) => ({ ...row, libraryRevision: embeddingRevision })),
         libraryId
       ),

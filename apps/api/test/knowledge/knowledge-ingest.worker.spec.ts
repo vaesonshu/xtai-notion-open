@@ -80,6 +80,18 @@ class FakeIngestStore implements KnowledgeIngestStore {
     chunks: IngestChunk[]
   }): Promise<void> {
     const row = this.require(input.sourceId)
+    const library = this.libraries.get(row.libraryId)
+    const commitRevision = input.chunks[0]?.embeddingRevision
+    // 嵌入版本已前进：旧向量不能成为可检索代，来源回到排队。
+    if (
+      library == null ||
+      commitRevision === undefined ||
+      library.revision !== commitRevision
+    ) {
+      row.status = "queued"
+      row.lockedAt = null
+      return
+    }
     this.chunks.splice(
       0,
       this.chunks.length,
@@ -112,6 +124,16 @@ class FakeIngestStore implements KnowledgeIngestStore {
 
   async markReady(id: string): Promise<void> {
     const row = this.require(id)
+    const library = this.libraries.get(row.libraryId)
+    const indexedRevision = this.chunks.find(
+      (chunk) =>
+        chunk.sourceId === id && chunk.generation === row.activeGeneration
+    )?.embeddingRevision
+    if (!library || library.revision !== indexedRevision) {
+      row.status = "queued"
+      row.lockedAt = null
+      return
+    }
     row.status = "ready"
     row.errorMessage = null
     row.lockedAt = null
@@ -120,7 +142,15 @@ class FakeIngestStore implements KnowledgeIngestStore {
   async findLibraryEmbedding(
     libraryId: string
   ): Promise<LibraryEmbedding | null> {
-    return this.libraries.get(libraryId) ?? null
+    const library = this.libraries.get(libraryId)
+    if (!library) {
+      return null
+    }
+    // 返回快照，模拟数据库读到的那一行，避免测试里改 revision 连带改掉 worker 手里的值。
+    return {
+      revision: library.revision,
+      settings: { ...library.settings },
+    }
   }
 
   async findActiveEmbeddingRevision(
@@ -281,6 +311,32 @@ describe("KnowledgeIngestWorker.processNext", () => {
     expect(sources.rows[0]?.status).toBe("ready")
     expect(sources.rows[0]?.activeGeneration).toBe(1)
     expect(sources.chunks).toHaveLength(1)
+  })
+
+  it("stays queued when a commit revision is older than the library", async () => {
+    const { worker, sources, embedTexts } = makeHarness({
+      source: sourceRecord({
+        activeGeneration: 1,
+        indexedContentHash: "old-hash",
+      }),
+      chunks: [oldChunk()],
+      revision: 1,
+      embed: async () => {
+        const library = sources.libraries.get(LIBRARY_ID)
+        if (library) {
+          library.revision = 2
+        }
+        return [[0.42]]
+      },
+    })
+
+    await worker.processNext()
+
+    expect(embedTexts).toHaveBeenCalledTimes(1)
+    expect(sources.rows[0]?.status).toBe("queued")
+    expect(sources.rows[0]?.lockedAt).toBeNull()
+    expect(sources.rows[0]?.activeGeneration).toBe(1)
+    expect(sources.chunks).toEqual([oldChunk()])
   })
 
   it("embeds again when the library revision is newer", async () => {

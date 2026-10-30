@@ -263,6 +263,21 @@ export async function uploadLibrarySourceFile(
   })
 }
 
+export type ReadableDocumentHit = {
+  id: string
+  title: string
+}
+
+export async function searchReadableDocuments(
+  query: string,
+  userId: string
+): Promise<ReadableDocumentHit[]> {
+  return apiRequestJson<ReadableDocumentHit[]>({
+    path: `/documents/search?q=${encodeURIComponent(query)}`,
+    userId,
+  })
+}
+
 export async function importLibraryDocument(
   libraryId: string,
   userId: string,

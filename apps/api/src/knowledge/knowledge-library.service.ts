@@ -108,15 +108,13 @@ export class KnowledgeLibraryService {
       },
       patch
     )
+    // 只改 Key 时 modelChanged 为 false，不会把来源打回排队。
     await this.libraries.saveEmbedding(
       libraryId,
       patched.settings,
-      patched.revision
+      patched.revision,
+      patched.modelChanged
     )
-    // 只改 Key 不算模型变化，避免无意义地把全部来源打回排队。
-    if (patched.modelChanged) {
-      await this.libraries.markAllSourcesQueued(libraryId)
-    }
     return {
       openAiBaseUrl:
         patched.settings.openAiBaseUrl ?? DEFAULT_EMBEDDING_BASE_URL,

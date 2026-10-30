@@ -151,6 +151,75 @@ describe("LibraryDetailPage", () => {
     expect(confirmSpy).not.toHaveBeenCalled()
   })
 
+  it("imports a document chosen from title search", async () => {
+    const searchDocuments = vi
+      .fn()
+      .mockResolvedValue([{ id: "doc-42", title: "产品需求文档" }])
+    const importDocument = vi.fn().mockResolvedValue({ id: "src-new" })
+
+    render(
+      <LibraryDetailPage
+        libraryId="lib-1"
+        userId="user-1"
+        fetchLibrary={vi.fn().mockResolvedValue(library)}
+        listSources={vi.fn().mockResolvedValue([])}
+        searchDocuments={searchDocuments}
+        importDocument={importDocument}
+      />
+    )
+
+    expect(await screen.findByText("产品资料库")).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText("文档 ID")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "上传文件" })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText("搜索文档标题"), {
+      target: { value: "产品" },
+    })
+
+    expect(await screen.findByText("产品需求文档")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "产品需求文档" }))
+
+    await waitFor(() => {
+      expect(importDocument).toHaveBeenCalledWith("lib-1", "user-1", "doc-42")
+    })
+  })
+
+  it("refreshes sources when embedding save reports modelChanged", async () => {
+    const confirmSpy = vi.fn().mockReturnValue(true)
+    vi.stubGlobal("confirm", confirmSpy)
+    const listSources = vi.fn().mockResolvedValue([])
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        openAiBaseUrl: "https://api.openai.com/v1",
+        openAiEmbeddingModel: "text-embedding-3-large",
+        hasApiKey: true,
+        modelChanged: true,
+      }),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(
+      <LibraryDetailPage
+        libraryId="lib-1"
+        userId="user-1"
+        fetchLibrary={vi.fn().mockResolvedValue(library)}
+        listSources={listSources}
+      />
+    )
+
+    expect(await screen.findByText("产品资料库")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "嵌入配置" }))
+    fireEvent.change(screen.getByLabelText("模型名称"), {
+      target: { value: "text-embedding-3-large" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "保存" }))
+
+    await waitFor(() => {
+      expect(listSources.mock.calls.length).toBeGreaterThan(1)
+    })
+  })
+
   it("hides the contact-owner hint from owners", async () => {
     render(
       <LibraryDetailPage
