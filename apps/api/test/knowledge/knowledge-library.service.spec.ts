@@ -61,6 +61,7 @@ class FakeKnowledgeLibraryRepository implements KnowledgeLibraryStore {
         sourceCount: 0,
         memberCount: library.members.size,
         updatedAt: library.updatedAt,
+        embeddingSettings: library.embeddingSettings,
       }))
   }
 
@@ -210,8 +211,35 @@ describe("KnowledgeLibraryService", () => {
     expect(created.name).toBe("产品资料")
     expect(created.role).toBe("owner")
     expect(created.memberCount).toBe(1)
+    expect(created.embeddingConfigured).toBe(false)
     expect(stored?.members.get(OWNER_ID)).toBe("owner")
     expect(stored?.members.size).toBe(1)
+  })
+
+  it("sets embeddingConfigured only when key and model are stored", async () => {
+    const { service, repo } = makeService()
+    const library = await createOwnedLibrary(service)
+    const stored = repo.libraries.get(library.id)
+    if (!stored) {
+      throw new Error("missing library")
+    }
+
+    stored.embeddingSettings = { openAiApiKey: "sk-secret" }
+    expect((await service.list(OWNER_ID))[0]?.embeddingConfigured).toBe(false)
+
+    stored.embeddingSettings = {
+      openAiEmbeddingModel: "text-embedding-3-small",
+    }
+    expect((await service.list(OWNER_ID))[0]?.embeddingConfigured).toBe(false)
+
+    stored.embeddingSettings = {
+      openAiApiKey: "sk-secret",
+      openAiEmbeddingModel: "text-embedding-3-small",
+    }
+    const listed = await service.list(OWNER_ID)
+    expect(listed[0]?.embeddingConfigured).toBe(true)
+    expect(listed[0]).not.toHaveProperty("openAiApiKey")
+    expect(JSON.stringify(listed)).not.toContain("sk-secret")
   })
 
   it("forbids viewer and admin from renaming", async () => {

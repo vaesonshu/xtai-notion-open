@@ -65,6 +65,7 @@ class FakeKnowledgeLibraryRepository implements KnowledgeLibraryStore {
         sourceCount: 0,
         memberCount: library.members.size,
         updatedAt: library.updatedAt,
+        embeddingSettings: library.embeddingSettings,
       }))
   }
 
@@ -183,7 +184,8 @@ class FakeKnowledgeSourceRepository implements KnowledgeSourceStore {
 
   async updateBodyAndQueue(
     sourceId: string,
-    bodyText: string | null
+    bodyText: string | null,
+    title?: string
   ): Promise<void> {
     const row = this.rows.find((item) => item.id === sourceId)
     if (!row) {
@@ -191,6 +193,9 @@ class FakeKnowledgeSourceRepository implements KnowledgeSourceStore {
     }
     row.bodyText = bodyText
     row.status = "queued"
+    if (title !== undefined) {
+      row.title = title
+    }
   }
 
   async deleteById(libraryId: string, sourceId: string): Promise<void> {
@@ -209,12 +214,23 @@ class FakeKnowledgeSourceRepository implements KnowledgeSourceStore {
 
 class FakeDocuments {
   calls: { documentId: string; userId: string }[] = []
+  titleCalls: { documentId: string; userId: string }[] = []
   markdown = "# 导入正文"
+  title = "产品手册"
   denyRead = false
+  throwOnExport = false
+
+  async readTitle(documentId: string, userId: string): Promise<string> {
+    this.titleCalls.push({ documentId, userId })
+    if (this.denyRead) {
+      throw new ForbiddenException("无权阅读该文档")
+    }
+    return this.title
+  }
 
   async exportMarkdown(documentId: string, userId: string): Promise<string> {
     this.calls.push({ documentId, userId })
-    if (this.denyRead) {
+    if (this.denyRead || this.throwOnExport) {
       throw new ForbiddenException("无权阅读该文档")
     }
     return this.markdown
@@ -446,6 +462,16 @@ describe("KnowledgeSourceService.importDocument", () => {
     )
   })
 
+  it("stores the document title instead of the document id", async () => {
+    const { service, libraryRepo, sources } = makeHarness()
+    const library = await seedLibrary(libraryRepo)
+
+    await service.importDocument(OWNER_ID, library.id, "doc-1")
+
+    expect(sources.rows[0]?.title).toBe("产品手册")
+    expect(sources.rows[0]?.title).not.toBe("doc-1")
+  })
+
   it("overwrites bodyText and requeues the same snapshot row", async () => {
     const { service, libraryRepo, sources, documents } = makeHarness()
     const library = await seedLibrary(libraryRepo)
@@ -459,6 +485,37 @@ describe("KnowledgeSourceService.importDocument", () => {
     expect(sources.rows[0]?.bodyText).toBe("# 第二版")
     expect(sources.rows[0]?.status).toBe("queued")
   })
+
+  it("updates the stored title when re-importing", async () => {
+    const { service, libraryRepo, sources, documents } = makeHarness()
+    const library = await seedLibrary(libraryRepo)
+    await service.importDocument(OWNER_ID, library.id, "doc-1")
+    documents.title = "改名后的手册"
+    documents.markdown = "# 第二版"
+
+    await service.importDocument(OWNER_ID, library.id, "doc-1")
+
+    expect(sources.rows).toHaveLength(1)
+    expect(sources.rows[0]?.title).toBe("改名后的手册")
+    expect(sources.rows[0]?.bodyText).toBe("# 第二版")
+  })
+
+  it("leaves the snapshot unchanged when exportMarkdown throws", async () => {
+    const { service, libraryRepo, sources, documents } = makeHarness()
+    const library = await seedLibrary(libraryRepo)
+    await service.importDocument(OWNER_ID, library.id, "doc-1")
+    documents.title = "不该写进去"
+    documents.markdown = "# 不该写进去"
+    documents.throwOnExport = true
+
+    await expect(
+      service.importDocument(OWNER_ID, library.id, "doc-1")
+    ).rejects.toThrow("无权阅读该文档")
+    expect(sources.rows).toHaveLength(1)
+    expect(sources.rows[0]?.title).toBe("产品手册")
+    expect(sources.rows[0]?.bodyText).toBe("# 导入正文")
+    expect(sources.rows[0]?.status).toBe("queued")
+  })
 })
 
 describe("KnowledgeSourceService.reindex", () => {
@@ -470,8 +527,10 @@ describe("KnowledgeSourceService.reindex", () => {
     await service.reindex(OWNER_ID, library.id, "file-1")
 
     expect(documents.calls).toHaveLength(0)
+    expect(documents.titleCalls).toHaveLength(0)
     expect(sources.rows[0]?.bodyText).toBeNull()
     expect(sources.rows[0]?.status).toBe("queued")
+    expect(sources.rows[0]?.title).toBe("note.txt")
   })
 
   it("exports markdown again when reindexing a snapshot", async () => {
@@ -479,12 +538,14 @@ describe("KnowledgeSourceService.reindex", () => {
     const library = await seedLibrary(libraryRepo)
     sources.seed(snapshotRecord(library.id))
     documents.markdown = "# 新快照"
+    documents.title = "更新后的标题"
 
     await service.reindex(OWNER_ID, library.id, "snap-1")
 
     expect(documents.calls).toEqual([{ documentId: "doc-1", userId: OWNER_ID }])
     expect(sources.rows[0]?.bodyText).toBe("# 新快照")
     expect(sources.rows[0]?.status).toBe("queued")
+    expect(sources.rows[0]?.title).toBe("更新后的标题")
   })
 
   it("does not change the row when exportMarkdown denies read", async () => {
@@ -503,6 +564,7 @@ describe("KnowledgeSourceService.reindex", () => {
     ).rejects.toThrow("无权阅读该文档")
     expect(sources.rows[0]?.status).toBe("ready")
     expect(sources.rows[0]?.bodyText).toBe("旧快照正文")
+    expect(sources.rows[0]?.title).toBe("doc-1")
   })
 })
 

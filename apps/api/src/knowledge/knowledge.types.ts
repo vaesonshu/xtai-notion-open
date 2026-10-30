@@ -64,6 +64,13 @@ export function sourceStatusLabel(
   return isUpdate ? "更新中" : "索引中"
 }
 
+/** 问答侧只认「有密钥且有模型」；缺一不可，也不把密钥回给列表。 */
+export function isEmbeddingConfigured(settings: EmbeddingSettings): boolean {
+  return Boolean(
+    settings.openAiApiKey?.trim() && settings.openAiEmbeddingModel?.trim()
+  )
+}
+
 export function applyEmbeddingPatch(
   current: { settings: EmbeddingSettings; revision: number },
   patch: EmbeddingSettings

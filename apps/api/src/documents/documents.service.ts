@@ -174,6 +174,16 @@ export class DocumentsService {
     return markdown
   }
 
+  async readTitle(documentId: string, userId: string): Promise<string> {
+    // 必须先 assertCanRead 再读标题行，避免未授权调用方仅凭 ID 拿到文档名。
+    await this.assertCanRead(documentId, userId)
+    const row = await this.documents.findById(documentId)
+    if (!row) {
+      throw new NotFoundException("Document not found")
+    }
+    return row.title
+  }
+
   async saveDocumentContent(
     documentId: string,
     userId: string,

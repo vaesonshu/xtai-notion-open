@@ -334,7 +334,11 @@ export function LibraryDetailPage({
         <LibraryAskPanel
           libraryId={libraryId}
           userId={userId}
-          embeddingHint={isOwner ? null : "请联系资料库所有者配置嵌入模型"}
+          embeddingHint={
+            library.role !== "owner" && !library.embeddingConfigured
+              ? "请联系资料库所有者配置嵌入模型"
+              : null
+          }
         />
       </div>
 
@@ -551,16 +555,20 @@ function LibraryEmbeddingDialog({
   userId: string
 }) {
   const [apiKey, setApiKey] = useState("")
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_EMBEDDING_BASE_URL)
+  const [baseUrl, setBaseUrl] = useState("")
   const [model, setModel] = useState("")
-  const [savedBaseUrl, setSavedBaseUrl] = useState(DEFAULT_EMBEDDING_BASE_URL)
+  const [savedBaseUrl, setSavedBaseUrl] = useState("")
   const [savedModel, setSavedModel] = useState("")
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
     const nextModel = model.trim()
     const nextBase = baseUrl.trim()
-    const modelChanged = nextModel !== savedModel || nextBase !== savedBaseUrl
+    const nextKey = apiKey.trim()
+    // 只对用户实际填写且与本会话上次保存值不同的模型/URL 确认重建。
+    const modelChanged =
+      (nextModel !== "" && nextModel !== savedModel) ||
+      (nextBase !== "" && nextBase !== savedBaseUrl)
     if (modelChanged && !window.confirm("将按新模型重建全部来源")) {
       return
     }
@@ -570,14 +578,15 @@ function LibraryEmbeddingDialog({
       openAiEmbeddingModel?: string
     } = {}
     if (nextModel) patch.openAiEmbeddingModel = nextModel
+    // 空 Base URL 表示不改已保存地址，不能把占位默认值写进 PUT。
     if (nextBase) patch.openAiBaseUrl = nextBase
     // 空 Key 表示不改已保存的密钥，所以不要把空字符串交给 PUT。
-    if (apiKey.trim()) patch.openAiApiKey = apiKey.trim()
+    if (nextKey) patch.openAiApiKey = nextKey
     setSaving(true)
     try {
       await updateLibraryEmbedding(libraryId, userId, patch)
-      setSavedModel(nextModel)
-      setSavedBaseUrl(nextBase || DEFAULT_EMBEDDING_BASE_URL)
+      if (nextModel) setSavedModel(nextModel)
+      if (nextBase) setSavedBaseUrl(nextBase)
       setApiKey("")
       toast.success("嵌入配置已保存")
       onOpenChange(false)

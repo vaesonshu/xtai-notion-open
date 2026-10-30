@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest"
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { LibraryDetailPage } from "@/components/libraries/library-detail-page"
 import type { LibrarySource, LibrarySummary } from "@/lib/library-api"
@@ -15,6 +15,17 @@ const library: LibrarySummary = {
   sourceCount: 1,
   memberCount: 1,
   updatedAt: "2026-01-02T00:00:00.000Z",
+  embeddingConfigured: false,
+}
+
+const viewerLibrary: LibrarySummary = {
+  ...library,
+  role: "viewer",
+}
+
+const configuredViewerLibrary: LibrarySummary = {
+  ...viewerLibrary,
+  embeddingConfigured: true,
 }
 
 const queuedSource: LibrarySource = {
@@ -89,5 +100,101 @@ describe("LibraryDetailPage", () => {
       await vi.advanceTimersByTimeAsync(3000)
     })
     expect(listSources).toHaveBeenCalledTimes(2)
+  })
+
+  it("saves only the api key from the owner embedding dialog", async () => {
+    const confirmSpy = vi.fn()
+    vi.stubGlobal("confirm", confirmSpy)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        openAiBaseUrl: "https://api.openai.com/v1",
+        openAiEmbeddingModel: "",
+        hasApiKey: true,
+        modelChanged: false,
+      }),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(
+      <LibraryDetailPage
+        libraryId="lib-1"
+        userId="user-1"
+        fetchLibrary={vi.fn().mockResolvedValue(library)}
+        listSources={vi.fn().mockResolvedValue([])}
+      />
+    )
+
+    expect(await screen.findByText("产品资料库")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "嵌入配置" }))
+    fireEvent.change(screen.getByLabelText("API Key"), {
+      target: { value: "sk-test" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "保存" }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalled()
+    })
+    const putCall = fetchMock.mock.calls.find((call) => {
+      const init = call[1] as RequestInit | undefined
+      return init?.method === "PUT"
+    })
+    expect(putCall).toBeDefined()
+    const body = JSON.parse(String((putCall?.[1] as RequestInit).body)) as {
+      openAiApiKey?: string
+      openAiBaseUrl?: string
+      openAiEmbeddingModel?: string
+    }
+    expect(body).toEqual({ openAiApiKey: "sk-test" })
+    expect(body).not.toHaveProperty("openAiBaseUrl")
+    expect(body).not.toHaveProperty("openAiEmbeddingModel")
+    expect(confirmSpy).not.toHaveBeenCalled()
+  })
+
+  it("hides the contact-owner hint from owners", async () => {
+    render(
+      <LibraryDetailPage
+        libraryId="lib-1"
+        userId="user-1"
+        fetchLibrary={vi.fn().mockResolvedValue(library)}
+        listSources={vi.fn().mockResolvedValue([])}
+      />
+    )
+
+    expect(await screen.findByText("产品资料库")).toBeInTheDocument()
+    expect(
+      screen.queryByText("请联系资料库所有者配置嵌入模型")
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows the contact-owner hint when embedding is missing", async () => {
+    render(
+      <LibraryDetailPage
+        libraryId="lib-1"
+        userId="user-1"
+        fetchLibrary={vi.fn().mockResolvedValue(viewerLibrary)}
+        listSources={vi.fn().mockResolvedValue([])}
+      />
+    )
+
+    expect(
+      await screen.findByText("请联系资料库所有者配置嵌入模型")
+    ).toBeInTheDocument()
+  })
+
+  it("hides the contact-owner hint when embedding is configured", async () => {
+    render(
+      <LibraryDetailPage
+        libraryId="lib-1"
+        userId="user-1"
+        fetchLibrary={vi.fn().mockResolvedValue(configuredViewerLibrary)}
+        listSources={vi.fn().mockResolvedValue([])}
+      />
+    )
+
+    expect(await screen.findByText("产品资料库")).toBeInTheDocument()
+    expect(
+      screen.queryByText("请联系资料库所有者配置嵌入模型")
+    ).not.toBeInTheDocument()
   })
 })

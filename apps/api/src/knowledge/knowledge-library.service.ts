@@ -14,6 +14,7 @@ import {
 import {
   applyEmbeddingPatch,
   DEFAULT_EMBEDDING_BASE_URL,
+  isEmbeddingConfigured,
   type EmbeddingSettings,
   type LibraryRole,
   roleAtLeast,
@@ -26,6 +27,7 @@ export type LibrarySummary = {
   sourceCount: number
   memberCount: number
   updatedAt: string
+  embeddingConfigured: boolean
 }
 
 type InviteMemberInput = {
@@ -60,6 +62,7 @@ export class KnowledgeLibraryService {
       sourceCount: 0,
       memberCount: 1,
       updatedAt: row.updatedAt.toISOString(),
+      embeddingConfigured: false,
     }
   }
 
@@ -72,6 +75,7 @@ export class KnowledgeLibraryService {
       sourceCount: row.sourceCount,
       memberCount: row.memberCount,
       updatedAt: row.updatedAt.toISOString(),
+      embeddingConfigured: isEmbeddingConfigured(row.embeddingSettings),
     }))
   }
 

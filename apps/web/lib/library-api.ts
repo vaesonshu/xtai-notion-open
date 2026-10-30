@@ -16,6 +16,7 @@ export type LibrarySummary = {
   sourceCount: number
   memberCount: number
   updatedAt: string
+  embeddingConfigured: boolean
 }
 
 export type LibrarySource = {

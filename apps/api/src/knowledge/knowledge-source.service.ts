@@ -43,7 +43,10 @@ export class KnowledgeSourceService {
     @Inject(KnowledgeSourceRepository)
     private readonly sources: KnowledgeSourceStore,
     @Inject(DocumentsService)
-    private readonly documents: Pick<DocumentsService, "exportMarkdown">,
+    private readonly documents: Pick<
+      DocumentsService,
+      "exportMarkdown" | "readTitle"
+    >,
     @Inject(KNOWLEDGE_PUT_FILE)
     private readonly putFile: KnowledgePutFile
   ) {}
@@ -100,11 +103,14 @@ export class KnowledgeSourceService {
     documentId: string
   ): Promise<{ id: string }> {
     await this.libraries.requireRole(userId, libraryId, "editor")
-    const markdown = await this.documents.exportMarkdown(documentId, userId)
+    const [title, markdown] = await Promise.all([
+      this.documents.readTitle(documentId, userId),
+      this.documents.exportMarkdown(documentId, userId),
+    ])
     const existing = await this.sources.findSnapshot(libraryId, documentId)
     if (existing) {
-      // 同一文档只保留一行快照；再导入覆盖正文并重新排队，而不是第二份来源。
-      await this.sources.updateBodyAndQueue(existing.id, markdown)
+      // 同一文档只保留一行快照；再导入覆盖正文和标题并重新排队。
+      await this.sources.updateBodyAndQueue(existing.id, markdown, title)
       return { id: existing.id }
     }
     const id = randomUUID()
@@ -112,7 +118,8 @@ export class KnowledgeSourceService {
       id,
       libraryId,
       kind: "document_snapshot",
-      title: documentId,
+      // 快照标题取导入时的文档标题，而不是文档 ID。
+      title,
       status: "queued",
       errorMessage: null,
       activeGeneration: 0,
@@ -139,11 +146,12 @@ export class KnowledgeSourceService {
         throw new NotFoundException("来源不存在")
       }
       // 阅读检查必须先于改行，避免无权阅读时把已有快照打回排队。
-      const markdown = await this.documents.exportMarkdown(
-        source.sourceDocumentId,
-        userId
-      )
-      await this.sources.updateBodyAndQueue(source.id, markdown)
+      const documentId = source.sourceDocumentId
+      const [title, markdown] = await Promise.all([
+        this.documents.readTitle(documentId, userId),
+        this.documents.exportMarkdown(documentId, userId),
+      ])
+      await this.sources.updateBodyAndQueue(source.id, markdown, title)
       return
     }
     // 文件正文在 COS；清空 bodyText 让 worker 重新解析，而不是沿用旧文本。

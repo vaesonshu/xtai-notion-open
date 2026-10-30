@@ -60,7 +60,11 @@ export type KnowledgeSourceStore = {
     libraryId: string,
     documentId: string
   ): Promise<KnowledgeSourceRecord | null>
-  updateBodyAndQueue(sourceId: string, bodyText: string | null): Promise<void>
+  updateBodyAndQueue(
+    sourceId: string,
+    bodyText: string | null,
+    title?: string
+  ): Promise<void>
   deleteById(libraryId: string, sourceId: string): Promise<void>
 }
 
@@ -353,7 +357,8 @@ export class KnowledgeSourceRepository
 
   async updateBodyAndQueue(
     sourceId: string,
-    bodyText: string | null
+    bodyText: string | null,
+    title?: string
   ): Promise<void> {
     await this.prisma.client.knowledgeSource.update({
       where: { id: sourceId },
@@ -361,6 +366,8 @@ export class KnowledgeSourceRepository
         bodyText,
         status: "queued",
         updatedAt: new Date(),
+        // 文件重索引不传 title，避免把文件名冲掉。
+        ...(title === undefined ? {} : { title }),
       },
     })
   }

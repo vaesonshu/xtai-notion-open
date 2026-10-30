@@ -15,6 +15,7 @@ export type LibraryListRow = {
   sourceCount: number
   memberCount: number
   updatedAt: Date
+  embeddingSettings: EmbeddingSettings
 }
 
 export type LibraryMembership = {
@@ -133,6 +134,9 @@ export class KnowledgeLibraryRepository implements KnowledgeLibraryStore {
       sourceCount: membership.library._count.sources,
       memberCount: membership.library._count.members,
       updatedAt: membership.library.updatedAt,
+      embeddingSettings: asEmbeddingSettings(
+        membership.library.embeddingSettings
+      ),
     }))
   }
 
