@@ -145,9 +145,10 @@ describe("pgvector knowledge chunk search (integration)", () => {
         storageKey: null,
       })
 
-      // 干扰块用全 0：与全 1 查询正交，余弦距离最大，证明最近邻
-      // 看的是向量距离而不是插入顺序。另一库写入相同的全 1 向量
-      // 也必须被 library_id 过滤掉，避免把别人的资料当成当前库命中。
+      // 干扰块用全 0（简报要求）且 ordinal 更小、先插入：若按插入顺序
+      // 或 ordinal 排序会排到前面。pgvector 对零向量的余弦距离是 NaN，
+      // 不是最大距离。另一库写入相同的全 1 向量也必须被 library_id
+      // 过滤掉，避免把别人的资料当成当前库命中。
       await sources.commitGeneration({
         sourceId,
         generation: ACTIVE_GENERATION,
@@ -158,10 +159,10 @@ describe("pgvector knowledge chunk search (integration)", () => {
             libraryId,
             generation: ACTIVE_GENERATION,
             ordinal: 0,
-            content: TARGET_CONTENT,
+            content: DISTRACTOR_CONTENT,
             heading: null,
             page: null,
-            embedding: ones,
+            embedding: zeros,
             embeddingRevision: REVISION,
           },
           {
@@ -169,10 +170,10 @@ describe("pgvector knowledge chunk search (integration)", () => {
             libraryId,
             generation: ACTIVE_GENERATION,
             ordinal: 1,
-            content: DISTRACTOR_CONTENT,
+            content: TARGET_CONTENT,
             heading: null,
             page: null,
-            embedding: zeros,
+            embedding: ones,
             embeddingRevision: REVISION,
           },
         ],
@@ -213,6 +214,10 @@ describe("pgvector knowledge chunk search (integration)", () => {
       expect(hits[0]?.content).toBe(TARGET_CONTENT)
       expect(hits[0]?.sourceId).toBe(sourceId)
       expect(hits[0]?.generation).toBe(ACTIVE_GENERATION)
+      expect(contents).toContain(DISTRACTOR_CONTENT)
+      expect(contents.indexOf(DISTRACTOR_CONTENT)).toBeGreaterThan(
+        contents.indexOf(TARGET_CONTENT)
+      )
       expect(contents).not.toContain(OTHER_LIBRARY_CONTENT)
       expect(contents).not.toContain(STALE_CONTENT)
     } finally {
