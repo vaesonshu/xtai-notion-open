@@ -9,7 +9,7 @@ const repoRoot = join(apiRoot, "../..")
 
 function readMigrationSql(): string {
   return readFileSync(
-    join(apiRoot, "prisma/migrations/012_knowledge_library/migration.sql"),
+    join(apiRoot, "prisma/migrations/013_knowledge_library/migration.sql"),
     "utf8"
   )
 }
@@ -40,6 +40,15 @@ describe("knowledge library migration", () => {
     expect(sql).toContain("knowledge_source")
     expect(sql).toContain("knowledge_chunk")
     expect(sql).toContain("vector(1536)")
+    const resized = readFileSync(
+      join(
+        apiRoot,
+        "prisma/migrations/014_embedding_dimensions_1024/migration.sql"
+      ),
+      "utf8"
+    )
+    expect(resized).toContain("vector(1024)")
+    expect(resized).not.toMatch(/hnsw/i)
     expect(sql).toContain("CREATE UNIQUE INDEX")
     expect(sql).toContain("document_snapshot")
     expect(sql).toContain("source_document_id")

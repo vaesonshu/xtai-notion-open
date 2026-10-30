@@ -47,7 +47,7 @@ function requestHeaders(
 }
 
 describe("embedKnowledgeTexts", () => {
-  it("splits 20 texts into batches of 16 and 4 with dimensions 1536", async () => {
+  it("splits 20 texts into batches of 16 and 4", async () => {
     const texts = Array.from({ length: 20 }, (_, i) => `text-${i}`)
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { input: string[] }
@@ -64,8 +64,8 @@ describe("embedKnowledgeTexts", () => {
     const second = requestBody(fetchImpl.mock.calls[1])
     expect((first.input as string[]).length).toBe(16)
     expect((second.input as string[]).length).toBe(4)
-    expect(first.dimensions).toBe(1536)
-    expect(second.dimensions).toBe(1536)
+    expect(first.dimensions).toBe(EMBEDDING_DIMENSIONS)
+    expect(second.dimensions).toBe(EMBEDDING_DIMENSIONS)
     expect(first.model).toBe(config.model)
     expect(second.model).toBe(config.model)
     expect(first.input).toEqual(texts.slice(0, 16))
@@ -161,6 +161,36 @@ describe("embedKnowledgeTexts", () => {
     expect(error).toBeInstanceOf(EmbeddingClientError)
     expect((error as EmbeddingClientError).code).toBe("unavailable")
     expect(fetchImpl).toHaveBeenCalledTimes(4)
+  })
+
+  it("embeds Agent Plan vision text one chunk at a time", async () => {
+    const planConfig: EmbeddingConfig = {
+      apiKey: "ark-test-key",
+      baseUrl: "https://ark.cn-beijing.volces.com/api/plan/v3",
+      model: "doubao-embedding-vision",
+    }
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse(200, { data: { embedding: unitVector() } })
+    )
+
+    const result = await embedKnowledgeTexts(
+      planConfig,
+      ["第一段", "第二段"],
+      fetchImpl,
+      noWait
+    )
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe(
+      "https://ark.cn-beijing.volces.com/api/plan/v3/embeddings/multimodal"
+    )
+    const body = requestBody(fetchImpl.mock.calls[0])
+    expect(body.model).toBe("doubao-embedding-vision")
+    expect(body.dimensions).toBe(EMBEDDING_DIMENSIONS)
+    expect(body.encoding_format).toBe("float")
+    expect(body.input).toEqual([{ type: "text", text: "第一段" }])
+    expect(result).toHaveLength(2)
+    expect(result[0]).toHaveLength(EMBEDDING_DIMENSIONS)
   })
 
   it("returns an empty array without fetching when texts is empty", async () => {

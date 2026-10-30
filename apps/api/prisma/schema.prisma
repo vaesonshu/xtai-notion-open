@@ -113,6 +113,7 @@ model AppUser {
   createdKnowledgeLibraries KnowledgeLibrary[] @relation("KnowledgeLibraryCreator")
   knowledgeLibraryMembers   KnowledgeLibraryMember[]
   createdKnowledgeSources   KnowledgeSource[]  @relation("KnowledgeSourceCreator")
+  notifications             UserNotification[]
 
   @@map("app_user")
 }
@@ -130,6 +131,22 @@ model UserDocumentPref {
   @@index([userId, isFavorite])
   @@index([userId, lastOpenedAt(sort: Desc)])
   @@map("user_document_pref")
+}
+
+// 远程库已经执行过 012_user_notification，这里把同一张表补进模型，避免迁移历史分叉。
+model UserNotification {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId, createdAt(sort: Desc)], map: "user_notification_user_created_idx")
+  @@map("user_notification")
 }
 
 // 广场已发布文章下的评论；parentId 自引用实现多级嵌套回复。
@@ -292,7 +309,7 @@ model KnowledgeChunk {
   heading           String?
   page              Int?
   // Prisma 不读写 embedding，相似度查询走参数化 SQL。
-  embedding         Unsupported("vector(1536)")
+  embedding         Unsupported("vector(1024)")
   embeddingRevision Int             @map("embedding_revision")
   createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   source            KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade, onUpdate: NoAction)

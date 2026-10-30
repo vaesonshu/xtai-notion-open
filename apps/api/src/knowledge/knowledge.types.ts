@@ -1,5 +1,8 @@
-/** 嵌入与分块上限：后续入库、截断都复用同一组常量，避免各处各写一遍。 */
-export const EMBEDDING_DIMENSIONS = 1536
+/**
+ * 嵌入维度跟资料库列宽一致。
+ * 方舟 Agent Plan 的 doubao-embedding-vision 输出 1024 维，列也是 vector(1024)。
+ */
+export const EMBEDDING_DIMENSIONS = 1024
 export const DEFAULT_EMBEDDING_BASE_URL = "https://api.openai.com/v1"
 export const CHUNK_TARGET_CHARS = 800
 export const CHUNK_OVERLAP_CHARS = 120
