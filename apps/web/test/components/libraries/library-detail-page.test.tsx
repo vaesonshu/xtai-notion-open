@@ -172,7 +172,7 @@ describe("LibraryDetailPage", () => {
     expect(screen.queryByPlaceholderText("文档 ID")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "上传文件" })).toBeInTheDocument()
 
-    fireEvent.change(screen.getByPlaceholderText("搜索文档标题"), {
+    fireEvent.change(screen.getByPlaceholderText("搜索站内文档并导入"), {
       target: { value: "产品" },
     })
 

@@ -254,6 +254,8 @@ export async function uploadLibrarySourceFile(
   file: File
 ): Promise<{ id: string }> {
   const body = new FormData()
+  // 单独传 UTF-8 文件名，避免 multipart originalname 在服务端被当成 latin1。
+  body.set("filename", file.name)
   body.set("file", file)
   return apiRequestJson<{ id: string }>({
     path: `/libraries/${libraryId}/sources/file`,

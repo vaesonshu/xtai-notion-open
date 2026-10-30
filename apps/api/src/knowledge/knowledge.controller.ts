@@ -26,6 +26,7 @@ import { CurrentUser, type DevUser } from "../auth/current-user.decorator"
 import { PrismaService } from "../database/prisma.module"
 import { CosService } from "../storage/cos.service"
 import { KnowledgeLibraryService } from "./knowledge-library.service"
+import { resolveUploadFilename } from "./upload-filename"
 import type { KnowledgeChatMessage } from "./knowledge-qa.service"
 import { KnowledgeQaService } from "./knowledge-qa.service"
 import { KnowledgeSourceService } from "./knowledge-source.service"
@@ -191,13 +192,14 @@ export class KnowledgeController {
     @Param("id") libraryId: string,
     @UploadedFile()
     file: { originalname: string; buffer: Buffer } | undefined,
+    @Body("filename") filenameField: string | undefined,
     @CurrentUser() user: DevUser
   ) {
     if (!file) {
       throw new BadRequestException("文件不能为空")
     }
     return this.sources.uploadFile(user.id, libraryId, {
-      filename: path.basename(file.originalname),
+      filename: resolveUploadFilename(filenameField, file.originalname),
       bytes: file.buffer,
     })
   }

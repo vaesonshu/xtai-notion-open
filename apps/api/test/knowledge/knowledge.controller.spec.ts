@@ -90,6 +90,7 @@ describe("KnowledgeController", () => {
     await controller.uploadFile(
       LIBRARY_ID,
       { originalname: "notes.txt", buffer: bytes },
+      undefined,
       USER
     )
 
@@ -99,6 +100,22 @@ describe("KnowledgeController", () => {
       "knowledge/lib-1/src-1/"
     )
     expect(uploadFile.mock.calls[0]?.[2]).not.toHaveProperty("storageKey")
+  })
+
+  it("POST /libraries/:id/sources/file uses UTF-8 filename field", async () => {
+    const bytes = Buffer.from("hello")
+    const uploadFile = vi.fn(async () => ({ id: SOURCE_ID }))
+    const controller = makeController({ sources: { uploadFile } })
+    const mojibake = Buffer.from("说明.txt", "utf8").toString("latin1")
+
+    await controller.uploadFile(
+      LIBRARY_ID,
+      { originalname: mojibake, buffer: bytes },
+      "说明.txt",
+      USER
+    )
+
+    expect(uploadFile.mock.calls[0]?.[2]?.filename).toBe("说明.txt")
   })
 
   it("POST /libraries/:id/qa writes citations as SSE", async () => {

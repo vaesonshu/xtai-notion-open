@@ -7,7 +7,10 @@ import {
   useState,
   type ChangeEvent,
 } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { ArrowLeftIcon, UsersIcon } from "@workspace/icons"
+import { LibrarySourcePanel } from "@/components/libraries/library-source-panel"
 import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
@@ -242,7 +245,7 @@ export function LibraryDetailPage({
 
   if (loading && !library) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full min-h-0 items-center justify-center bg-[#FCFCFA]">
         <Spinner />
       </div>
     )
@@ -250,144 +253,93 @@ export function LibraryDetailPage({
 
   if (!library) {
     return (
-      <div className="rounded-xl border border-dashed border-[#ECEAE4] bg-white px-6 py-16 text-center">
-        <p className="text-sm text-[#78746C]">资料库不存在或无权访问</p>
+      <div className="flex h-full items-center justify-center bg-[#FCFCFA] px-6">
+        <div className="rounded-xl border border-dashed border-[#ECEAE4] bg-white px-6 py-16 text-center">
+          <p className="text-sm text-[#78746C]">资料库不存在或无权访问</p>
+        </div>
       </div>
     )
   }
 
   const canEdit = canEditLibrarySources(library.role)
   const isOwner = library.role === "owner"
+  const readySourceCount = sources.filter(
+    (source) => source.status === "ready"
+  ).length
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto px-8 py-10">
-      <header className="mx-auto flex w-full max-w-4xl flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold tracking-wide text-[#78746C] uppercase">
-            资料库
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">{library.name}</h1>
-          <p className="mt-2 text-sm text-[#78746C]">
-            你的角色：{LIBRARY_ROLE_LABELS[library.role]}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#FCFCFA]">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-[#ECEAE4] bg-white px-4 py-3 sm:px-5">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 gap-1 px-2 text-[#78746C]"
+          render={<Link href="/libraries" />}
+          nativeButton={false}
+        >
+          <ArrowLeftIcon className="size-4" />
+          资料库
+        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-semibold text-[#242321]">
+            {library.name}
+          </h1>
+          <p className="text-xs text-[#78746C]">
+            {LIBRARY_ROLE_LABELS[library.role]} · {library.sourceCount} 个来源 ·{" "}
+            {library.memberCount} 位成员
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setMembersOpen(true)}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={() => setMembersOpen(true)}
+          >
+            <UsersIcon className="size-3.5" />
             成员
           </Button>
           {isOwner ? (
-            <Button variant="outline" onClick={() => setEmbeddingOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => setEmbeddingOpen(true)}
+            >
               嵌入配置
             </Button>
           ) : null}
           {isOwner ? (
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-[#78746C]"
               onClick={() => void handleDeleteLibrary()}
             >
-              删除资料库
+              删除
             </Button>
           ) : null}
         </div>
       </header>
 
-      <div className="mx-auto mt-8 grid w-full max-w-4xl gap-8 lg:grid-cols-2">
-        <section className="space-y-4">
-          <h2 className="text-sm font-semibold text-[#78746C]">来源</h2>
-          {canEdit ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="sr-only"
-                onChange={(event) => void handleFileChange(event)}
-              />
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                上传文件
-              </Button>
-              <div className="relative">
-                {/* 用标题搜索代替粘贴 UUID，结果来自当前用户可读文档。 */}
-                <Input
-                  className="w-[220px]"
-                  placeholder="搜索文档标题"
-                  value={documentQuery}
-                  onChange={(event) => setDocumentQuery(event.target.value)}
-                />
-                {documentHits.length > 0 ? (
-                  <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-[#ECEAE4] bg-white shadow-sm">
-                    {documentHits.map((doc) => (
-                      <li key={doc.id}>
-                        <button
-                          type="button"
-                          className="w-full truncate px-3 py-2 text-left text-sm hover:bg-[#F7F6F3]"
-                          onClick={() => void handlePickDocument(doc.id)}
-                        >
-                          {doc.title || "未命名文档"}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-          {uploadError ? (
-            <p className="text-sm text-[#B42318]">{uploadError}</p>
-          ) : null}
-          {sources.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[#ECEAE4] bg-white px-6 py-12 text-center">
-              <p className="text-sm text-[#78746C]">还没有来源</p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-[#ECEAE4] rounded-xl border border-[#ECEAE4] bg-white">
-              {sources.map((source) => (
-                <li
-                  key={source.id}
-                  className="flex flex-wrap items-center gap-2 px-4 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {source.title}
-                    </p>
-                    <p className="text-xs text-[#78746C]">
-                      {source.statusLabel}
-                    </p>
-                    {source.errorMessage ? (
-                      <p className="text-xs text-[#B42318]">
-                        {source.errorMessage}
-                      </p>
-                    ) : null}
-                  </div>
-                  {canEdit ? (
-                    <div className="flex shrink-0 gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void handleReindex(source.id)}
-                      >
-                        重新索引
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void handleDeleteSource(source)}
-                      >
-                        删除
-                      </Button>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <LibrarySourcePanel
+          canEdit={canEdit}
+          sources={sources}
+          uploadError={uploadError}
+          fileInputRef={fileInputRef}
+          onFileChange={(event) => void handleFileChange(event)}
+          documentQuery={documentQuery}
+          onDocumentQueryChange={setDocumentQuery}
+          documentHits={documentHits}
+          onPickDocument={(documentId) => void handlePickDocument(documentId)}
+          onReindex={(sourceId) => void handleReindex(sourceId)}
+          onDeleteSource={(source) => void handleDeleteSource(source)}
+        />
         <LibraryAskPanel
           libraryId={libraryId}
           userId={userId}
+          readySourceCount={readySourceCount}
           embeddingHint={
             library.role !== "owner" && !library.embeddingConfigured
               ? "请联系资料库所有者配置嵌入模型"

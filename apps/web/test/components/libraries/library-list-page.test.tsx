@@ -72,7 +72,9 @@ describe("LibraryListPage", () => {
       await screen.findByText("还没有资料库，先创建一个吧")
     ).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole("button", { name: "新建资料库" }))
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "新建资料库" })[0]!
+    )
     fireEvent.change(screen.getByPlaceholderText("资料库名称"), {
       target: { value: "  产品资料  " },
     })
