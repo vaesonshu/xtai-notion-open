@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeAll, describe, expect, it } from "vitest"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import { EditorProvider } from "@xtai-notion/editor-react/providers/editor-provider"
 import { EditorSurface } from "@shadcn-src/components/editor/editor-surface"
 

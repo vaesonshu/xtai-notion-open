@@ -3,8 +3,8 @@ import {
   createEmptyBlocks,
   createStarterBlocks,
   isBlockArray,
-} from "@core/block-schema/documents"
-import { MAX_NEST_DEPTH } from "@core/block-schema/ids"
+} from "@core/model/documents"
+import { MAX_NEST_DEPTH } from "@core/model/ids"
 
 describe("block documents", () => {
   it("creates a single empty paragraph block", () => {

@@ -1,11 +1,11 @@
-import { generateBlockId } from "../block-schema/ids"
-import { createEmptyBlocks } from "../block-schema/documents"
+import { generateBlockId } from "../../../model/ids"
+import { createEmptyBlocks } from "../../../model/documents"
 import type {
   Block,
   InlineContent,
   InlineStyles,
   TableContent,
-} from "../block-schema/types"
+} from "../../../model/types"
 
 function textContent(text: string, styles: InlineStyles = {}): InlineContent[] {
   if (!text) return []

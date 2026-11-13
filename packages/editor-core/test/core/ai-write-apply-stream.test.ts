@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import { createAiWriteStreamApplier } from "@core/ai-write"
 
 const REF = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"

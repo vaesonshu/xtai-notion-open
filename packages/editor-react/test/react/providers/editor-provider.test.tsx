@@ -9,8 +9,8 @@ import {
   documentFromYjs,
   forkYDoc,
 } from "@xtai-notion/editor-core"
-import { blocksToPmDoc } from "@xtai-notion/editor-core/block-schema/convert"
-import { createStarterBlocks } from "@xtai-notion/editor-core/block-schema/documents"
+import { blocksToPmDoc } from "@xtai-notion/editor-core/api/conversions/pm-doc"
+import { createStarterBlocks } from "@xtai-notion/editor-core/model/documents"
 import type {
   CreateProvider,
   CreateProviderOptions,

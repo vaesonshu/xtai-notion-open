@@ -2,7 +2,7 @@ import { Extension } from "@tiptap/core"
 import type { Node as PMNode } from "@tiptap/pm/model"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
 import { Decoration, DecorationSet } from "@tiptap/pm/view"
-import type { BlockEditor } from "../block-editor"
+import type { BlockEditor } from "../editor/block-editor"
 
 export const aiWriteAgentCursorPluginKey = new PluginKey("aiWriteAgentCursor")
 

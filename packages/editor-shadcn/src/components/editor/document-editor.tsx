@@ -5,7 +5,7 @@ import type { EditorProviderProps } from "@xtai-notion/editor-react/providers/ed
 import { createEditorSchema } from "@xtai-notion/editor-core/schema"
 import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import type { CollaborationConfig } from "@xtai-notion/editor-react/collaboration/types"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
 import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
 import { CollaborationEditorProvider } from "@xtai-notion/editor-react/providers/collaboration-editor-provider"

@@ -82,14 +82,28 @@ new BlockEditor({ editorSchema: schema })
 
 完整 callout 示例见 `examples/callout-block.ts`；设计文档见仓库 `docs/superpowers/specs/2026-08-29-extensible-block-schema-design.md`。
 
-## 块操纵 API（`src/core/api`）
+## 目录分层（`src/core`）
 
-| 场景                    | 推荐入口                                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| React 页面、协作编辑    | `BlockEditor`（内部委托 `core/api`）                                                                                      |
-| 单测、Agent、服务端脚本 | 包根或 `@xtai-notion/editor-core/api`：`insertBlocks(editor, …)`、`updateBlock`、`removeBlocks`、`handleMarkdownPaste` 等 |
+| 目录           | 职责                                                            |
+| -------------- | --------------------------------------------------------------- |
+| `model/`       | `Block[]` JSON 类型与工厂（`types`、`documents`、`ids`）        |
+| `schema/`      | 可扩展块 Spec、Tiptap 扩展注册；`schema/convert` 为 PM 转换实现 |
+| `api/`         | 块操纵、剪贴板、解析/导出、行内命令、Enter/Backspace 事务       |
+| `editor/`      | `BlockEditor` 门面（装配 extensions，委托 `api`）               |
+| `extensions/`  | 仅 Tiptap/PM 插件壳；业务逻辑调用 `api`                         |
+| `features/`    | 产品编排（如 `features/slash`）                                 |
+| `persistence/` | Yjs 文档与 schema 迁移                                          |
 
-`core/api` 函数的第一个参数是 Tiptap `Editor`（即 `blockEditor.tiptap`），不依赖 React。
+**兼容**：源码里已去掉旧目录；`package.json` 的 `exports` 仍将
+`@xtai-notion/editor-core/block-schema/*`、`/block-editor`、`/slash-commands`、
+`/yjs-document`、`/markdown` 等映射到新实现。Monorepo 内请直接用上表路径（`@core/model`、`@core/editor/...`）。
+
+| 场景                 | 推荐入口                                                  |
+| -------------------- | --------------------------------------------------------- |
+| React 页面、协作编辑 | `BlockEditor`（`core/editor`）                            |
+| 单测、Agent、服务端  | `core/api`：`insertBlocks(editor, …)`、`pmDocToBlocks` 等 |
+
+`api` 函数的第一个参数是 Tiptap `Editor`（`blockEditor.tiptap`），不依赖 React。
 
 ## 主要导出
 

@@ -74,29 +74,27 @@ class BlockDropCursorView {
     private editorView: EditorView,
     private options: BlockDropcursorOptions
   ) {
-    this.handlers = ["dragover", "dragend", "drop", "dragleave"].map(
-      (name) => {
-        const handler = (event: Event) => {
-          // 仅绑定 drag 事件方法，避免 keyof 误选到 cursorPos 等非函数属性
-          switch (name) {
-            case "dragover":
-              this.dragover(event as DragEvent)
-              break
-            case "dragend":
-              this.dragend()
-              break
-            case "drop":
-              this.drop()
-              break
-            case "dragleave":
-              this.dragleave(event as DragEvent)
-              break
-          }
+    this.handlers = ["dragover", "dragend", "drop", "dragleave"].map((name) => {
+      const handler = (event: Event) => {
+        // 仅绑定 drag 事件方法，避免 keyof 误选到 cursorPos 等非函数属性
+        switch (name) {
+          case "dragover":
+            this.dragover(event as DragEvent)
+            break
+          case "dragend":
+            this.dragend()
+            break
+          case "drop":
+            this.drop()
+            break
+          case "dragleave":
+            this.dragleave(event as DragEvent)
+            break
         }
-        editorView.dom.addEventListener(name, handler)
-        return { name, handler }
       }
-    )
+      editorView.dom.addEventListener(name, handler)
+      return { name, handler }
+    })
   }
 
   destroy() {
@@ -105,7 +103,10 @@ class BlockDropCursorView {
     }
   }
 
-  update(editorView: EditorView, prevState: { doc: EditorView["state"]["doc"] }) {
+  update(
+    editorView: EditorView,
+    prevState: { doc: EditorView["state"]["doc"] }
+  ) {
     if (this.cursorPos != null && prevState.doc !== editorView.state.doc) {
       if (this.lastDragEvent) {
         const target = this.computeTarget(this.lastDragEvent)

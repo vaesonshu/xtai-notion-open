@@ -14,10 +14,7 @@ export {
   isEmptyTextBlock,
 } from "./serialize"
 export { validateAiWriteOp } from "./validate"
-export {
-  applyAiWriteOp,
-  collectAiWriteDraftIds,
-} from "./apply"
+export { applyAiWriteOp, collectAiWriteDraftIds } from "./apply"
 export {
   parsePartialToolArgs,
   partialArgsHaveNonEmptyText,

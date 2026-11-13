@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import { applyAiWriteOp } from "@core/ai-write"
 import {
   createBlockSchemaYDoc,
   documentFromYjs,
   forkYDoc,
   mergeForkInto,
-} from "@core/yjs-document"
+} from "@core/persistence/yjs-document"
 
 const PARA_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 

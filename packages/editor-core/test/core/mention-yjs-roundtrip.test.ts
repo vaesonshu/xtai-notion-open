@@ -1,11 +1,11 @@
 import { TiptapTransformer } from "@hocuspocus/transformer"
 import { Editor } from "@tiptap/core"
 import { describe, expect, it } from "vitest"
-import { blocksToPmDoc } from "@core/block-schema/convert"
-import type { Block } from "@core/block-schema/types"
+import { blocksToPmDoc } from "@core/api/conversions/pm-doc"
+import type { Block } from "@core/model/types"
 import { createEditorExtensions } from "@core/extensions"
 import { collectMentionIds } from "@core/mention-collect"
-import { documentFromYjs } from "@core/yjs-document"
+import { documentFromYjs } from "@core/persistence/yjs-document"
 
 describe("mention yjs roundtrip", () => {
   it("preserves mention id through Yjs for graph extraction", () => {

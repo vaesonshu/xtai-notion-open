@@ -1,29 +1,29 @@
 import { Editor } from "@tiptap/core"
-import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
-import { createEmptyBlocks } from "./block-schema/documents"
-import type { Block, PartialBlock } from "./block-schema/types"
+import { blocksToPmDoc, pmDocToBlocks } from "../api/conversions/pm-doc"
+import { createEmptyBlocks } from "../model/documents"
+import type { Block, PartialBlock } from "../model/types"
 import {
   BLOCK_SIDE_MENU_PLUGIN_KEY,
   createBlockSideMenuController,
-} from "./block-side-menu"
+} from "../block-side-menu"
 import {
   createBlockSchemaExtensions,
   createBlockSchemaExtensionsFromRegistry,
-} from "./extensions"
-import { handleBackspace } from "./extensions/block-keymap"
-import type { EditorSchema } from "./schema/create-editor-schema"
-import type { EditorExtensionOptions } from "./types"
-import { getCommentTextSelection as resolveCommentTextSelection } from "./document-comment-anchor"
-import type { CommentTextAnchor } from "./document-comment-anchor"
-import { insertBlocks as apiInsertBlocks } from "./api/blockManipulation/commands/insertBlocks"
-import { updateBlock as apiUpdateBlock } from "./api/blockManipulation/commands/updateBlock"
-import { removeBlocks as apiRemoveBlocks } from "./api/blockManipulation/commands/removeBlocks"
-import { nestBlock as apiNestBlock } from "./api/blockManipulation/commands/nestBlock"
-import { unnestBlock as apiUnnestBlock } from "./api/blockManipulation/commands/unnestBlock"
-import { getSelectedBlocks as apiGetSelectedBlocks } from "./api/blockManipulation/selections/getSelectedBlocks"
-import { getActiveBlockContainerId as apiGetActiveBlockContainerId } from "./api/blockManipulation/selections/getActiveBlockContainerId"
-import { handleTableBlockPaste } from "./api/clipboard/fromClipboard/tableBlockPaste"
-import { handleMarkdownPaste } from "./api/clipboard/fromClipboard/handleMarkdownPaste"
+} from "../extensions"
+import { handleBackspace } from "../extensions/block-keymap"
+import type { EditorSchema } from "../schema/create-editor-schema"
+import type { EditorExtensionOptions } from "../types"
+import { getCommentTextSelection as resolveCommentTextSelection } from "../document-comment-anchor"
+import type { CommentTextAnchor } from "../document-comment-anchor"
+import { insertBlocks as apiInsertBlocks } from "../api/blockManipulation/commands/insertBlocks"
+import { updateBlock as apiUpdateBlock } from "../api/blockManipulation/commands/updateBlock"
+import { removeBlocks as apiRemoveBlocks } from "../api/blockManipulation/commands/removeBlocks"
+import { nestBlock as apiNestBlock } from "../api/blockManipulation/commands/nestBlock"
+import { unnestBlock as apiUnnestBlock } from "../api/blockManipulation/commands/unnestBlock"
+import { getSelectedBlocks as apiGetSelectedBlocks } from "../api/blockManipulation/selections/getSelectedBlocks"
+import { getActiveBlockContainerId as apiGetActiveBlockContainerId } from "../api/blockManipulation/selections/getActiveBlockContainerId"
+import { handleTableBlockPaste } from "../api/clipboard/fromClipboard/tableBlockPaste"
+import { handleMarkdownPaste } from "../api/clipboard/fromClipboard/handleMarkdownPaste"
 
 type BlockEditorOptions = {
   initialContent?: Block[]

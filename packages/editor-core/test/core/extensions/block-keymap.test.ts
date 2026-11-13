@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { NodeSelection } from "@tiptap/pm/state"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import { handleBackspace, handleEnter } from "@core/extensions/block-keymap"
 
 const editors: BlockEditor[] = []

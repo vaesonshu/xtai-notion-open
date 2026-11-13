@@ -1,6 +1,6 @@
 import type { Mark, Node as PMNode, Schema } from "@tiptap/pm/model"
 import { Fragment } from "@tiptap/pm/model"
-import type { InlineContent, InlineStyles } from "../../block-schema/types"
+import type { InlineContent, InlineStyles } from "../../model/types"
 
 /** PM marks → Block 行内 styles（不含 link） */
 export function marksToStyles(marks: readonly Mark[]): InlineStyles {

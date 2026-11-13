@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
-import { handleMarkdownPaste } from "@core/markdown/paste"
+import { BlockEditor } from "@core/editor/block-editor"
+import { handleMarkdownPaste } from "@core/api/clipboard/fromClipboard/handleMarkdownPaste"
 
 const EMPTY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 const CODE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
@@ -46,7 +46,7 @@ describe("handleMarkdownPaste", () => {
     )
 
     const handled = handleMarkdownPaste(
-      editor,
+      editor.tiptap,
       pasteEvent("# Hello\n\n- item one")
     )
     expect(handled).toBe(true)
@@ -70,7 +70,7 @@ describe("handleMarkdownPaste", () => {
     )
 
     const handled = handleMarkdownPaste(
-      editor,
+      editor.tiptap,
       pasteEvent("- item one", "<ul><li>item one</li></ul>")
     )
     expect(handled).toBe(true)
@@ -108,7 +108,10 @@ describe("handleMarkdownPaste", () => {
     const html =
       "<ul><li>记录想法</li></ul><blockquote>好的工具让秩序自然出现。</blockquote>"
 
-    const handled = handleMarkdownPaste(editor, pasteEvent(markdown, html))
+    const handled = handleMarkdownPaste(
+      editor.tiptap,
+      pasteEvent(markdown, html)
+    )
     expect(handled).toBe(true)
     expect(editor.document.map((block) => block.type)).toEqual([
       "heading",
@@ -135,7 +138,7 @@ describe("handleMarkdownPaste", () => {
     )
 
     editor.tiptap.commands.focus("end")
-    const handled = handleMarkdownPaste(editor, pasteEvent("# Hello"))
+    const handled = handleMarkdownPaste(editor.tiptap, pasteEvent("# Hello"))
     expect(handled).toBe(false)
     expect(editor.document[0]?.type).toBe("codeBlock")
   })

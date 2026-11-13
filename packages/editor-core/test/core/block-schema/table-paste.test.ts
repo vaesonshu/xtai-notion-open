@@ -1,9 +1,9 @@
 import { TextSelection } from "@tiptap/pm/state"
 import { describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
-import { pmDocToBlocks } from "@core/block-schema/convert"
-import { handleTableBlockPaste } from "@core/block-schema/table-paste"
-import type { Block } from "@core/block-schema/types"
+import { BlockEditor } from "@core/editor/block-editor"
+import { pmDocToBlocks } from "@core/api/conversions/pm-doc"
+import { handleTableBlockPaste } from "@core/api/clipboard/fromClipboard/tableBlockPaste"
+import type { Block } from "@core/model/types"
 
 const TABLE_BLOCK_ID = "11111111-1111-4111-8111-111111111111"
 

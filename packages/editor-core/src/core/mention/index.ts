@@ -1,5 +1,3 @@
-import type { Editor, Range } from "@tiptap/core"
-
 /** 可被 @ 提及的目标文档，由宿主应用通过 MentionProvider 提供。 */
 export type MentionableItem = {
   id: string
@@ -41,27 +39,4 @@ export function filterMentionItems(
   )
 }
 
-/**
- * 将选定文档作为原子 mention 节点插入编辑器：先删除触发 @ 的范围，再在
- * range.from 处插入 `mention` 节点（含 id/label/href），使其呈现为不可拆分
- * 的 `@标题`，点击可跳转到对应文档。节点由 @tiptap/extension-mention 渲染。
- */
-export function insertMention(
-  editor: Editor,
-  range: Range,
-  item: MentionableItem
-): void {
-  editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContentAt(range.from, {
-      type: "mention",
-      attrs: {
-        id: item.id,
-        label: item.title,
-        href: item.href,
-      },
-    })
-    .run()
-}
+export { insertMention } from "../api/commands/insertMention"

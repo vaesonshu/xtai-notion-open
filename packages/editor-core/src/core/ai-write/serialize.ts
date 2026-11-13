@@ -1,4 +1,4 @@
-import type { Block, InlineContent } from "../block-schema/types"
+import type { Block, InlineContent } from "../model/types"
 import type { AiBlockView } from "./types"
 import { isAiWritableBlockType } from "./types"
 

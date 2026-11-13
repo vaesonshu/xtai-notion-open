@@ -1,6 +1,6 @@
-import type { BlockEditor } from "../block-editor"
-import { generateBlockId } from "../block-schema/ids"
-import type { Block, InlineContent } from "../block-schema/types"
+import type { BlockEditor } from "../editor/block-editor"
+import { generateBlockId } from "../model/ids"
+import type { Block, InlineContent } from "../model/types"
 import { applyAiWriteOp, textToInlineContent } from "./apply"
 import { sanitizePartialToolArgs } from "./parse-partial"
 import type {
@@ -300,11 +300,7 @@ export function createAiWriteStreamApplier(input: {
     const props = asRecord(args.props) ?? undefined
     // 仅首次缺 text 时用空串覆盖旧文；后续 partial 无 text 则保留已打出内容
     const text: string | undefined =
-      typeof args.text === "string"
-        ? args.text
-        : state.started
-          ? undefined
-          : ""
+      typeof args.text === "string" ? args.text : state.started ? undefined : ""
     updateLocalBlock(editor, id, { type: blockType, text, props })
     state.started = true
     return { applied: true, touchedId: id }

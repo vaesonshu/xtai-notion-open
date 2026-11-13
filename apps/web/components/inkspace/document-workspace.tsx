@@ -6,7 +6,7 @@ import type {
   DocumentCommentMarkEntry,
 } from "@xtai-notion/editor-core"
 import { createBlockSchemaYDoc } from "@xtai-notion/editor-core"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import { useEditorText } from "@xtai-notion/editor-react"
 import type { CreateProvider } from "@xtai-notion/editor-react/collaboration/create-collaboration-session"
 import { DocumentEditor } from "@xtai-notion/editor-shadcn"

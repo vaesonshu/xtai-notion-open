@@ -1,9 +1,9 @@
 import { Editor, Node } from "@tiptap/core"
 import { afterEach, describe, expect, it } from "vitest"
-import { generateBlockId } from "@core/block-schema/ids"
-import { createEmptyBlocks, createStarterBlocks } from "@core/block-schema/documents"
+import { generateBlockId } from "@core/model/ids"
+import { createEmptyBlocks, createStarterBlocks } from "@core/model/documents"
 import { createBlockSchemaExtensions } from "@core/extensions"
-import { blocksToPmDoc, pmDocToBlocks } from "@core/block-schema/convert"
+import { blocksToPmDoc, pmDocToBlocks } from "@core/api/conversions/pm-doc"
 
 const editors: Editor[] = []
 

@@ -1,6 +1,6 @@
 import type { Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState, Transaction } from "@tiptap/pm/state"
-import { generateBlockId, MAX_NEST_DEPTH } from "../../block-schema/ids"
+import { generateBlockId, MAX_NEST_DEPTH } from "../../model/ids"
 import type { ContainerRef } from "../nodeUtil"
 import {
   findContainerAtSelection,

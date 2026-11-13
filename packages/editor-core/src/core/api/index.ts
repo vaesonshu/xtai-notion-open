@@ -17,6 +17,24 @@ export {
   blockToContainerNode,
   normalizePartialBlock,
 } from "./conversions/partialBlock"
+export { blocksToPmDoc, pmDocToBlocks } from "./conversions/pm-doc"
+
+export type { InlineMark } from "./commands/inline"
+export {
+  normalizeLinkHref,
+  normalizeTextColorInput,
+  setEditorLink,
+  setTextColor,
+  toggleInlineMark,
+  unsetTextColor,
+} from "./commands/inline"
+export { insertTable } from "./commands/insertTable"
+export { insertMention } from "./commands/insertMention"
+
+export {
+  handleBackspace,
+  handleEnter,
+} from "./blockManipulation/keymap-handlers"
 
 export { findBlockById } from "./blockManipulation/tree"
 export {

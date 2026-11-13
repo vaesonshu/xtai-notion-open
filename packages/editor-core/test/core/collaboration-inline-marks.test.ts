@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest"
 import * as Y from "yjs"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import { markdownToBlocks } from "@core/markdown"
-import { createBlockSchemaYDoc } from "@core/yjs-document"
+import { createBlockSchemaYDoc } from "@core/persistence/yjs-document"
 
 const README_LINE_3 =
   "面向团队与个人的 **Notion 式知识工作台**：以块（Block）为一等公民组织文档，内置实时协作、发布广场与文档关系图。编辑器内核拆分为可独立发布的 **MIT** SDK（`@xtai-notion/editor-*`），既可开箱即用，也可 Headless 嵌入自有产品。"

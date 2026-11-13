@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { pmDocToBlocks } from "@core/block-schema/convert"
-import { createEmptyBlocks } from "@core/block-schema/documents"
-import { generateBlockId } from "@core/block-schema/ids"
-import type { Block } from "@core/block-schema/types"
-import { BlockEditor } from "@core/block-editor"
+import { pmDocToBlocks } from "@core/api/conversions/pm-doc"
+import { createEmptyBlocks } from "@core/model/documents"
+import { generateBlockId } from "@core/model/ids"
+import type { Block } from "@core/model/types"
+import { BlockEditor } from "@core/editor/block-editor"
 import {
   findBlockById,
   findContainerById,

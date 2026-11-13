@@ -1,8 +1,8 @@
 import type { Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState } from "@tiptap/pm/state"
-import { blocksToPmDoc } from "../../block-schema/convert"
-import { generateBlockId } from "../../block-schema/ids"
-import type { Block, PartialBlock } from "../../block-schema/types"
+import { blocksToPmDoc } from "./pm-doc"
+import { generateBlockId } from "../../model/ids"
+import type { Block, PartialBlock } from "../../model/types"
 
 /** 将 PartialBlock 补全为可写入 PM 的 Block */
 export function normalizePartialBlock(partial: PartialBlock): Block {

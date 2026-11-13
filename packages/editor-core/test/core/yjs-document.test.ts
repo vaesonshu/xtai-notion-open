@@ -2,16 +2,16 @@ import { describe, expect, it } from "vitest"
 import { TiptapTransformer } from "@hocuspocus/transformer"
 import { Editor } from "@tiptap/core"
 import * as Y from "yjs"
-import { blocksToPmDoc } from "@core/block-schema/convert"
-import { createStarterBlocks } from "@core/block-schema/documents"
-import { generateBlockId } from "@core/block-schema/ids"
+import { blocksToPmDoc } from "@core/api/conversions/pm-doc"
+import { createStarterBlocks } from "@core/model/documents"
+import { generateBlockId } from "@core/model/ids"
 import { createEditorExtensions } from "@core/extensions"
 import {
   appendTextToBlockSchemaYDoc,
   createBlockSchemaYDoc,
   documentFromYjs,
   documentToPlainText,
-} from "@core/yjs-document"
+} from "@core/persistence/yjs-document"
 
 describe("yjs-document", () => {
   it("creates and reads block schema Y.Doc without Tiptap Editor", () => {

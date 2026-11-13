@@ -1,6 +1,6 @@
 import type { Editor } from "@tiptap/core"
-import { pmDocToBlocks } from "../../../block-schema/convert"
-import type { Block } from "../../../block-schema/types"
+import { pmDocToBlocks } from "../../conversions/pm-doc"
+import type { Block } from "../../../model/types"
 
 /** 收集当前选区覆盖到的顶层 Block 快照（含嵌套子树内命中项） */
 export function getSelectedBlocks(editor: Editor): Block[] {

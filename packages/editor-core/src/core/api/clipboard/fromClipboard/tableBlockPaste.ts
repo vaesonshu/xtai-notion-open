@@ -1,7 +1,7 @@
 import type { EditorView } from "@tiptap/pm/view"
-import { documentToPlainText } from "../../../yjs-document"
-import { isBlockArray } from "../../../block-schema/documents"
-import type { Block } from "../../../block-schema/types"
+import { documentToPlainText } from "../../../persistence/yjs-document"
+import { isBlockArray } from "../../../model/documents"
+import type { Block } from "../../../model/types"
 
 /** 判断当前选区是否位于表格单元格（含表头单元格）内 */
 export function isSelectionInTableCell(view: EditorView): boolean {

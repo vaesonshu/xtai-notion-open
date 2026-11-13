@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { Editor } from "@tiptap/core"
-import { blocksToPmDoc } from "@core/block-schema/convert"
+import { blocksToPmDoc } from "@core/api/conversions/pm-doc"
 import { createEditorExtensions } from "@core/extensions/index"
 import {
   DEFAULT_PARAGRAPH_PLACEHOLDER,

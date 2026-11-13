@@ -2,7 +2,7 @@ import type { BlockEditor } from "@xtai-notion/editor-core"
 import type {
   Block,
   PartialBlock,
-} from "@xtai-notion/editor-core/block-schema/types"
+} from "@xtai-notion/editor-core/model/types"
 import type {
   CommentTextAnchor,
   DocumentAgentSelectionState,

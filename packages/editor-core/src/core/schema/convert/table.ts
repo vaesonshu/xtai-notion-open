@@ -1,5 +1,5 @@
 import type { Node as PMNode } from "@tiptap/pm/model"
-import type { InlineContent, TableContent } from "../../block-schema/types"
+import type { InlineContent, TableContent } from "../../model/types"
 import { inlinePmToBlock } from "./inline"
 
 export function countHeaderRows(tableNode: PMNode): number {

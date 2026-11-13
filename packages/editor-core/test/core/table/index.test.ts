@@ -1,8 +1,8 @@
 import { Editor } from "@tiptap/core"
 import type { JSONContent } from "@tiptap/core"
 import { describe, expect, it } from "vitest"
-import { blocksToPmDoc } from "@core/block-schema/convert"
-import { createEmptyBlocks } from "@core/block-schema/documents"
+import { blocksToPmDoc } from "@core/api/conversions/pm-doc"
+import { createEmptyBlocks } from "@core/model/documents"
 import { createEditorExtensions } from "@core/extensions"
 import { insertTable } from "@core/table/index"
 

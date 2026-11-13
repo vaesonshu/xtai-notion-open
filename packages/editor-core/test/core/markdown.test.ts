@@ -7,8 +7,8 @@ import {
 import {
   clipboardHtmlHasRichStructure,
   looksLikeMarkdown,
-} from "@core/markdown/detect"
-import type { InlineContent } from "@core/block-schema/types"
+} from "@core/api/parsers/markdown/detect"
+import type { InlineContent } from "@core/model/types"
 
 function textStyles(blockIndex = 0) {
   const block = markdownToBlocks(

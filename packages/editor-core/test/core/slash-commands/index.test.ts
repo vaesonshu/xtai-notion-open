@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import {
   convertBlockCommand,
   executeSlashCommand,
@@ -7,7 +7,7 @@ import {
   filterSlashCommands,
   getSlashCommands,
   SLASH_COMMANDS,
-} from "@core/slash-commands/index"
+} from "@core/features/slash"
 import { createEditorSchema } from "@core/schema/create-editor-schema"
 
 const editors: BlockEditor[] = []

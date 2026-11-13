@@ -1,6 +1,6 @@
 import { NodeSelection } from "@tiptap/pm/state"
 import type { BlockEditor } from "@xtai-notion/editor-core"
-import { generateBlockId } from "@xtai-notion/editor-core/block-schema/ids"
+import { generateBlockId } from "@xtai-notion/editor-core/model/ids"
 
 /** 计算 blockContainer 内 textblock 的可编辑光标位置 */
 function getInlineCursorPos(

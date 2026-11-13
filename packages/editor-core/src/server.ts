@@ -2,13 +2,13 @@
  * 服务端安全入口：不含 @excalidraw/excalidraw 等浏览器侧依赖。
  * NestJS / 脚本应从此路径导入，避免 Node 解析 Excalidraw 子包失败。
  */
-export type { Block } from "./core/block-schema/types"
-export { generateBlockId } from "./core/block-schema/ids"
+export type { Block } from "./core/model/types"
+export { generateBlockId } from "./core/model/ids"
 export {
   CURRENT_SCHEMA_VERSION,
   readYDocSchemaVersion,
   writeYDocSchemaVersion,
-} from "./core/migrate"
+} from "./core/persistence/migrate"
 export {
   appendTextToBlockSchemaYDoc,
   blockSchemaYDocHasContent,
@@ -16,7 +16,7 @@ export {
   documentFromYjs,
   documentFromYjsOrStarter,
   documentToPlainText,
-} from "./core/yjs-document"
+} from "./core/persistence/yjs-document"
 export { collectMentionIds } from "./core/mention-collect"
 export { blocksToMarkdown, markdownToBlocks } from "./core/markdown"
 export {

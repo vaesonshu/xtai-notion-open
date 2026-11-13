@@ -1,7 +1,7 @@
 import { isTextSelection } from "@tiptap/core"
 import type { Node as PMNode } from "@tiptap/pm/model"
 import type { EditorState } from "@tiptap/pm/state"
-import type { BlockEditor } from "./block-editor"
+import type { BlockEditor } from "./editor/block-editor"
 
 /** 选区评论锚点：块 id + 块内 plain text 字符偏移 */
 export type CommentTextAnchor = {

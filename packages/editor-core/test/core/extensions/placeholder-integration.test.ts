@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import { blockPlaceholderPluginKey } from "@core/extensions/block-placeholder-extension"
 
 const editors: BlockEditor[] = []

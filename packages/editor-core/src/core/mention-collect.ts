@@ -1,4 +1,4 @@
-import type { Block, InlineContent, TableContent } from "./block-schema/types"
+import type { Block, InlineContent, TableContent } from "./model/types"
 
 /** 从 Block[] 递归收集 mention 引用的文档 id（@提及关系）。 */
 export function collectMentionIds(blocks: Block[]): string[] {

@@ -12,8 +12,8 @@ import type {
   CollaborationStatus,
 } from "@xtai-notion/editor-react/collaboration/types"
 import { BlockEditor } from "@xtai-notion/editor-core"
-import { createStarterBlocks } from "@xtai-notion/editor-core/block-schema/documents"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import { createStarterBlocks } from "@xtai-notion/editor-core/model/documents"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import type { CollaborationUser } from "@xtai-notion/editor-core"
 import type { Node } from "@tiptap/core"
 import type { EditorSchema } from "@xtai-notion/editor-core/schema"

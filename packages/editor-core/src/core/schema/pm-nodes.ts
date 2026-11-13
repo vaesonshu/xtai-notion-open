@@ -1,5 +1,5 @@
 import { Node, mergeAttributes } from "@tiptap/core"
-import { generateBlockId } from "./ids"
+import { generateBlockId } from "../model/ids"
 
 /** 块文档根节点：子树必须是 blockGroup */
 export const BlockDoc = Node.create({

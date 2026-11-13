@@ -4,7 +4,7 @@ import {
   CURRENT_SCHEMA_VERSION,
   readYDocSchemaVersion,
   writeYDocSchemaVersion,
-} from "@core/migrate/migrate-ydoc"
+} from "@core/persistence/migrate/migrate-ydoc"
 
 describe("migrate-ydoc", () => {
   it("defaults missing meta schemaVersion to current version", () => {

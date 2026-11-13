@@ -2,7 +2,7 @@ import { Extension } from "@tiptap/core"
 import type { Node as PMNode } from "@tiptap/pm/model"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
 import { Decoration, DecorationSet } from "@tiptap/pm/view"
-import type { BlockEditor } from "../block-editor"
+import type { BlockEditor } from "../editor/block-editor"
 import {
   type DocumentCommentMarkEntry,
   resolveCommentAnchorInDoc,
@@ -104,9 +104,9 @@ export function createDocumentCommentMarkExtension() {
           },
           props: {
             decorations(state) {
-              const markState = documentCommentMarkPluginKey.getState(
-                state
-              ) as DocumentCommentMarkState | undefined
+              const markState = documentCommentMarkPluginKey.getState(state) as
+                | DocumentCommentMarkState
+                | undefined
               if (!markState || markState.marks.length === 0) {
                 return DecorationSet.empty
               }

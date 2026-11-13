@@ -1,13 +1,13 @@
 import type { Editor } from "@tiptap/core"
 import type { EditorState } from "@tiptap/pm/state"
-import { pmDocToBlocks } from "../../../block-schema/convert"
-import type { Block } from "../../../block-schema/types"
+import { pmDocToBlocks } from "../../conversions/pm-doc"
+import type { Block } from "../../../model/types"
 import { insertBlocks } from "../../blockManipulation/commands/insertBlocks"
 import { removeBlocks } from "../../blockManipulation/commands/removeBlocks"
 import { updateBlock } from "../../blockManipulation/commands/updateBlock"
 import { getActiveBlockContainerId } from "../../blockManipulation/selections/getActiveBlockContainerId"
 import { findBlockById } from "../../blockManipulation/tree"
-import { looksLikeMarkdown } from "../../../markdown/detect"
+import { looksLikeMarkdown } from "../../parsers/markdown/detect"
 import { markdownToBlocks } from "../../parsers/markdown/parseMarkdown"
 
 function selectionIsInCodeBlock(state: EditorState): boolean {

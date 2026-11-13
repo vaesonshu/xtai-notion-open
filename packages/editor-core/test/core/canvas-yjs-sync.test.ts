@@ -2,9 +2,9 @@ import type { HocuspocusProvider } from "@hocuspocus/provider"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import * as Y from "yjs"
 import { NodeSelection } from "@tiptap/pm/state"
-import { BlockEditor } from "@core/block-editor"
-import { createEmptyBlocks } from "@core/block-schema/documents"
-import { executeSlashCommand } from "@core/slash-commands"
+import { BlockEditor } from "@core/editor/block-editor"
+import { createEmptyBlocks } from "@core/model/documents"
+import { executeSlashCommand } from "@core/features/slash"
 import type { CollaborationUser } from "@core/types"
 
 const editors: BlockEditor[] = []

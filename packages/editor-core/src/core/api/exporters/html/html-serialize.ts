@@ -1,4 +1,4 @@
-import type { Block, InlineContent, TableContent } from "../block-schema/types"
+import type { Block, InlineContent, TableContent } from "../../../model/types"
 
 function escapeHtml(text: string): string {
   return text

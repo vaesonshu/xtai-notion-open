@@ -6,7 +6,7 @@ import type {
   Schema,
   TagParseRule,
 } from "@tiptap/pm/model"
-import type { PartialBlock } from "../block-schema/types"
+import type { PartialBlock } from "../model/types"
 import { propsToAttributes, type PropSchema } from "./prop-types"
 
 /** 斜杠菜单项元数据，注册在 BlockConfig 上供 registry 聚合 */

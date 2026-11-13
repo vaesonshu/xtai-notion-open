@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/core"
-import type { PartialBlock } from "../../../block-schema/types"
+import type { PartialBlock } from "../../../model/types"
 import {
   blockToContainerNode,
   normalizePartialBlock,

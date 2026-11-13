@@ -10,7 +10,7 @@ import type { Editor } from "@tiptap/core"
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { use, useEffect } from "react"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import type { MentionableItem } from "@xtai-notion/editor-core/mention"
 import { DocumentEditor } from "@shadcn-src/components/editor/document-editor"
 

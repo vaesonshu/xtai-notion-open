@@ -2,11 +2,11 @@ import { TiptapTransformer } from "@hocuspocus/transformer"
 import { getSchema } from "@tiptap/core"
 import { Node as PMNode } from "@tiptap/pm/model"
 import * as Y from "yjs"
-import type { Block, InlineContent, TableContent } from "./block-schema/types"
-import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
-import { createStarterBlocks } from "./block-schema/documents"
-import { generateBlockId } from "./block-schema/ids"
-import { createEditorExtensions } from "./extensions"
+import type { Block, InlineContent, TableContent } from "../model/types"
+import { blocksToPmDoc, pmDocToBlocks } from "../api/conversions/pm-doc"
+import { createStarterBlocks } from "../model/documents"
+import { generateBlockId } from "../model/ids"
+import { createEditorExtensions } from "../extensions"
 import {
   CURRENT_SCHEMA_VERSION,
   writeYDocSchemaVersion,
@@ -22,10 +22,10 @@ function yDocToBlockSchemaJson(yDoc: Y.Doc): {
   content?: { type?: string }[]
 } {
   const extensions = createEditorExtensions()
-  return TiptapTransformer.extensions(extensions).fromYdoc(
-    yDoc,
-    "default"
-  ) as { type?: string; content?: { type?: string }[] }
+  return TiptapTransformer.extensions(extensions).fromYdoc(yDoc, "default") as {
+    type?: string
+    content?: { type?: string }[]
+  }
 }
 
 /** 将已加载的 Yjs 文档快照转为 Block[]，供只读渲染或公开 API 使用。 */

@@ -1,7 +1,7 @@
 "use client"
 
 import { documentFromYjs } from "@xtai-notion/editor-core"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import { AI_WRITE_MERGE_ORIGIN } from "@xtai-notion/editor-core"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Doc as YDoc } from "yjs"

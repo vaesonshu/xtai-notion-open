@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
+import { BlockEditor } from "@core/editor/block-editor"
 import { getActiveBlockToolbarCommand } from "@core/block-toolbar"
 
 describe("getActiveBlockToolbarCommand", () => {

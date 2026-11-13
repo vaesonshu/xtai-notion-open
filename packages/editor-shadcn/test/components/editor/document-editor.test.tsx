@@ -2,7 +2,7 @@
 import type { HocuspocusProvider } from "@hocuspocus/provider"
 import { describe, expect, it, vi } from "vitest"
 import type { CollaborationConfig } from "@xtai-notion/editor-react/collaboration/types"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import type { CollaborationUser } from "@xtai-notion/editor-core"
 import { DocumentEditor, type DocumentEditorProps } from "@shadcn-src/components/editor/document-editor"
 

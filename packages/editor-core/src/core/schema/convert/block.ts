@@ -4,7 +4,7 @@ import type {
   BlockType,
   InlineContent,
   TableContent,
-} from "../../block-schema/types"
+} from "../../model/types"
 import type { BlockSpec } from "../block-spec"
 import type { BlockSchemaRegistry } from "../registry"
 import {
@@ -57,7 +57,10 @@ function nodeAttrsToBlockProps(
 }
 
 /** Block.props → PM create attrs */
-function blockPropsToNodeAttrs(block: Block, spec: BlockSpec): Record<string, unknown> {
+function blockPropsToNodeAttrs(
+  block: Block,
+  spec: BlockSpec
+): Record<string, unknown> {
   const type = spec.config.type
 
   if (type === "heading") {
@@ -187,10 +190,7 @@ export function blockToContentNode(
   if (!spec) {
     return requireNodeType(schema, "paragraph").create(
       null,
-      inlineBlockToPm(
-        Array.isArray(block.content) ? block.content : [],
-        schema
-      )
+      inlineBlockToPm(Array.isArray(block.content) ? block.content : [], schema)
     )
   }
 

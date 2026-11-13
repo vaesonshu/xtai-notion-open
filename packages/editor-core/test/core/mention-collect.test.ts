@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Block } from "@core/block-schema/types"
+import type { Block } from "@core/model/types"
 import { collectMentionIds } from "@core/mention-collect"
 
 describe("collectMentionIds", () => {

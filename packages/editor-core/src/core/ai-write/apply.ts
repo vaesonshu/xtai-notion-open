@@ -1,6 +1,6 @@
-import type { BlockEditor } from "../block-editor"
-import { generateBlockId } from "../block-schema/ids"
-import type { Block, InlineContent, PartialBlock } from "../block-schema/types"
+import type { BlockEditor } from "../editor/block-editor"
+import { generateBlockId } from "../model/ids"
+import type { Block, InlineContent, PartialBlock } from "../model/types"
 import type { AiInsertBlockInput, AiWriteOp } from "./types"
 
 type ApplyResult = { ok: true; op: AiWriteOp } | { ok: false; reason: string }

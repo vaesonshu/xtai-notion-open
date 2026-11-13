@@ -1,7 +1,7 @@
 import type { Editor } from "@tiptap/core"
 import type { Node as PMNode } from "@tiptap/pm/model"
-import { blocksToPmDoc, pmDocToBlocks } from "../../../block-schema/convert"
-import { createEmptyBlocks } from "../../../block-schema/documents"
+import { blocksToPmDoc, pmDocToBlocks } from "../../conversions/pm-doc"
+import { createEmptyBlocks } from "../../../model/documents"
 
 /** 按 id 删除 blockContainer；删光后补一块空段落 */
 export function removeBlocks(editor: Editor, ids: string[]): void {

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { Editor } from "@tiptap/core"
 import type { JSONContent } from "@tiptap/core"
-import { blocksToPmDoc } from "@xtai-notion/editor-core/block-schema/convert"
-import { createEmptyBlocks } from "@xtai-notion/editor-core/block-schema/documents"
+import { blocksToPmDoc } from "@xtai-notion/editor-core/api/conversions/pm-doc"
+import { createEmptyBlocks } from "@xtai-notion/editor-core/model/documents"
 import { createEditorExtensions } from "@xtai-notion/editor-core/extensions"
 import {
   applyLinkAtRange,

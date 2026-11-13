@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest"
-import { BlockEditor } from "@core/block-editor"
-import { generateBlockId } from "@core/block-schema/ids"
+import { BlockEditor } from "@core/editor/block-editor"
+import { generateBlockId } from "@core/model/ids"
 
 const editors: BlockEditor[] = []
 

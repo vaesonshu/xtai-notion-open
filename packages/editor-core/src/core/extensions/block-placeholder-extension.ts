@@ -11,7 +11,14 @@ export const blockPlaceholderPluginKey = new PluginKey("blockPlaceholder")
 
 /** 从当前选区向上找到第一个空的 textblock（适配 blockContainer 嵌套） */
 function findEmptyTextblockAtSelection(state: {
-  selection: { empty: boolean; $from: { depth: number; before: (d: number) => number; node: (d: number) => import("@tiptap/pm/model").Node } }
+  selection: {
+    empty: boolean
+    $from: {
+      depth: number
+      before: (d: number) => number
+      node: (d: number) => import("@tiptap/pm/model").Node
+    }
+  }
 }) {
   if (!state.selection.empty) {
     return null

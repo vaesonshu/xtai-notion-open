@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest"
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { HocuspocusProvider } from "@hocuspocus/provider"
-import type { Block } from "@xtai-notion/editor-core/block-schema/types"
+import type { Block } from "@xtai-notion/editor-core/model/types"
 import { createEditorSchema } from "@xtai-notion/editor-core/schema"
 import { documentFromYjs } from "@xtai-notion/editor-core"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"

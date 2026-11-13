@@ -1,4 +1,4 @@
-import type { Block, InlineContent, TableContent } from "../block-schema/types"
+import type { Block, InlineContent, TableContent } from "../../../model/types"
 
 /** 行内纯文本 → Markdown（粗体/斜体/代码） */
 function inlineToMarkdown(content: InlineContent[]): string {

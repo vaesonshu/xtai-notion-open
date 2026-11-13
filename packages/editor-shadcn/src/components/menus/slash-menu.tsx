@@ -21,12 +21,12 @@ import {
   filterCommands,
   getSlashCommands,
   type SlashCommand,
-} from "@xtai-notion/editor-core/slash-commands"
+} from "@xtai-notion/editor-core/features/slash"
 import type {
   Block,
   TableContent,
-} from "@xtai-notion/editor-core/block-schema/types"
-import { generateBlockId } from "@xtai-notion/editor-core/block-schema/ids"
+} from "@xtai-notion/editor-core/model/types"
+import { generateBlockId } from "@xtai-notion/editor-core/model/ids"
 import type { BlockEditor } from "@xtai-notion/editor-core"
 import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 import { use } from "react"

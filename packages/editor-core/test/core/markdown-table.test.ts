@@ -4,8 +4,8 @@ import type {
   Block,
   InlineContent,
   TableContent,
-} from "@core/block-schema/types"
-import { createBlockSchemaYDoc, documentFromYjs } from "@core/yjs-document"
+} from "@core/model/types"
+import { createBlockSchemaYDoc, documentFromYjs } from "@core/persistence/yjs-document"
 
 const README_TABLE = `| 参考项目 | 在本仓库中的角色 |
 |----------|------------------|

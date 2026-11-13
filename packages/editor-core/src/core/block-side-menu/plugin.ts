@@ -54,8 +54,7 @@ function getBlockMetaFromContainer(blockNode: Node): {
   const blockType = content.type.name
   const headingLevel =
     blockType === "heading" ? (content.attrs.level as number) : null
-  const hasFileUrl =
-    blockType === "image" ? Boolean(content.attrs.src) : null
+  const hasFileUrl = blockType === "image" ? Boolean(content.attrs.src) : null
 
   return { blockType, headingLevel, hasFileUrl }
 }
@@ -167,7 +166,11 @@ class BlockSideMenuView {
     private readonly pmView: EditorView,
     private readonly notify: BlockSideMenuListener
   ) {
-    this.pmView.root.addEventListener("drop", this.onDrop as EventListener, true)
+    this.pmView.root.addEventListener(
+      "drop",
+      this.onDrop as EventListener,
+      true
+    )
     this.pmView.root.addEventListener(
       "dragover",
       this.onDragOver as EventListener
@@ -372,7 +375,9 @@ class BlockSideMenuView {
       cursorWithinEditor &&
       event.target instanceof Element &&
       editorWrapper &&
-      !(editorWrapper === event.target || editorWrapper.contains(event.target)) &&
+      !(
+        editorWrapper === event.target || editorWrapper.contains(event.target)
+      ) &&
       !isSideMenuElement(event.target)
     ) {
       this.hide()
@@ -392,7 +397,11 @@ class BlockSideMenuView {
 
   destroy() {
     this.hide()
-    this.pmView.root.removeEventListener("drop", this.onDrop as EventListener, true)
+    this.pmView.root.removeEventListener(
+      "drop",
+      this.onDrop as EventListener,
+      true
+    )
     this.pmView.root.removeEventListener(
       "dragover",
       this.onDragOver as EventListener

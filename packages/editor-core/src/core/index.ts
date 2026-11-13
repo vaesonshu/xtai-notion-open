@@ -6,8 +6,8 @@ export type {
   InlineStyles,
   PartialBlock,
   TableContent,
-} from "./block-schema/types"
-export { BlockEditor } from "./block-editor"
+} from "./model"
+export { BlockEditor } from "./editor/block-editor"
 export type { BlockSideMenuState } from "./block-side-menu"
 export type { BlockToolbarCommand } from "./block-toolbar"
 export { getActiveBlockToolbarCommand } from "./block-toolbar"
@@ -15,17 +15,17 @@ export {
   getDraggableBlockFromElement,
   startBlockContainerDrag,
 } from "./block-side-menu"
-export { MAX_NEST_DEPTH, generateBlockId } from "./block-schema/ids"
+export { MAX_NEST_DEPTH, generateBlockId } from "./model/ids"
 export {
   createEmptyBlocks,
   createStarterBlocks,
   isBlockArray,
-} from "./block-schema/documents"
+} from "./model/documents"
 export {
   CURRENT_SCHEMA_VERSION,
   readYDocSchemaVersion,
   writeYDocSchemaVersion,
-} from "./migrate"
+} from "./persistence/migrate"
 export {
   createBlockSchemaExtensions,
   createEditorExtensions,
@@ -66,7 +66,7 @@ export {
 } from "./document-comment-anchor"
 export { setAiWriteAgentCursor } from "./extensions/ai-write-agent-cursor-extension"
 export { ImageUploadNode } from "./extensions/image-upload-node"
-export type { BlockCommandMode, SlashCommand } from "./slash-commands"
+export type { BlockCommandMode, SlashCommand } from "./features/slash"
 export {
   SLASH_COMMANDS,
   convertBlockCommand,
@@ -75,7 +75,7 @@ export {
   filterSlashCommands,
   getSlashCommands,
   UPLOAD_IMAGE_SLASH_COMMAND,
-} from "./slash-commands"
+} from "./features/slash"
 export type { InlineMark } from "./commands"
 export {
   normalizeTextColorInput,
@@ -108,7 +108,7 @@ export {
   documentToPlainText,
   forkYDoc,
   mergeForkInto,
-} from "./yjs-document"
+} from "./persistence/yjs-document"
 export { collectMentionIds } from "./mention-collect"
 export type {
   ImageMimeType,

@@ -17,9 +17,7 @@ export type {
   CreateEditorSchemaOptions,
   EditorSchema,
 } from "./create-editor-schema"
-export {
-  createEditorSchema,
-} from "./create-editor-schema"
+export { createEditorSchema } from "./create-editor-schema"
 
 export {
   blockSpecFromExtension,

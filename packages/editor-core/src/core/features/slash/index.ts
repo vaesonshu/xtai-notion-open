@@ -1,15 +1,16 @@
-import { createCanvasBlockId } from "../canvas/canvas-snapshot"
-import type { BlockEditor } from "../block-editor"
-import { generateBlockId } from "../block-schema/ids"
+import { createCanvasBlockId } from "../../canvas/canvas-snapshot"
+import type { BlockEditor } from "../../editor/block-editor"
+import { generateBlockId } from "../../model/ids"
 import type {
   Block,
   BlockType,
   InlineContent,
   PartialBlock,
   TableContent,
-} from "../block-schema/types"
-import { createDefaultBlockSchemaRegistry } from "../schema/default-specs"
-import type { BlockSchemaRegistry } from "../schema/registry"
+} from "../../model/types"
+import { findBlockById } from "../../api/blockManipulation/tree"
+import { createDefaultBlockSchemaRegistry } from "../../schema/default-specs"
+import type { BlockSchemaRegistry } from "../../schema/registry"
 
 export type SlashCommand = {
   id: string
@@ -143,19 +144,6 @@ function getTargetBlockId(editor: BlockEditor): string | null {
   }
 
   return editor.document[0]?.id ?? null
-}
-
-function findBlockById(blocks: Block[], id: string): Block | null {
-  for (const block of blocks) {
-    if (block.id === id) {
-      return block
-    }
-    const nested = findBlockById(block.children, id)
-    if (nested) {
-      return nested
-    }
-  }
-  return null
 }
 
 export type BlockCommandMode = "slash" | "convert"

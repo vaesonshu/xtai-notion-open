@@ -50,21 +50,76 @@
       "require": "./dist/index.cjs",
       "default": "./dist/index.js"
     },
-    "./migrate": {
-      "types": "./src/core/migrate/index.ts",
-      "development": "./src/core/migrate/index.ts",
-      "import": "./dist/migrate/index.js",
-      "require": "./dist/migrate/index.cjs",
-      "default": "./dist/migrate/index.js"
-    },
-    "./*": "./src/core/*",
     "./server": {
       "types": "./src/server.ts",
       "development": "./src/server.ts",
       "import": "./dist/server.js",
       "require": "./dist/server.cjs",
       "default": "./dist/server.js"
-    }
+    },
+    "./migrate": {
+      "types": "./src/core/persistence/migrate/index.ts",
+      "development": "./src/core/persistence/migrate/index.ts",
+      "import": "./dist/migrate/index.js",
+      "require": "./dist/migrate/index.cjs",
+      "default": "./dist/migrate/index.js"
+    },
+    "./block-schema/types": {
+      "types": "./src/core/model/types.ts",
+      "development": "./src/core/model/types.ts",
+      "default": "./src/core/model/types.ts"
+    },
+    "./block-schema/ids": {
+      "types": "./src/core/model/ids.ts",
+      "development": "./src/core/model/ids.ts",
+      "default": "./src/core/model/ids.ts"
+    },
+    "./block-schema/documents": {
+      "types": "./src/core/model/documents.ts",
+      "development": "./src/core/model/documents.ts",
+      "default": "./src/core/model/documents.ts"
+    },
+    "./block-schema/convert": {
+      "types": "./src/core/api/conversions/pm-doc.ts",
+      "development": "./src/core/api/conversions/pm-doc.ts",
+      "default": "./src/core/api/conversions/pm-doc.ts"
+    },
+    "./block-schema/table-paste": {
+      "types": "./src/core/api/clipboard/fromClipboard/tableBlockPaste.ts",
+      "development": "./src/core/api/clipboard/fromClipboard/tableBlockPaste.ts",
+      "default": "./src/core/api/clipboard/fromClipboard/tableBlockPaste.ts"
+    },
+    "./block-schema/pm-nodes": {
+      "types": "./src/core/schema/pm-nodes.ts",
+      "development": "./src/core/schema/pm-nodes.ts",
+      "default": "./src/core/schema/pm-nodes.ts"
+    },
+    "./block-editor": {
+      "types": "./src/core/editor/block-editor.ts",
+      "development": "./src/core/editor/block-editor.ts",
+      "default": "./src/core/editor/block-editor.ts"
+    },
+    "./slash-commands": {
+      "types": "./src/core/features/slash/index.ts",
+      "development": "./src/core/features/slash/index.ts",
+      "default": "./src/core/features/slash/index.ts"
+    },
+    "./markdown": {
+      "types": "./src/core/markdown/index.ts",
+      "development": "./src/core/markdown/index.ts",
+      "default": "./src/core/markdown/index.ts"
+    },
+    "./markdown/detect": {
+      "types": "./src/core/api/parsers/markdown/detect.ts",
+      "development": "./src/core/api/parsers/markdown/detect.ts",
+      "default": "./src/core/api/parsers/markdown/detect.ts"
+    },
+    "./yjs-document": {
+      "types": "./src/core/persistence/yjs-document.ts",
+      "development": "./src/core/persistence/yjs-document.ts",
+      "default": "./src/core/persistence/yjs-document.ts"
+    },
+    "./*": "./src/core/*"
   },
   "main": "./src/index.ts",
   "module": "./src/index.ts",

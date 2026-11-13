@@ -3,7 +3,7 @@ import {
   createEmptyBlocks,
   createStarterBlocks,
   isBlockArray,
-} from "@core/block-schema/documents"
+} from "@core/model/documents"
 
 describe("core document entry point", () => {
   it("exposes the stable block document contract", () => {

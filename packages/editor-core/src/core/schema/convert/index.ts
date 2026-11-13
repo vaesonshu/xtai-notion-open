@@ -1,12 +1,9 @@
 import type { Node as PMNode, Schema } from "@tiptap/pm/model"
-import { createEmptyBlocks } from "../../block-schema/documents"
-import type { Block } from "../../block-schema/types"
+import { createEmptyBlocks } from "../../model/documents"
+import type { Block } from "../../model/types"
 import { createDefaultBlockSchemaRegistry } from "../default-specs"
 import type { BlockSchemaRegistry } from "../registry"
-import {
-  blockToContainer,
-  containersToBlocks,
-} from "./block"
+import { blockToContainer, containersToBlocks } from "./block"
 import { requireNodeType } from "./inline"
 
 /** 默认内置 registry；自定义 schema 时可传入覆盖 */

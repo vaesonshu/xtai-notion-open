@@ -8,7 +8,7 @@ import {
   use,
   type ReactNode,
 } from "react"
-import { executeSlashCommand } from "@xtai-notion/editor-core/slash-commands"
+import { executeSlashCommand } from "@xtai-notion/editor-core/features/slash"
 import { EditorContext } from "@xtai-notion/editor-react/context/editor-context"
 
 export type ImageUploadControls = {

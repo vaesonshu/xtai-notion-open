@@ -39,9 +39,7 @@ export function resolveBlockPlaceholder(
 ): string {
   switch (node.type.name) {
     case "paragraph":
-      return isParagraphInTable(editor, pos)
-        ? "输入内容"
-        : paragraphPlaceholder
+      return isParagraphInTable(editor, pos) ? "输入内容" : paragraphPlaceholder
     case "heading": {
       const level = node.attrs.level as number
       if (level === 2) return "标题 2"
