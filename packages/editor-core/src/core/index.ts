@@ -159,3 +159,19 @@ export {
   markdownToBlocks,
   wrapExportHtmlDocument,
 } from "./markdown"
+export type { ContainerRef } from "./api"
+export {
+  blockToContainerNode,
+  findBlockById,
+  findContainerById,
+  getActiveBlockContainerId,
+  getSelectedBlocks,
+  handleMarkdownPaste,
+  handleTableBlockPaste,
+  insertBlocks,
+  normalizePartialBlock,
+  nestBlock,
+  removeBlocks,
+  unnestBlock,
+  updateBlock,
+} from "./api"

@@ -1,12 +1,6 @@
 import { Editor } from "@tiptap/core"
-import type { Node as PMNode } from "@tiptap/pm/model"
-import type { EditorState, Transaction } from "@tiptap/pm/state"
-import { NodeSelection, TextSelection } from "@tiptap/pm/state"
 import { blocksToPmDoc, pmDocToBlocks } from "./block-schema/convert"
 import { createEmptyBlocks } from "./block-schema/documents"
-import { generateBlockId, MAX_NEST_DEPTH } from "./block-schema/ids"
-import { handleTableBlockPaste } from "./block-schema/table-paste"
-import { handleMarkdownPaste } from "./markdown/paste"
 import type { Block, PartialBlock } from "./block-schema/types"
 import {
   BLOCK_SIDE_MENU_PLUGIN_KEY,
@@ -21,6 +15,15 @@ import type { EditorSchema } from "./schema/create-editor-schema"
 import type { EditorExtensionOptions } from "./types"
 import { getCommentTextSelection as resolveCommentTextSelection } from "./document-comment-anchor"
 import type { CommentTextAnchor } from "./document-comment-anchor"
+import { insertBlocks as apiInsertBlocks } from "./api/blockManipulation/commands/insertBlocks"
+import { updateBlock as apiUpdateBlock } from "./api/blockManipulation/commands/updateBlock"
+import { removeBlocks as apiRemoveBlocks } from "./api/blockManipulation/commands/removeBlocks"
+import { nestBlock as apiNestBlock } from "./api/blockManipulation/commands/nestBlock"
+import { unnestBlock as apiUnnestBlock } from "./api/blockManipulation/commands/unnestBlock"
+import { getSelectedBlocks as apiGetSelectedBlocks } from "./api/blockManipulation/selections/getSelectedBlocks"
+import { getActiveBlockContainerId as apiGetActiveBlockContainerId } from "./api/blockManipulation/selections/getActiveBlockContainerId"
+import { handleTableBlockPaste } from "./api/clipboard/fromClipboard/tableBlockPaste"
+import { handleMarkdownPaste } from "./api/clipboard/fromClipboard/handleMarkdownPaste"
 
 type BlockEditorOptions = {
   initialContent?: Block[]
@@ -32,278 +35,9 @@ type BlockEditorOptions = {
   applyInitialContent?: boolean
 }
 
-type ContainerRef = {
-  pos: number
-  node: PMNode
-  depth: number
-}
-
-/** 块 schema 必备节点，缺失时尽早抛错便于调试 */
-function requireNodeType(schema: EditorState["schema"], name: string) {
-  const nodeType = schema.nodes[name]
-  if (!nodeType) {
-    throw new Error(`Missing block schema node: ${name}`)
-  }
-  return nodeType
-}
-
-/** 将 PartialBlock 补全为可写入 PM 的 Block */
-function normalizePartialBlock(partial: PartialBlock): Block {
-  return {
-    id: partial.id ?? generateBlockId(),
-    type: partial.type,
-    props: partial.props ?? {},
-    content: partial.content,
-    children: partial.children ?? [],
-  }
-}
-
-/** 单块 → blockContainer PM 节点（复用 blocksToPmDoc 保证与 convert 一致） */
-function blockToContainerNode(
-  block: Block,
-  schema: EditorState["schema"]
-): PMNode {
-  const doc = blocksToPmDoc([block], schema)
-  const group = doc.firstChild
-  if (!group?.firstChild) {
-    throw new Error("blocksToPmDoc produced an empty container")
-  }
-  return group.firstChild
-}
-
-/** 块在树中的深度（根块为 0，MAX_NEST_DEPTH 限制的是嵌套后深度上界） */
-function getContainerDepth(doc: PMNode, containerPos: number): number {
-  const $pos = doc.resolve(containerPos + 1)
-  let depth = 0
-  for (let level = 1; level <= $pos.depth; level += 1) {
-    if ($pos.node(level).type.name === "blockContainer") {
-      depth += 1
-    }
-  }
-  return Math.max(0, depth - 1)
-}
-
-/** 按 id 查找 blockContainer 在文档中的位置 */
-function findContainerById(doc: PMNode, id: string): ContainerRef | null {
-  let match: ContainerRef | null = null
-
-  doc.descendants((node, pos) => {
-    if (match) {
-      return false
-    }
-    if (node.type.name === "blockContainer" && node.attrs.id === id) {
-      match = {
-        pos,
-        node,
-        depth: getContainerDepth(doc, pos),
-      }
-      return false
-    }
-    return undefined
-  })
-
-  return match
-}
-
-/** 在 blockGroup 内紧挨 ref 块之后插入 sibling 的位置（单块文档也能用） */
-function insertPosAfterContainer(doc: PMNode, ref: ContainerRef): number {
-  const $inside = doc.resolve(Math.min(ref.pos + 1, doc.content.size))
-  for (let depth = $inside.depth; depth > 0; depth -= 1) {
-    if ($inside.node(depth).type.name === "blockContainer") {
-      return $inside.after(depth)
-    }
-  }
-  return ref.pos + ref.node.nodeSize
-}
-
-/** 从选区位置向上找到所在的 blockContainer */
-function findContainerAtSelection(state: EditorState): ContainerRef | null {
-  const { from } = state.selection
-  const $pos = state.doc.resolve(from)
-
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    const node = $pos.node(depth)
-    if (node.type.name === "blockContainer") {
-      const pos = $pos.before(depth)
-      return {
-        pos,
-        node,
-        depth: getContainerDepth(state.doc, pos),
-      }
-    }
-  }
-
-  return null
-}
-
-/** 同一 blockGroup 内的上一个 blockContainer */
-function findPreviousSiblingContainer(
-  doc: PMNode,
-  containerPos: number
-): ContainerRef | null {
-  const $pos = doc.resolve(containerPos)
-  const index = $pos.index()
-  if (index === 0) {
-    return null
-  }
-
-  const parent = $pos.parent
-  const prevNode = parent.child(index - 1)
-  if (prevNode.type.name !== "blockContainer") {
-    return null
-  }
-
-  const prevPos = containerPos - prevNode.nodeSize
-  return {
-    pos: prevPos,
-    node: prevNode,
-    depth: getContainerDepth(doc, prevPos),
-  }
-}
-
-/** 当前块是否位于某个父 blockContainer 的 blockGroup 内 */
-function hasParentContainer(doc: PMNode, containerPos: number): boolean {
-  const $pos = doc.resolve(containerPos + 1)
-  for (let depth = $pos.depth - 1; depth > 0; depth -= 1) {
-    if ($pos.node(depth).type.name !== "blockContainer") {
-      continue
-    }
-    if (
-      depth + 1 <= $pos.depth &&
-      $pos.node(depth + 1).type.name === "blockGroup"
-    ) {
-      return true
-    }
-  }
-  return false
-}
-
-/** 将 blockContainer 节点移动到文档中的目标位置（自动处理 mapping） */
-function moveContainer(
-  tr: Transaction,
-  fromPos: number,
-  node: PMNode,
-  toPos: number
-): Transaction {
-  tr.delete(fromPos, fromPos + node.nodeSize)
-  const mappedTo = tr.mapping.map(toPos)
-  tr.insert(mappedTo, node)
-  return tr
-}
-
-/** 在上一个同级 blockContainer 的 children 末尾插入当前块 */
-function nestContainerInPreviousSibling(
-  state: EditorState,
-  current: ContainerRef,
-  previous: ContainerRef
-): Transaction | null {
-  const { schema } = state
-  const movedNode = current.node
-
-  if (previous.depth + 1 > MAX_NEST_DEPTH) {
-    return null
-  }
-
-  let tr = state.tr
-  const contentNode = previous.node.child(0)
-
-  if (previous.node.childCount > 1) {
-    const childGroup = previous.node.child(1)
-    const insertPos =
-      previous.pos + 1 + contentNode.nodeSize + childGroup.content.size
-    tr = moveContainer(tr, current.pos, movedNode, insertPos)
-    return tr
-  }
-
-  tr.delete(current.pos, current.pos + movedNode.nodeSize)
-  const mappedPrevPos = tr.mapping.map(previous.pos)
-  const mappedPrevNode = tr.doc.nodeAt(mappedPrevPos)
-  if (!mappedPrevNode) {
-    return null
-  }
-
-  const group = requireNodeType(schema, "blockGroup").create(null, [movedNode])
-  const mappedContent = mappedPrevNode.child(0)
-  const groupInsertPos = mappedPrevPos + 1 + mappedContent.nodeSize
-  tr.insert(groupInsertPos, group)
-  return tr
-}
-
-/**
- * 无同级可嵌套时，在父块内为当前块包一层 blockContainer，等价于再缩进一级。
- * 仅当已有父 blockContainer 且未超深度上限时生效。
- */
-function wrapContainerDeeper(
-  state: EditorState,
-  current: ContainerRef
-): Transaction | null {
-  if (current.depth + 1 > MAX_NEST_DEPTH) {
-    return null
-  }
-  if (!hasParentContainer(state.doc, current.pos)) {
-    return null
-  }
-
-  const { schema } = state
-  const wrapper = requireNodeType(schema, "blockContainer").create(
-    { id: generateBlockId() },
-    [
-      requireNodeType(schema, "paragraph").create(),
-      requireNodeType(schema, "blockGroup").create(null, [current.node]),
-    ]
-  )
-
-  return state.tr.replaceWith(
-    current.pos,
-    current.pos + current.node.nodeSize,
-    wrapper
-  )
-}
-
-/** 将块升到父 blockContainer 之后（整棵子树一起移动） */
-function unnestContainer(
-  state: EditorState,
-  current: ContainerRef
-): Transaction | null {
-  const $pos = state.doc.resolve(current.pos + 1)
-  let containerDepth = -1
-
-  for (let depth = $pos.depth; depth > 0; depth -= 1) {
-    if ($pos.node(depth).type.name === "blockContainer") {
-      containerDepth = depth
-      break
-    }
-  }
-
-  if (containerDepth <= 0) {
-    return null
-  }
-
-  let parentContainerDepth = -1
-  for (let depth = containerDepth - 1; depth > 0; depth -= 1) {
-    if ($pos.node(depth).type.name === "blockContainer") {
-      parentContainerDepth = depth
-      break
-    }
-  }
-
-  if (parentContainerDepth <= 0) {
-    return null
-  }
-
-  const parentPos = $pos.before(parentContainerDepth)
-  const parentNode = $pos.node(parentContainerDepth)
-  const currentPos = $pos.before(containerDepth)
-  const currentNode = $pos.node(containerDepth)
-  const insertPos = parentPos + parentNode.nodeSize
-
-  let tr = state.tr
-  tr = moveContainer(tr, currentPos, currentNode, insertPos)
-  return tr
-}
-
 /**
  * 块文档门面：对外暴露 Block[] 与块级命令，内部持有 Tiptap/PM 实例。
+ * 块操纵实现位于 `core/api`，本类仅做装配与委托。
  * tiptap getter 仅供 React NodeView / 协作层内部使用。
  */
 export class BlockEditor {
@@ -359,7 +93,7 @@ export class BlockEditor {
           if (handleTableBlockPaste(view, event)) {
             return true
           }
-          return handleMarkdownPaste(this, event)
+          return handleMarkdownPaste(this.editor, event)
         },
       },
       // Next.js 需显式关闭首帧渲染，避免 SSR/水合与软导航后正文空白
@@ -401,51 +135,7 @@ export class BlockEditor {
     refId: string,
     placement: "before" | "after" | "nested"
   ): void {
-    const ref = findContainerById(this.editor.state.doc, refId)
-    if (!ref) {
-      return
-    }
-
-    const normalized = blocks.map(normalizePartialBlock)
-    const nodes = normalized.map((block) =>
-      blockToContainerNode(block, this.editor.schema)
-    )
-
-    let tr = this.editor.state.tr
-
-    if (placement === "nested") {
-      const contentNode = ref.node.child(0)
-      let insertPos = ref.pos + 1 + contentNode.nodeSize
-
-      if (ref.node.childCount > 1) {
-        const childGroup = ref.node.child(1)
-        insertPos = ref.pos + 1 + contentNode.nodeSize + childGroup.content.size
-        for (const node of nodes) {
-          tr.insert(tr.mapping.map(insertPos), node)
-          insertPos += node.nodeSize
-        }
-      } else {
-        const group = requireNodeType(this.editor.schema, "blockGroup").create(
-          null,
-          nodes
-        )
-        tr.insert(tr.mapping.map(insertPos), group)
-      }
-    } else if (placement === "before") {
-      const insertPos = ref.pos
-      for (const node of nodes) {
-        tr.insert(tr.mapping.map(insertPos), node)
-      }
-    } else {
-      let insertPos = insertPosAfterContainer(tr.doc, ref)
-      for (const node of nodes) {
-        const mappedPos = tr.mapping.map(insertPos)
-        tr.insert(mappedPos, node)
-        insertPos = mappedPos + node.nodeSize
-      }
-    }
-
-    this.editor.view.dispatch(tr)
+    apiInsertBlocks(this.editor, blocks, refId, placement)
   }
 
   updateBlock(
@@ -456,174 +146,28 @@ export class BlockEditor {
       content?: Block["content"]
     }
   ): void {
-    const ref = findContainerById(this.editor.state.doc, id)
-    if (!ref) {
-      return
-    }
-
-    const blocks = pmDocToBlocks(this.editor.state.doc)
-
-    const findBlock = (items: Block[]): Block | null => {
-      for (const item of items) {
-        if (item.id === id) {
-          return item
-        }
-        const nested = findBlock(item.children)
-        if (nested) {
-          return nested
-        }
-      }
-      return null
-    }
-
-    const existing = findBlock(blocks)
-    if (!existing) {
-      return
-    }
-
-    const merged: Block = {
-      ...existing,
-      type: update.type ?? existing.type,
-      props: update.props ?? existing.props,
-      content: update.content !== undefined ? update.content : existing.content,
-      id: existing.id,
-    }
-
-    const newContainer = blockToContainerNode(merged, this.editor.schema)
-    let tr = this.editor.state.tr.replaceWith(
-      ref.pos,
-      ref.pos + ref.node.nodeSize,
-      newContainer
-    )
-
-    // 原子块（画板/分割线/图片）替换后把选区落到合法位置，避免协作层同步越界 cursor
-    const mappedPos = tr.mapping.map(ref.pos)
-    const inserted = tr.doc.nodeAt(mappedPos)
-    const contentNode = inserted?.child(0)
-    if (contentNode) {
-      const atomTypes = new Set(["canvas", "divider", "image"])
-      if (atomTypes.has(contentNode.type.name)) {
-        tr.setSelection(NodeSelection.create(tr.doc, mappedPos + 1))
-      } else if (contentNode.isTextblock) {
-        tr.setSelection(
-          TextSelection.create(tr.doc, mappedPos + 1 + contentNode.nodeSize - 1)
-        )
-      }
-    }
-
-    this.editor.view.dispatch(tr)
+    apiUpdateBlock(this.editor, id, update)
   }
 
   removeBlocks(ids: string[]): void {
-    const idSet = new Set(ids)
-    let tr = this.editor.state.tr
-
-    const toRemove: { pos: number; node: PMNode }[] = []
-    this.editor.state.doc.descendants((node, pos) => {
-      if (
-        node.type.name === "blockContainer" &&
-        idSet.has(node.attrs.id as string)
-      ) {
-        toRemove.push({ pos, node })
-      }
-    })
-
-    toRemove
-      .sort((a, b) => b.pos - a.pos)
-      .forEach(({ pos, node }) => {
-        tr = tr.delete(tr.mapping.map(pos), tr.mapping.map(pos) + node.nodeSize)
-      })
-
-    if (toRemove.length > 0) {
-      this.editor.view.dispatch(tr)
-    }
-
-    // 删光后补一块空段落，避免 blockGroup 变成空文档
-    if (this.document.length === 0) {
-      const empty = createEmptyBlocks()
-      const doc = blocksToPmDoc(empty, this.editor.schema)
-      this.editor.commands.setContent(doc.toJSON())
-    }
+    apiRemoveBlocks(this.editor, ids)
   }
 
   nestBlock(): boolean {
-    const state = this.editor.state
-    const current = findContainerAtSelection(state)
-    if (!current) {
-      return false
-    }
-
-    const previous = findPreviousSiblingContainer(state.doc, current.pos)
-    const tr = previous
-      ? nestContainerInPreviousSibling(state, current, previous)
-      : wrapContainerDeeper(state, current)
-
-    if (!tr) {
-      return false
-    }
-
-    this.editor.view.dispatch(tr)
-    return true
+    return apiNestBlock(this.editor)
   }
 
   unnestBlock(): boolean {
-    const state = this.editor.state
-    const current = findContainerAtSelection(state)
-    if (!current) {
-      return false
-    }
-
-    const tr = unnestContainer(state, current)
-    if (!tr) {
-      return false
-    }
-
-    this.editor.view.dispatch(tr)
-    return true
+    return apiUnnestBlock(this.editor)
   }
 
   getSelectedBlocks(): Block[] {
-    const { from, to } = this.editor.state.selection
-    const selectedIds = new Set<string>()
-
-    this.editor.state.doc.nodesBetween(from, to, (node) => {
-      if (node.type.name === "blockContainer") {
-        selectedIds.add(node.attrs.id as string)
-      }
-    })
-
-    const result: Block[] = []
-    const collect = (blocks: Block[]) => {
-      for (const block of blocks) {
-        if (selectedIds.has(block.id)) {
-          result.push(block)
-        }
-        collect(block.children)
-      }
-    }
-    collect(this.document)
-    return result
+    return apiGetSelectedBlocks(this.editor)
   }
 
   /** 解析当前选区所在的 blockContainer id（折叠光标也可用） */
   getActiveBlockContainerId(): string | null {
-    const state = this.editor.state
-    if (!state.selection.empty) {
-      const selected = this.getSelectedBlocks()
-      if (selected[0]?.id) {
-        return selected[0].id
-      }
-    }
-
-    const { from } = state.selection
-    const $pos = state.doc.resolve(from)
-    for (let depth = $pos.depth; depth > 0; depth -= 1) {
-      const node = $pos.node(depth)
-      if (node.type.name === "blockContainer") {
-        return node.attrs.id as string
-      }
-    }
-    return null
+    return apiGetActiveBlockContainerId(this.editor)
   }
 
   /** 非空文本选区且落在单块内时返回评论锚点 */

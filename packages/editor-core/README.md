@@ -61,7 +61,12 @@ const schema = createEditorSchema({ blocks: [callout] })
 
 // React 层挂载 NodeView
 const canvasWithUi = defineReactBlockSpec(
-  { type: "canvas", propSchema: { canvasId: { default: "" }, snapshot: { default: "" } }, content: "none", isAtom: true },
+  {
+    type: "canvas",
+    propSchema: { canvasId: { default: "" }, snapshot: { default: "" } },
+    content: "none",
+    isAtom: true,
+  },
   { component: MyCanvasNodeView }
 )
 
@@ -77,15 +82,25 @@ new BlockEditor({ editorSchema: schema })
 
 完整 callout 示例见 `examples/callout-block.ts`；设计文档见仓库 `docs/superpowers/specs/2026-08-29-extensible-block-schema-design.md`。
 
+## 块操纵 API（`src/core/api`）
+
+| 场景                    | 推荐入口                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| React 页面、协作编辑    | `BlockEditor`（内部委托 `core/api`）                                                                                      |
+| 单测、Agent、服务端脚本 | 包根或 `@xtai-notion/editor-core/api`：`insertBlocks(editor, …)`、`updateBlock`、`removeBlocks`、`handleMarkdownPaste` 等 |
+
+`core/api` 函数的第一个参数是 Tiptap `Editor`（即 `blockEditor.tiptap`），不依赖 React。
+
 ## 主要导出
 
-| 类别 | 示例 |
-|------|------|
-| 文档 | `createEmptyBlocks`、`createStarterBlocks`、`isBlockArray` |
-| 扩展 | `createEditorExtensions`、`ImageUploadNode` |
-| 命令 | `toggleInlineMark`、`setEditorLink`、`executeSlashCommand` |
-| 协作 / Yjs | `documentFromYjs`、`externalizeCanvasFiles` |
-| 类型 | `Block`、`EditorExtensionOptions`、`CollaborationUser` |
+| 类别       | 示例                                                               |
+| ---------- | ------------------------------------------------------------------ |
+| 文档       | `createEmptyBlocks`、`createStarterBlocks`、`isBlockArray`         |
+| 块操纵 API | `insertBlocks`、`updateBlock`、`removeBlocks`、`findContainerById` |
+| 扩展       | `createEditorExtensions`、`ImageUploadNode`                        |
+| 命令       | `toggleInlineMark`、`setEditorLink`、`executeSlashCommand`         |
+| 协作 / Yjs | `documentFromYjs`、`externalizeCanvasFiles`                        |
+| 类型       | `Block`、`EditorExtensionOptions`、`CollaborationUser`             |
 
 完整 API 见 `dist/index.d.ts`（需先 `pnpm build`）。
 
