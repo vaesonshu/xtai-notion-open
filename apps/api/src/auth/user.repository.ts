@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common"
-import type { AppUser } from "../generated/prisma/client"
+import type { AppUser, Prisma } from "../generated/prisma/client"
 import { PrismaService } from "../database/prisma.module"
 
 export type UserRecord = {
@@ -74,7 +74,8 @@ export class UserRepository {
   async setAiSettings(userId: string, value: Record<string, unknown>): Promise<void> {
     await this.prisma.client.appUser.update({
       where: { id: userId },
-      data: { aiSettings: value, updatedAt: new Date() },
+      // Prisma Json 列要求 InputJsonValue，与 workspace settings 一致
+      data: { aiSettings: value as Prisma.InputJsonValue, updatedAt: new Date() },
     })
   }
 

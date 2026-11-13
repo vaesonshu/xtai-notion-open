@@ -53,13 +53,16 @@ export function LibraryAskPage({ userId, libraryId }: LibraryAskPageProps) {
       return
     }
 
+    // 收窄类型：嵌套 async 内 TS 不会沿用上一行的 libraryId 守卫
+    const activeLibraryId = libraryId
+
     let cancelled = false
     async function loadSelected() {
       setLoadingDetail(true)
       try {
         const [summary, sources] = await Promise.all([
-          fetchLibrary(libraryId, userId),
-          fetchLibrarySources(libraryId, userId),
+          fetchLibrary(activeLibraryId, userId),
+          fetchLibrarySources(activeLibraryId, userId),
         ])
         if (cancelled) return
         setLibrary(summary)

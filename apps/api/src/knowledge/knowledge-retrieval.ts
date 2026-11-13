@@ -59,7 +59,9 @@ export function selectKnowledgeHits(
       // 用距离门槛而不是 1-distance，避免 0.8 因浮点误差被当成低于 0.2。
       return row.distance <= DISTANCE_MAX
     })
-    .toSorted((left, right) => left.distance - right.distance)
+    // 与 tsconfig ES2022 一致：不用 toSorted，避免生产 tsc 失败
+    .slice()
+    .sort((left, right) => left.distance - right.distance)
     .slice(0, RETRIEVAL_TOP_K)
 
   return kept.map((row, index) => ({

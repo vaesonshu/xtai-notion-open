@@ -76,8 +76,10 @@ function vectorsFromPayload(
 ): number[][] {
   const record = payload as { data?: EmbeddingItem[] } | null
   const items = Array.isArray(record?.data) ? record.data : []
-  const sorted = items.toSorted(
-    (left, right) => (left.index ?? 0) - (right.index ?? 0)
+  // ES2022 构建目标无 toSorted，用拷贝后 sort 保证不突变原数组
+  const sorted = [...items].sort(
+    (left: EmbeddingItem, right: EmbeddingItem) =>
+      (left.index ?? 0) - (right.index ?? 0)
   )
   const vectors = sorted.map((item) => item.embedding)
   if (vectors.length !== expectedCount) {

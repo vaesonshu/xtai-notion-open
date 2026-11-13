@@ -117,11 +117,16 @@ function parseHeading(line: string): { level: number; title: string } | null {
   if (!match) {
     return null
   }
-  const title = match[2].replace(/[ \t]+#+\s*$/, "").trim()
+  const levelMark = match[1]
+  const rawTitle = match[2]
+  if (levelMark === undefined || rawTitle === undefined) {
+    return null
+  }
+  const title = rawTitle.replace(/[ \t]+#+\s*$/, "").trim()
   if (!title) {
     return null
   }
-  return { level: match[1].length, title }
+  return { level: levelMark.length, title }
 }
 
 function splitParagraph(
