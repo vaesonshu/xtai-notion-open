@@ -1,17 +1,22 @@
 ﻿"use client"
 
-import type { Node } from "@tiptap/core"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import type { Doc as YDoc } from "yjs"
-import { BlockEditor, createStarterBlocks } from "@xtai-notion/editor-core"
 import type { Block } from "@xtai-notion/editor-core/model/types"
+import type { Node } from "@tiptap/core"
 import type { EditorSchema } from "@xtai-notion/editor-core/schema"
 import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
 import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
+import type { BlockEditor } from "@xtai-notion/editor-core"
 import {
   EditorContext,
   type RebindVisibleEditorInput,
 } from "../context/editor-context"
+import {
+  createLocalBlockEditor,
+  createReboundVisibleBlockEditor,
+  createSoloYjsBlockEditor,
+} from "../lib/block-editor-factory"
 
 export type EditorProviderProps = {
   initialContent?: Block[]
@@ -27,62 +32,6 @@ export type EditorProviderProps = {
   /** 带 React NodeView 的自定义 schema（优先于 canvasBlockNode 覆盖） */
   editorSchema?: EditorSchema
   children: ReactNode
-}
-
-const COLLABORATION_FIELD = "default"
-
-function isRemoteDocumentEmpty(document: YDoc): boolean {
-  return document.getXmlFragment(COLLABORATION_FIELD).length === 0
-}
-
-function createLocalBlockEditor(options: {
-  initialContent?: Block[]
-  editable: boolean
-  imageUpload?: ImageUploadHandler
-  canvasImageFetch?: CanvasImageFetchHandler
-  imageUploadNode?: Node
-  canvasBlockNode?: Node
-  editorSchema?: EditorSchema
-}): BlockEditor {
-  return new BlockEditor({
-    initialContent: options.initialContent ?? createStarterBlocks(),
-    editable: options.editable,
-    editorSchema: options.editorSchema,
-    extensions: {
-      imageUpload: options.imageUpload,
-      canvasImageFetch: options.canvasImageFetch,
-      imageUploadNode: options.imageUploadNode,
-      canvasBlockNode: options.canvasBlockNode,
-    },
-  })
-}
-
-function createSoloBlockEditor(options: {
-  document: YDoc
-  editable: boolean
-  initialContent?: Block[]
-  imageUpload?: ImageUploadHandler
-  canvasImageFetch?: CanvasImageFetchHandler
-  imageUploadNode?: Node
-  canvasBlockNode?: Node
-  editorSchema?: EditorSchema
-}): BlockEditor {
-  const wasEmpty = isRemoteDocumentEmpty(options.document)
-  return new BlockEditor({
-    initialContent: wasEmpty
-      ? (options.initialContent ?? createStarterBlocks())
-      : undefined,
-    applyInitialContent: wasEmpty,
-    editable: options.editable,
-    editorSchema: options.editorSchema,
-    extensions: {
-      document: options.document,
-      imageUpload: options.imageUpload,
-      canvasImageFetch: options.canvasImageFetch,
-      imageUploadNode: options.imageUploadNode,
-      canvasBlockNode: options.canvasBlockNode,
-    },
-  })
 }
 
 export function EditorProvider({
@@ -135,15 +84,9 @@ export function EditorProvider({
     if (!blockEditorRef.current) {
       const options = createOptionsRef.current
       const instance = sharedDocument
-        ? createSoloBlockEditor({
+        ? createSoloYjsBlockEditor({
+            ...options,
             document: sharedDocument,
-            editable: options.editable,
-            initialContent: options.initialContent,
-            imageUpload: options.imageUpload,
-            canvasImageFetch: options.canvasImageFetch,
-            imageUploadNode: options.imageUploadNode,
-            canvasBlockNode: options.canvasBlockNode,
-            editorSchema: options.editorSchema,
           })
         : createLocalBlockEditor(options)
       blockEditorRef.current = instance
@@ -165,32 +108,11 @@ export function EditorProvider({
       const options = createOptionsRef.current
       visibleEditableLockRef.current =
         input.target === "fork" ? input.editable : null
-      const nextEditor =
-        input.target === "fork"
-          ? new BlockEditor({
-              applyInitialContent: false,
-              editable: input.editable,
-              editorSchema: options.editorSchema,
-              extensions: {
-                document: input.document,
-                imageUpload: options.imageUpload,
-                canvasImageFetch: options.canvasImageFetch,
-                imageUploadNode: options.imageUploadNode,
-                canvasBlockNode: options.canvasBlockNode,
-              },
-            })
-          : new BlockEditor({
-              applyInitialContent: false,
-              editable: input.editable,
-              editorSchema: options.editorSchema,
-              extensions: {
-                document: sharedDocument,
-                imageUpload: options.imageUpload,
-                canvasImageFetch: options.canvasImageFetch,
-                imageUploadNode: options.imageUploadNode,
-                canvasBlockNode: options.canvasBlockNode,
-              },
-            })
+      const nextEditor = createReboundVisibleBlockEditor({
+        ...options,
+        input,
+        soloSharedDocument: sharedDocument,
+      })
       blockEditorRef.current = nextEditor
       setBlockEditor(nextEditor)
       return nextEditor

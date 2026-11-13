@@ -38,14 +38,88 @@
   },
   "exports": {
     ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./collaboration": {
+      "types": "./src/collaboration/index.ts",
+      "development": "./src/collaboration/index.ts",
       "import": "./dist/collaboration/index.js",
       "require": "./dist/collaboration/index.cjs",
-      "types": "./dist/collaboration/index.d.ts"
+      "default": "./dist/collaboration/index.js"
+    },
+    "./collaboration/create-collaboration-session": {
+      "types": "./src/collaboration/create-collaboration-session.ts",
+      "development": "./src/collaboration/create-collaboration-session.ts",
+      "default": "./src/collaboration/create-collaboration-session.ts"
+    },
+    "./collaboration/types": {
+      "types": "./src/collaboration/types.ts",
+      "development": "./src/collaboration/types.ts",
+      "default": "./src/collaboration/types.ts"
+    },
+    "./providers/editor-provider": {
+      "types": "./src/react/providers/editor-provider.tsx",
+      "development": "./src/react/providers/editor-provider.tsx",
+      "default": "./src/react/providers/editor-provider.tsx"
+    },
+    "./providers/collaboration-editor-provider": {
+      "types": "./src/react/providers/collaboration-editor-provider.tsx",
+      "development": "./src/react/providers/collaboration-editor-provider.tsx",
+      "default": "./src/react/providers/collaboration-editor-provider.tsx"
+    },
+    "./providers/mention-provider": {
+      "types": "./src/react/providers/mention-provider.tsx",
+      "development": "./src/react/providers/mention-provider.tsx",
+      "default": "./src/react/providers/mention-provider.tsx"
+    },
+    "./context/editor-context": {
+      "types": "./src/react/context/editor-context.tsx",
+      "development": "./src/react/context/editor-context.tsx",
+      "default": "./src/react/context/editor-context.tsx"
+    },
+    "./editor-content": {
+      "types": "./src/react/editor-content.tsx",
+      "development": "./src/react/editor-content.tsx",
+      "default": "./src/react/editor-content.tsx"
+    },
+    "./hooks/use-block-editor": {
+      "types": "./src/react/hooks/use-block-editor.ts",
+      "development": "./src/react/hooks/use-block-editor.ts",
+      "default": "./src/react/hooks/use-block-editor.ts"
+    },
+    "./hooks/use-collaboration-status": {
+      "types": "./src/react/hooks/use-collaboration-status.ts",
+      "development": "./src/react/hooks/use-collaboration-status.ts",
+      "default": "./src/react/hooks/use-collaboration-status.ts"
+    },
+    "./hooks/use-canvas-collaboration-lock": {
+      "types": "./src/react/hooks/use-canvas-collaboration-lock.ts",
+      "development": "./src/react/hooks/use-canvas-collaboration-lock.ts",
+      "default": "./src/react/hooks/use-canvas-collaboration-lock.ts"
+    },
+    "./hooks/use-document-theme": {
+      "types": "./src/react/hooks/use-document-theme.ts",
+      "development": "./src/react/hooks/use-document-theme.ts",
+      "default": "./src/react/hooks/use-document-theme.ts"
+    },
+    "./hooks/use-in-view": {
+      "types": "./src/react/hooks/use-in-view.ts",
+      "development": "./src/react/hooks/use-in-view.ts",
+      "default": "./src/react/hooks/use-in-view.ts"
+    },
+    "./components/components-context": {
+      "types": "./src/components/components-context.tsx",
+      "development": "./src/components/components-context.tsx",
+      "default": "./src/components/components-context.tsx"
+    },
+    "./schema/define-react-block-spec": {
+      "types": "./src/schema/define-react-block-spec.ts",
+      "development": "./src/schema/define-react-block-spec.ts",
+      "default": "./src/schema/define-react-block-spec.ts"
     },
     "./collaboration/*": "./src/collaboration/*",
     "./schema/*": "./src/schema/*",

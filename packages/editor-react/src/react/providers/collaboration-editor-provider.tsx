@@ -11,30 +11,21 @@ import type {
   CollaborationConfig,
   CollaborationStatus,
 } from "@xtai-notion/editor-react/collaboration/types"
-import { BlockEditor } from "@xtai-notion/editor-core"
-import { createStarterBlocks } from "@xtai-notion/editor-core/model/documents"
-import type { Block } from "@xtai-notion/editor-core/model/types"
-import type { CollaborationUser } from "@xtai-notion/editor-core"
-import type { Node } from "@tiptap/core"
-import type { EditorSchema } from "@xtai-notion/editor-core/schema"
-import type { ImageUploadHandler } from "@xtai-notion/editor-core/image-upload"
-import type { CanvasImageFetchHandler } from "@xtai-notion/editor-core/canvas/canvas-files"
+import type { BlockEditor, CollaborationUser } from "@xtai-notion/editor-core"
 import {
   EditorContext,
   type RebindVisibleEditorInput,
 } from "../context/editor-context"
+import {
+  createCollaborationSyncedBlockEditor,
+  createReboundVisibleBlockEditor,
+} from "../lib/block-editor-factory"
 import type { EditorProviderProps } from "./editor-provider"
 
 export type CollaborationEditorProviderProps = EditorProviderProps & {
   collaboration: CollaborationConfig
   /** Optional provider factory for tests; omit in production. */
   createProvider?: CreateProvider
-}
-
-const COLLABORATION_FIELD = "default"
-
-function isRemoteDocumentEmpty(document: Y.Doc): boolean {
-  return document.getXmlFragment(COLLABORATION_FIELD).length === 0
 }
 
 function readCollaborators(provider: HocuspocusProvider): CollaborationUser[] {
@@ -100,38 +91,6 @@ function readCanvasEditors(
   })
 
   return editors
-}
-
-function createSyncedBlockEditor(options: {
-  document: Y.Doc
-  provider: HocuspocusProvider
-  user: CollaborationUser
-  editable: boolean
-  initialContent?: Block[]
-  imageUpload?: ImageUploadHandler
-  canvasImageFetch?: CanvasImageFetchHandler
-  imageUploadNode?: Node
-  canvasBlockNode?: Node
-  editorSchema?: EditorSchema
-}): BlockEditor {
-  const wasEmpty = isRemoteDocumentEmpty(options.document)
-  return new BlockEditor({
-    initialContent: wasEmpty
-      ? (options.initialContent ?? createStarterBlocks())
-      : undefined,
-    applyInitialContent: wasEmpty,
-    editable: options.editable,
-    editorSchema: options.editorSchema,
-    extensions: {
-      document: options.document,
-      provider: options.provider,
-      user: options.user,
-      imageUpload: options.imageUpload,
-      canvasImageFetch: options.canvasImageFetch,
-      imageUploadNode: options.imageUploadNode,
-      canvasBlockNode: options.canvasBlockNode,
-    },
-  })
 }
 
 export function CollaborationEditorProvider({
@@ -200,17 +159,11 @@ export function CollaborationEditorProvider({
       if (blockEditorRef.current || session.getStatus() !== "synced") {
         return
       }
-      const nextEditor = createSyncedBlockEditor({
+      const nextEditor = createCollaborationSyncedBlockEditor({
+        ...createOptionsRef.current,
         document: session.document,
         provider: session.provider,
         user: collaboration.user,
-        editable: createOptionsRef.current.editable,
-        initialContent: createOptionsRef.current.initialContent,
-        imageUpload: createOptionsRef.current.imageUpload,
-        canvasImageFetch: createOptionsRef.current.canvasImageFetch,
-        imageUploadNode: createOptionsRef.current.imageUploadNode,
-        canvasBlockNode: createOptionsRef.current.canvasBlockNode,
-        editorSchema: createOptionsRef.current.editorSchema,
       })
       blockEditorRef.current = nextEditor
       setBlockEditor(nextEditor)
@@ -267,34 +220,15 @@ export function CollaborationEditorProvider({
       const options = createOptionsRef.current
       visibleEditableLockRef.current =
         input.target === "fork" ? input.editable : null
-      const nextEditor =
-        input.target === "fork"
-          ? new BlockEditor({
-              applyInitialContent: false,
-              editable: input.editable,
-              editorSchema: options.editorSchema,
-              extensions: {
-                document: input.document,
-                imageUpload: options.imageUpload,
-                canvasImageFetch: options.canvasImageFetch,
-                imageUploadNode: options.imageUploadNode,
-                canvasBlockNode: options.canvasBlockNode,
-              },
-            })
-          : new BlockEditor({
-              applyInitialContent: false,
-              editable: input.editable,
-              editorSchema: options.editorSchema,
-              extensions: {
-                document: session.document,
-                provider: session.provider,
-                user: collaboration.user,
-                imageUpload: options.imageUpload,
-                canvasImageFetch: options.canvasImageFetch,
-                imageUploadNode: options.imageUploadNode,
-                canvasBlockNode: options.canvasBlockNode,
-              },
-            })
+      const nextEditor = createReboundVisibleBlockEditor({
+        ...options,
+        input,
+        collaboration: {
+          document: session.document,
+          provider: session.provider,
+          user: collaboration.user,
+        },
+      })
       blockEditorRef.current = nextEditor
       setBlockEditor(nextEditor)
       return nextEditor

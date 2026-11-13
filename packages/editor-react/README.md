@@ -21,9 +21,34 @@ pnpm add @xtai-notion/editor-react @xtai-notion/editor-core react react-dom
 
 ### 子路径
 
+推荐从包根导入；深路径（`providers/`、`hooks/`、`collaboration/`）为稳定 public API：
+
 ```ts
 import { createCollaborationSession } from "@xtai-notion/editor-react/collaboration"
+import { useBlockEditor } from "@xtai-notion/editor-react/hooks/use-block-editor"
 ```
+
+Monorepo 开发期 `package.json` `exports` 的 `development` 条件指向 `src/`；根入口发布产物在 `dist/`。
+
+## 目录分层（`src/`）
+
+| 目录 | 职责 |
+| --- | --- |
+| `react/providers/` | `EditorProvider`、`CollaborationEditorProvider`、生命周期与 Context |
+| `react/hooks/` | 订阅 `BlockEditor` / 协作态（**无块操纵业务**） |
+| `react/lib/` | 挂载 `BlockEditor` 的工厂（Yjs 空文档判断、rebind） |
+| `react/context/` | `EditorContext` |
+| `collaboration/` | Hocuspocus 会话与状态类型 |
+| `schema/` | `defineReactBlockSpec`（React NodeView） |
+| `components/` | `ComponentsProvider`（headless UI 原语注入） |
+
+**约定：** 块 JSON、粘贴、命令等逻辑在 `@xtai-notion/editor-core`（尤其 `core/api`）；本包只做 React 绑定。自定义块样式请用 `editor-shadcn`，勿在本包引入 shadcn。
+
+| 场景 | 推荐入口 |
+| --- | --- |
+| 页面挂载编辑区 | 根包 `EditorProvider` / `CollaborationEditorProvider` |
+| UI 组件读门面 | `useBlockEditor()` → `blockEditor.tiptap` 或 `blockEditor.document` |
+| 单测复用挂载逻辑 | `src/react/lib/block-editor-factory`（与 Provider 同源） |
 
 ## Headless 示例（无默认 UI）
 
