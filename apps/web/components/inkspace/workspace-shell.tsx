@@ -22,6 +22,7 @@ import {
 } from "./workspace-members-dialog"
 import { WorkspaceSidebar } from "./sidebar"
 import type { WorkspaceSummary } from "@/lib/workspace-api"
+import type { DocumentQuota } from "@/lib/document-quota"
 
 const WORKSPACE_STORAGE_KEY = "inkspace:workspace:v1"
 
@@ -171,6 +172,7 @@ export function WorkspaceShell({
   const [documents, setDocuments] = useState<SidebarDocument[]>(() =>
     documentsCache?.userId === user.id ? documentsCache.items : []
   )
+  const [documentQuota, setDocumentQuota] = useState<DocumentQuota | null>(null)
   const currentWorkspace = workspaces.find(
     (item) => item.id === currentWorkspaceId
   )
@@ -184,6 +186,13 @@ export function WorkspaceShell({
     },
     [user.id]
   )
+  const bumpDocumentQuota = useCallback((delta: number) => {
+    setDocumentQuota((current) => {
+      if (!current) return current
+      const used = Math.max(0, Math.min(current.limit, current.used + delta))
+      return { ...current, used }
+    })
+  }, [])
   const personalDocuments = documents.filter((item) => item.role === "owner")
   const collaborativeDocuments = documents.filter(
     (item) => item.role !== "owner"
@@ -224,7 +233,7 @@ export function WorkspaceShell({
     async (workspaceId?: string | null) => {
       if (!apiUrl) return
       const targetWorkspaceId = workspaceId ?? currentWorkspaceId
-      const [activeResponse, trashResponse] = await Promise.all([
+      const [activeResponse, trashResponse, quotaResponse] = await Promise.all([
         targetWorkspaceId
           ? apiRequest({
               path: `/workspaces/${targetWorkspaceId}/documents`,
@@ -232,6 +241,7 @@ export function WorkspaceShell({
             })
           : apiRequest({ path: "/documents", userId: user.id }),
         apiRequest({ path: "/documents/trash", userId: user.id }),
+        apiRequest({ path: "/documents/quota", userId: user.id }),
       ])
       const activeItems = activeResponse.ok
         ? ((await activeResponse.json()) as Array<
@@ -259,6 +269,9 @@ export function WorkspaceShell({
           depth: item.depth ?? 1,
         }))
       )
+      if (quotaResponse.ok) {
+        setDocumentQuota((await quotaResponse.json()) as DocumentQuota)
+      }
     },
     [apiUrl, currentWorkspaceId, user.id]
   )
@@ -413,7 +426,9 @@ export function WorkspaceShell({
         userId: user.id,
       })
       if (!response.ok) throw new Error("删除失败")
+      const deleted = documents.find((item) => item.id === id)
       syncDocuments((current) => current.filter((item) => item.id !== id))
+      if (deleted?.role === "owner") bumpDocumentQuota(-1)
       void refreshDocuments()
       if (id === documentId) {
         const nextDocumentId = getDocumentIdAfterDeletion(personalDocuments, id)
@@ -482,7 +497,12 @@ export function WorkspaceShell({
         userId: user.id,
       })
       if (!response.ok) {
-        throw new Error(`新建文档失败 (${response.status})`)
+        const payload = (await response.json().catch(() => null)) as {
+          message?: string
+        } | null
+        throw new Error(
+          payload?.message ?? `新建文档失败 (${response.status})`
+        )
       }
       const document = (await response.json()) as CreatedDocumentResponse
       if (!document.id) {
@@ -499,6 +519,7 @@ export function WorkspaceShell({
           workspaceId: document.workspaceId ?? currentWorkspaceId,
         },
       ])
+      bumpDocumentQuota(1)
       router.push(`/documents/${document.id}`)
     } catch (error) {
       toast.error(getCreationError(error))
@@ -519,9 +540,15 @@ export function WorkspaceShell({
         userId: user.id,
         json: { parentId },
       })
-      if (!response.ok) throw new Error("创建子文档失败")
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          message?: string
+        } | null
+        throw new Error(payload?.message ?? "创建子文档失败")
+      }
       const document = (await response.json()) as SidebarDocument
       syncDocuments((current) => [...current, document])
+      if (document.role === "owner") bumpDocumentQuota(1)
       router.push(`/documents/${document.id}`)
     } catch (error) {
       toastError(error, "创建子文档失败")
@@ -628,6 +655,7 @@ export function WorkspaceShell({
             void createDocument()
           }}
           creatingDocument={creating}
+          documentQuota={documentQuota}
           onRenameDocument={renameDocument}
           onDeleteDocument={deleteDocument}
           onCreateChildDocument={(id) => {
@@ -691,6 +719,7 @@ export function WorkspaceShell({
                 documents={documents}
                 onCreateDocument={() => void createDocument()}
                 creatingDocument={creating}
+                documentQuota={documentQuota}
               />
             ) : documentId ? (
               <DocumentWorkspace

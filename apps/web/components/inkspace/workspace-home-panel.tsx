@@ -7,6 +7,10 @@ import {
   WORKSPACE_ROLE_LABELS,
   type WorkspaceSummary,
 } from "@/lib/workspace-api"
+import {
+  type DocumentQuota,
+  isDocumentQuotaFull,
+} from "@/lib/document-quota"
 
 type WorkspaceDocument = {
   id: string
@@ -20,12 +24,16 @@ export function WorkspaceHomePanel({
   documents,
   onCreateDocument,
   creatingDocument = false,
+  documentQuota = null,
 }: {
   workspace: WorkspaceSummary
   documents: readonly WorkspaceDocument[]
   onCreateDocument: () => void
   creatingDocument?: boolean
+  documentQuota?: DocumentQuota | null
 }) {
+  const quotaFull =
+    documentQuota !== null && isDocumentQuotaFull(documentQuota)
   // Copy before sort — ts lib is es2022 (no toSorted).
   const recentDocuments = [...documents].sort((a, b) => {
     const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
@@ -45,7 +53,10 @@ export function WorkspaceHomePanel({
           {workspace.memberCount} 位成员 · {workspace.documentCount} 篇文档
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button onClick={onCreateDocument} disabled={creatingDocument}>
+          <Button
+            onClick={onCreateDocument}
+            disabled={creatingDocument || quotaFull}
+          >
             <PlusIcon className="size-4" />
             {creatingDocument ? "新建中…" : "新建文档"}
           </Button>
@@ -61,7 +72,7 @@ export function WorkspaceHomePanel({
               className="mt-4"
               variant="outline"
               onClick={onCreateDocument}
-              disabled={creatingDocument}
+              disabled={creatingDocument || quotaFull}
             >
               创建第一篇文档
             </Button>

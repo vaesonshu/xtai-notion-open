@@ -41,6 +41,14 @@ import {
 } from "@workspace/ui/components/tooltip"
 import { Separator } from "@workspace/ui/components/separator"
 import { useEffect, useState } from "react"
+import {
+  type DocumentQuota,
+  documentQuotaAccentClass,
+  documentQuotaPercent,
+  documentQuotaTone,
+  formatDocumentQuotaPercent,
+  isDocumentQuotaFull,
+} from "@/lib/document-quota"
 import { PencilIcon } from "./icon"
 
 const SIDEBAR_WIDTH_EXPANDED = 280
@@ -116,6 +124,7 @@ export function WorkspaceSidebar({
   onOpenLibraryAsk,
   onCreateDocument,
   creatingDocument = false,
+  documentQuota = null,
   documents = [],
   collaborativeDocuments = [],
   showFavorites = false,
@@ -144,6 +153,8 @@ export function WorkspaceSidebar({
   onCreateDocument?: () => void
   onCreateChildDocument?: (id: string) => void
   creatingDocument?: boolean
+  /** 每人文档篇数上限（与 /documents/quota 一致） */
+  documentQuota?: DocumentQuota | null
   documents?: SidebarDocument[]
   collaborativeDocuments?: SidebarDocument[]
   showFavorites?: boolean
@@ -195,6 +206,14 @@ export function WorkspaceSidebar({
     setSelectedKey(key)
     action?.()
   }
+  const quotaFull =
+    documentQuota !== null && isDocumentQuotaFull(documentQuota)
+  const quotaPercent =
+    documentQuota !== null ? documentQuotaPercent(documentQuota) : 0
+  const quotaAccent =
+    documentQuota !== null
+      ? documentQuotaAccentClass(documentQuotaTone(documentQuota))
+      : null
   const selectDocument = (id: string) => {
     setSelectedKey(`doc:${id}`)
     onSelectDocument?.(id)
@@ -265,7 +284,7 @@ export function WorkspaceSidebar({
               label={creatingDocument ? "新建中" : "新建文档"}
               shortcut="N"
               onClick={onCreateDocument}
-              disabled={creatingDocument}
+              disabled={creatingDocument || quotaFull}
               compact={collapsed}
             />
             {/* 次要入口收进「浏览」，避免上半区按钮堆叠 */}
@@ -326,10 +345,24 @@ export function WorkspaceSidebar({
               <div className="flex flex-col gap-1.5 px-1">
                 <div className="flex justify-between text-[10px] font-semibold text-[#78746C]">
                   <span>知识容量</span>
-                  <span className="text-[#24866B]">62%</span>
+                  <span
+                    className={quotaAccent?.text ?? "text-[#24866B]"}
+                    title={
+                      documentQuota
+                        ? `已用 ${documentQuota.used} / ${documentQuota.limit} 篇`
+                        : undefined
+                    }
+                  >
+                    {documentQuota
+                      ? formatDocumentQuotaPercent(documentQuota)
+                      : "—"}
+                  </span>
                 </div>
                 <div className="h-1 rounded bg-[#DFE1DC]">
-                  <div className="h-1 w-[62%] rounded bg-[#24866B]" />
+                  <div
+                    className={`h-1 rounded ${quotaAccent?.bar ?? "bg-[#24866B]"}`}
+                    style={{ width: `${quotaPercent}%` }}
+                  />
                 </div>
               </div>
             </>
