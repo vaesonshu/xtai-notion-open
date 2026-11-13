@@ -36,6 +36,7 @@ import {
 } from "./ai-collaboration-panel"
 import type { WorkspaceAiSettings } from "@/lib/article-agent-types"
 import { ensureDocumentAgentAccess } from "@/lib/article-agent"
+import { isDocumentAgentUiEnabled } from "@/lib/product-features"
 import { AiWritingHost } from "./ai-writing-host"
 import {
   DocumentCommentBridge,
@@ -248,6 +249,7 @@ export function DocumentWorkspace({
     setAiPanelTab("assistant")
   }, [aiPanelTab])
   const toggleAiAgent = useCallback(() => {
+    if (!isDocumentAgentUiEnabled) return
     void (async () => {
       const access = await ensureDocumentAgentAccess({
         workspaceId,
@@ -270,6 +272,7 @@ export function DocumentWorkspace({
         setAiPanelTab("assistant")
         return
       }
+      if (!isDocumentAgentUiEnabled) return
       void (async () => {
         const access = await ensureDocumentAgentAccess({
           workspaceId,
@@ -636,8 +639,13 @@ export function DocumentWorkspace({
             aiOpen={aiOpen}
             aiPanelTab={aiPanelTab}
             onAiAssistantToggle={toggleAiAssistant}
-            onAiAgentToggle={toggleAiAgent}
-            agentUsesLocalCodex={aiSettings?.aiProvider === "local_codex"}
+            onAiAgentToggle={
+              isDocumentAgentUiEnabled ? toggleAiAgent : undefined
+            }
+            agentUsesLocalCodex={
+              isDocumentAgentUiEnabled &&
+              aiSettings?.aiProvider === "local_codex"
+            }
             commentsOpen={commentsOpen}
             onCommentsToggle={() => setCommentsOpen((open) => !open)}
             onVersionRestored={() => window.location.reload()}
