@@ -54,7 +54,7 @@ function withApiPrefixForAuthProxy(req: unknown): void {
 
 // 字面量路径让 Vercel 的 nft 能打包 Nest 依赖；须先 `pnpm --filter api build`。
 async function loadNestHandler(): Promise<NestHandler> {
-  // @ts-expect-error — 从 api 的 tsc 产物加载，避免 next build 扫 Nest 源码
+  // 动态 import dist：Vercel build 会先跑 api build，此处路径可被 TS 解析
   const mod = (await import("../../api/dist/serverless.js")) as {
     default: NestHandler
   }
