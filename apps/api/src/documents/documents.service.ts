@@ -36,6 +36,7 @@ import {
   mapWorkspaceRoleToDocumentRole,
   type PublicWorkspaceDocumentSummary,
 } from "../workspaces/workspace.types"
+import { USER_DOCUMENT_QUOTA, type OwnedDocumentQuota } from "./document-quota"
 import { DocumentsRepository } from "./documents.repository"
 import { ShareLinkRepository } from "./share-link.repository"
 
@@ -223,9 +224,7 @@ export class DocumentsService {
     return this.listDocuments(userId, workspaceId)
   }
 
-  private async resolvePublicWorkspaceId(
-    key: string
-  ): Promise<string | null> {
+  private async resolvePublicWorkspaceId(key: string): Promise<string | null> {
     const trimmed = key.trim()
     if (!trimmed) return null
     if (isUuid(trimmed)) {
@@ -351,6 +350,13 @@ export class DocumentsService {
     userId: string
   ): Promise<DocumentMetadata> {
     await this.assertCanWrite(documentId, userId)
+    const trashed = await this.documents.findTrashedById(documentId)
+    if (!trashed) throw new NotFoundException("Document not in trash")
+    // 从回收站恢复会再次占用「每人篇数」上限（仅统计本人为 owner 的文档）
+    const ownerId = await this.documents.findOwnerId(documentId)
+    if (ownerId === userId) {
+      await this.assertOwnedDocumentQuota(userId)
+    }
     const restored = await this.documents.restore(documentId)
     if (!restored) throw new NotFoundException("Document not in trash")
     const row = await this.documents.findById(documentId)
@@ -376,12 +382,7 @@ export class DocumentsService {
     markdown: string
   ): Promise<DocumentMetadata> {
     const workspace = await this.resolveDefaultWorkspace(userId)
-    return this.importMarkdownInWorkspace(
-      userId,
-      workspace.id,
-      title,
-      markdown
-    )
+    return this.importMarkdownInWorkspace(userId, workspace.id, title, markdown)
   }
 
   async importMarkdownInWorkspace(
@@ -407,6 +408,7 @@ export class DocumentsService {
     if (workspaceRole === "viewer") {
       throw new ForbiddenException("查看者无法导入文档")
     }
+    await this.assertOwnedDocumentQuota(userId)
     const blocks = markdownToBlocks(trimmed)
     const row = await this.documents.createInWorkspace(workspaceId, userId)
     const nextTitle = title.trim() || "导入的文档"
@@ -493,10 +495,25 @@ export class DocumentsService {
     return this.createDocumentInWorkspace(userId, workspace.id)
   }
 
+  async getOwnedDocumentQuota(userId: string): Promise<OwnedDocumentQuota> {
+    const used = await this.documents.countOwnedActive(userId)
+    return { used, limit: USER_DOCUMENT_QUOTA }
+  }
+
+  private async assertOwnedDocumentQuota(userId: string): Promise<void> {
+    const used = await this.documents.countOwnedActive(userId)
+    if (used >= USER_DOCUMENT_QUOTA) {
+      throw new ForbiddenException(
+        `每人最多创建 ${USER_DOCUMENT_QUOTA} 篇文档，请先删除或清空回收站中的文档`
+      )
+    }
+  }
+
   async createDocumentInWorkspace(
     userId: string,
     workspaceId: string
   ): Promise<DocumentMetadata> {
+    await this.assertOwnedDocumentQuota(userId)
     const workspaceRole = await this.workspaces.getMemberRole(
       workspaceId,
       userId
@@ -508,10 +525,7 @@ export class DocumentsService {
       throw new ForbiddenException("查看者无法创建文档")
     }
     const row = await this.documents.createInWorkspace(workspaceId, userId)
-    return this.toMetadata(
-      row,
-      mapWorkspaceRoleToDocumentRole(workspaceRole)
-    )
+    return this.toMetadata(row, mapWorkspaceRoleToDocumentRole(workspaceRole))
   }
 
   async createChildDocumentInWorkspace(
@@ -528,6 +542,7 @@ export class DocumentsService {
     if ((parent.depth ?? 1) >= 3) {
       throw new ForbiddenException("Documents can be nested up to three levels")
     }
+    await this.assertOwnedDocumentQuota(userId)
     const row = await this.documents.createChild(parent, userId)
     return this.toMetadata(row, role)
   }
@@ -562,6 +577,7 @@ export class DocumentsService {
     parentId: string,
     userId: string
   ): Promise<DocumentMetadata> {
+    await this.assertOwnedDocumentQuota(userId)
     const role = await this.assertCanWrite(parentId, userId)
     const parent = await this.documents.findById(parentId)
     if (!parent) throw new NotFoundException("Parent document not found")
@@ -650,7 +666,8 @@ export class DocumentsService {
 
     const yDoc = await this.yjsPersistence.loadDocument(documentId)
     try {
-      const content = documentFromYjs(yDoc)
+      // 已发布但尚未写入块 schema 的文档，用 starter 兜底避免公开页 500。
+      const content = documentFromYjsOrStarter(yDoc)
       const excerpt = documentToPlainText(content).slice(0, 200)
       return {
         id: article.row.id,

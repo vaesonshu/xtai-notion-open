@@ -114,6 +114,13 @@ export class DocumentsController {
     return this.documents.listDocumentGraph(user.id)
   }
 
+  @Get("quota")
+  getOwnedDocumentQuota(
+    @CurrentUser() user: DevUser
+  ): Promise<{ used: number; limit: number }> {
+    return this.documents.getOwnedDocumentQuota(user.id)
+  }
+
   @Get(":documentId")
   getDocument(
     @Param("documentId") documentId: string,

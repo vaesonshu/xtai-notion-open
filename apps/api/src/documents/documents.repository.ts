@@ -56,6 +56,14 @@ export class DocumentsRepository {
     return isDocumentRole(member?.role) ? (member.role as DocumentRole) : null
   }
 
+  async findOwnerId(documentId: string): Promise<string | null> {
+    const document = await this.prisma.client.document.findUnique({
+      where: { id: documentId },
+      select: { ownerId: true },
+    })
+    return document?.ownerId ?? null
+  }
+
   async findById(documentId: string): Promise<DocumentRow | null> {
     const document = await this.prisma.client.document.findFirst({
       where: { id: documentId, deletedAt: null },
@@ -275,6 +283,13 @@ export class DocumentsRepository {
       where: { id: documentId },
     })
     return result.count > 0
+  }
+
+  /** 统计用户作为 owner 且未进回收站的文档数，用于每人容量上限。 */
+  async countOwnedActive(userId: string): Promise<number> {
+    return this.prisma.client.document.count({
+      where: { ownerId: userId, deletedAt: null },
+    })
   }
 
   async createInWorkspace(

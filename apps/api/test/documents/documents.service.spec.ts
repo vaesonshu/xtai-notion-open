@@ -37,6 +37,7 @@ function createRepo(
       updated_at: new Date("2026-01-02T00:00:00.000Z"),
     }),
     countMembers: vi.fn().mockResolvedValue(1),
+    countOwnedActive: vi.fn().mockResolvedValue(0),
     ...overrides,
   } as unknown as DocumentsRepository
 }
@@ -347,7 +348,20 @@ describe("DocumentsService", () => {
         hasActiveShareLink: false,
       },
     })
-    expect(repo.createInWorkspace).toHaveBeenCalledWith("ws-1", "user-1")
+  })
+
+  it("rejects create when owned document quota is full", async () => {
+    const createInWorkspace = vi.fn()
+    const repo = createRepo({
+      countOwnedActive: vi.fn().mockResolvedValue(10),
+      createInWorkspace,
+    })
+    const service = makeService(repo)
+
+    await expect(service.createDocument("user-1")).rejects.toBeInstanceOf(
+      ForbiddenException
+    )
+    expect(createInWorkspace).not.toHaveBeenCalled()
   })
 
   it("lists documents with each user's membership role", async () => {
@@ -475,7 +489,7 @@ describe("DocumentsService", () => {
 
   it("returns published article detail with content for the public square", async () => {
     const yDoc = { destroy: vi.fn() }
-    vi.spyOn(editorCore, "documentFromYjs").mockReturnValue([
+    vi.spyOn(editorCore, "documentFromYjsOrStarter").mockReturnValue([
       {
         id: "block-1",
         type: "paragraph",
