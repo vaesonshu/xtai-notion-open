@@ -1,112 +1,176 @@
 # xtai-notion-open
 
-面向团队与个人的 **Notion 式知识工作台**：以块（Block）为一等公民组织文档，内置实时协作、发布广场与文档关系图。编辑器内核拆分为可独立发布的 **MIT** SDK（`@xtai-notion/editor-*`），既可开箱即用，也可 Headless 嵌入自有产品。
+面向团队与个人的 **Notion 式知识工作台**：以块（Block）为一等公民组织文档，内置实时协作、知识广场与文档关系图。编辑器内核拆分为可独立发布的 **MIT** SDK（`@xtai-notion/editor-*`），既可开箱即用，也可 Headless 嵌入自有产品。
 
-编辑器实现明确参考 **[Tiptap](https://tiptap.dev)** 与 **[BlockNote](https://www.blocknotejs.org)**：以 Tiptap / ProseMirror 为底层编辑引擎，以 BlockNote 为块模型与 Notion 式交互的产品范式。
+---
 
-| 参考项目 | 在本仓库中的角色 |
-|----------|------------------|
-| **[Tiptap](https://tiptap.dev)** | 编辑内核：ProseMirror 封装、扩展体系、Yjs 协作集成 |
-| **[BlockNote](https://www.blocknotejs.org)** | 块模型与 UX：`Block[]` 对外 API、每块 UUID、斜杠菜单、块级 Enter / Backspace |
+## 目录
 
-## 项目优势
+- [xtai-notion-open](#xtai-notion-open)
+  - [目录](#目录)
+  - [项目介绍](#项目介绍)
+    - [是什么](#是什么)
+    - [适合谁](#适合谁)
+    - [技术参考与定位](#技术参考与定位)
+    - [相对闭源文档产品的差异（摘要）](#相对闭源文档产品的差异摘要)
+  - [快速开始](#快速开始)
+    - [环境要求](#环境要求)
+    - [1. 安装依赖](#1-安装依赖)
+    - [2. 配置 API](#2-配置-api)
+    - [3. 配置 Web](#3-配置-web)
+    - [4. 启动](#4-启动)
+  - [本地常用入口](#本地常用入口)
+  - [产品能力](#产品能力)
+  - [文档模型：为何使用 Block\[\]](#文档模型为何使用-block)
+  - [技术架构](#技术架构)
+    - [Monorepo 结构](#monorepo-结构)
+  - [嵌入编辑器 SDK](#嵌入编辑器-sdk)
+  - [文档工作区](#文档工作区)
+  - [Windows 桌面端](#windows-桌面端)
+  - [开发与质量](#开发与质量)
+  - [部署](#部署)
+  - [相关文档](#相关文档)
+  - [许可证](#许可证)
 
-相对飞书文档、Notion、语雀等闭源 SaaS，本项目的差异化不在功能广度，而在**可控性、可扩展性与开发者体验**：
+---
 
-| 优势 | 说明 |
+## 项目介绍
+
+### 是什么
+
+全栈 Monorepo：**Next.js 工作区** + **NestJS API** + **自研块编辑器 SDK**。持久化与协作以 **Yjs** 为正文真相源；对外业务与 API 以 **`Block[]`** 为文档模型，底层编辑由 **Tiptap 3 / ProseMirror** 完成。
+
+### 适合谁
+
+| 场景 | 说明 |
 |------|------|
-| **开源可自托管** | 编辑器 SDK 采用 **MIT** 许可；支持 Vercel + Render + Neon 等组合部署，文档与协作数据存于自有 PostgreSQL，满足数据主权与私有化需求 |
-| **可嵌入的编辑器 SDK** | 拆分为 `editor-core` / `editor-react` / `editor-shadcn` 三层，既可开箱即用，也可 Headless 嵌入 CRM、工单、知识库等自有产品 |
-| **`Block[]` 一等公民** | 对外文档模型为带 UUID 的块数组，语义与 Notion / 飞书一致；服务端无需 React 即可读写（见下文对比表） |
-| **UI 与块类型可扩展** | 通过 `ComponentsContext` 替换 UI 主题；通过 `defineBlockSpec` 注册自定义块，不被单一设计系统绑定 |
-| **全栈透明可改造** | Tiptap 3 + Yjs + NestJS 全链路开源，可深度定制协作协议、权限模型、AI 流程与存储策略 |
-| **AI 集成灵活** | 支持 OpenAI 兼容接口与自建模型；编辑器内续写 / 改写先本地草稿预览，接受后才同步协作，成本与流程可控 |
+| **私有化知识库** | 数据在自有 PostgreSQL，支持 Vercel + Render + Neon 等组合部署 |
+| **嵌入编辑器** | `editor-core` → `editor-react` → `editor-shadcn` 分层，可只拿 Headless 层 |
+| **深度定制** | 协作协议、权限、AI 流程、块类型均可 fork 后改造 |
 
-**适合谁？** 需要私有化知识库、将 Notion 式编辑器嵌入现有产品、或希望 fork 后按业务深度定制的团队。若追求开箱即用的大厂级企业功能（SSO、审计、模板市场等），商业 SaaS 仍是更成熟的选择。
+若需要大厂级 SSO、审计、模板市场等，商业 SaaS 通常更省心；本项目的优势在**可控性、可扩展性与开发者体验**。
+
+### 技术参考与定位
+
+实现思路参考 **[Tiptap](https://tiptap.dev)** 与 **[BlockNote](https://www.blocknotejs.org)**：
+
+| 参考 | 在本仓库中的角色 |
+|------|------------------|
+| [Tiptap](https://tiptap.dev) | ProseMirror 封装、扩展体系、Yjs 协作集成 |
+| [BlockNote](https://www.blocknotejs.org) | 块模型与 UX：`Block[]` API、块 UUID、斜杠菜单、块级 Enter / Backspace |
+
+### 相对闭源文档产品的差异（摘要）
+
+| 维度 | 说明 |
+|------|------|
+| **开源可自托管** | 编辑器 SDK **MIT**；文档与协作数据可完全落在自有库 |
+| **`Block[]` 一等公民** | 语义对齐 Notion / 飞书；**服务端无 React** 也可解析与导入 |
+| **UI / 块可扩展** | `ComponentsContext` 换主题；`defineBlockSpec` 注册自定义块 |
+| **AI** | OpenAI 兼容接口；续写 / 改写**本地草稿预览**，接受后再进协作 |
+
+---
+
+## 快速开始
+
+### 环境要求
+
+- **Node.js** ≥ 20
+- **pnpm** 10.x（见根目录 `packageManager`）
+- **PostgreSQL**（API + 协作持久化；本地见 [`docs/local-database.md`](./docs/local-database.md)，云端推荐 [Neon](https://neon.tech)）
+
+### 1. 安装依赖
+
+```bash
+pnpm install
+```
+
+根目录 `.npmrc` 为 `node-linker=hoisted`（Electron 打包需要）。克隆或改依赖后请重新执行 `pnpm install`。
+
+### 2. 配置 API
+
+在 `apps/api/.env` 中配置（可参考仓库内示例）：
+
+```env
+PORT=3100
+COLLABORATION_PORT=3101
+NODE_ENV=development
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
+```
+
+初始化数据库：
+
+```bash
+pnpm --filter api prisma migrate deploy
+# 本地亦可：pnpm --filter api prisma db push
+```
+
+可选：`apps/api/.env` 中配置 COS（图片）、`OPENAI_*`（AI 助手）。
+
+### 3. 配置 Web
+
+复制 `apps/web/.env.example` 为 `apps/web/.env` 或 `.env.local`：
+
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:3100
+NEXT_PUBLIC_COLLABORATION_URL=ws://127.0.0.1:3101
+NEXT_PUBLIC_DEV_USER_ID=demo-owner
+```
+
+### 4. 启动
+
+**推荐（前后端一起）：**
+
+```bash
+pnpm dev
+```
+
+**或分别启动：**
+
+```bash
+pnpm --filter api dev   # HTTP 3100 + 协作 WS 3101
+pnpm --filter web dev   # http://localhost:3000
+```
+
+登录后访问 **`/documents`** 进入工作区。开发环境通过 Cookie / `x-dev-user-id` 识别用户。
+
+**只想看编辑器 UI、可不连库：**
+
+```text
+http://localhost:3000/editor-playground
+```
+
+Next 缓存异常时：`pnpm --filter web dev:clean`。
+
+---
+
+## 本地常用入口
+
+| 路径 | 用途 |
+|------|------|
+| `/documents/[documentId]` | 文档编辑与协作 |
+| `/editor-playground` | 编辑器测试台（弱依赖后端） |
+| `/square` | 知识广场 |
+| `/workspaces` | 知识库总览 |
+
+---
 
 ## 产品能力
 
 | 能力 | 说明 |
 |------|------|
-| **块编辑器** | 段落、标题、列表、待办、引用、代码、分割线、表格、图片、Excalidraw 画板等 |
-| **Notion 式交互** | `/` 斜杠菜单、选区气泡工具栏、左侧块拖拽把手、块级 Enter / Backspace 行为 |
-| **实时协作** | Yjs + Hocuspocus，多光标、离线恢复、PostgreSQL 持久化快照 |
-| **文档工作区** | 多文档管理、分享链接、成员角色（owner / editor / viewer）；**回收站**、**收藏 / 最近**、**⌘K 搜索**、**Markdown 导入导出**、**版本历史**、**块级评论** |
-| **知识广场** | 文档发布、公开阅读、评论 |
-| **文档图谱** | 可视化文档之间的引用关系 |
-| **AI 助手** | 可选 OpenAI 兼容接口：编辑器内 `/ai` 斜杠续写与选区改写（本地草稿预览，接受后才同步协作）；侧边栏聊天为只读问答（需配置 API Key） |
+| **块编辑器** | 段落、标题、列表、待办、引用、代码、分割线、表格、图片、Excalidraw 画板 |
+| **Notion 式交互** | `/` 斜杠、气泡工具栏、块拖拽把手、块级 Enter / Backspace |
+| **实时协作** | Yjs + Hocuspocus、多光标、PostgreSQL 快照 |
+| **文档工作区** | 多文档、分享、角色；回收站、收藏 / 最近、⌘K 搜索、MD 导入导出、版本历史、块级评论 |
+| **知识广场** | 发布、公开阅读、评论 |
+| **文档图谱** | 文档引用关系可视化 |
+| **AI 助手** | 可选：`/ai` 续写与选区改写（草稿预览）；侧边栏只读问答 |
 
-本地开发常用入口：
+---
 
-- 文档编辑：`/documents/[documentId]`
-- 编辑器测试台（无需完整后端）：`/editor-playground`
-- 知识广场：`/square`
+## 文档模型：为何使用 Block[]
 
-## 桌面端（Windows）
-
-开发：先配置好 `apps/web` 与 API，再执行 `pnpm dev:desktop`（或分别 `pnpm --filter web dev` 与 `pnpm --filter desktop start`）。窗口加载 `http://localhost:3000`。关闭窗口会缩到托盘，托盘或菜单「退出」才结束进程。
-
-打安装包：在 `apps/desktop/.env` 设置 `XT_DESKTOP_APP_URL` 为线上 Vercel 的 `https` 地址，然后 `pnpm --filter desktop package` 或 `pnpm --filter desktop make`。未配置该变量时构建会失败。默认 `pnpm dev` 不会启动 Electron。打包产物在 `apps/desktop/release/`（安装包在 `release/make/`）。打包前请**先退出**所有 Electron / 桌面端窗口；若仍报 `EBUSY`，结束相关进程后删除旧的 `apps/desktop/out` 或 `release` 再重试。
-
-根目录 `.npmrc` 使用 `node-linker=hoisted`（Electron Forge 对 pnpm 的要求）。若你刚克隆仓库或改过依赖，请重新执行一次 `pnpm install`。
-
-## 文档工作区能力（P0）
-
-以下能力对标飞书 / Notion / 语雀的「文档日常闭环」，已在工作区落地，可直接使用。
-
-| 功能 | 入口 / 操作 | 说明 |
-|------|-------------|------|
-| **回收站** | 侧边栏「回收站」；删除文档 → 移入回收站 | 软删除（`deleted_at`），支持恢复或永久删除；协作 Yjs 数据保留 |
-| **收藏 & 最近** | 侧边栏「收藏」视图；文档菜单收藏；打开文档自动记录 | 按用户维度存储偏好（`user_document_pref`）；最近列表展示最近 8 篇 |
-| **全文搜索** | 侧边栏「搜索」或 **⌘K / Ctrl+K** | 按标题、文档 ID、正文检索；正文命中时展示摘要片段 |
-| **Markdown 导入** | 侧边栏「导入 Markdown」 | 选择 `.md` 文件创建新文档（`markdownToBlocks`） |
-| **Markdown 导出** | 编辑器固定工具栏下载按钮 | 将当前文档导出为 `.md`（`blocksToMarkdown`） |
-| **版本历史** | 工具栏 **⋯ → 版本历史** | 基于 Yjs 快照：手动保存当前版本、列表浏览、回滚到历史版本 |
-| **文档内评论** | 工具栏 **「评论」** | 块级锚定（`block_id`）；光标所在段落可评论，支持嵌套回复与跳转到对应块 |
-| **知识库** | 侧边栏顶部名称 / 切换器 | 创建知识库、切换当前库；库内新建文档；成员数来自 `workspace_member` |
-| **知识库成员** | 侧边栏「N 位成员」或切换器 → 成员管理 | 搜索/邮箱邀请、角色调整、移除成员（owner/admin） |
-| **知识库总览** | `/workspaces` 或侧边栏「知识库」（新建文档下方） | 多库列表、筛选排序、进入库首页 `/workspaces/:id` |
-
-### 相关 API（节选）
-
-| 方法 | 路径 | 用途 |
-|------|------|------|
-| `GET` · `POST` | `/workspaces` | 知识库列表 / 创建 |
-| `GET` · `PATCH` | `/workspaces/:id` | 知识库详情 / 重命名 |
-| `GET` · `POST` · `DELETE` | `/workspaces/:id/members` | 成员列表 / 邀请（`userId` 或 `email`）/ 移除 |
-| `GET` | `/workspaces/:id/members/search?q=` | 邀请前搜索用户（owner/admin） |
-| `PATCH` | `/workspaces/:id/members/:userId` | 更新成员角色（owner/admin） |
-| `GET` · `POST` | `/workspaces/:id/documents` | 库内文档列表 / 新建（可带 `parentId`） |
-| `GET` | `/documents/search?q=` | 全文搜索 |
-| `GET` | `/documents/trash` | 回收站列表 |
-| `POST` | `/documents/:id/restore` | 从回收站恢复 |
-| `DELETE` | `/documents/:id/permanent` | 永久删除 |
-| `PATCH` | `/documents/:id/pref` | 收藏 / 记录最近打开 |
-| `GET` | `/documents/favorites` · `/documents/recent` | 收藏与最近文档 |
-| `POST` | `/documents/import` | Markdown 导入 |
-| `GET` · `POST` | `/documents/:id/versions` | 列出版本 / 保存当前版本 |
-| `POST` | `/documents/:id/versions/:versionId/restore` | 恢复到指定版本 |
-| `GET` · `POST` | `/documents/:id/comments` | 文档内评论列表 / 发表（可选 `?blockId=`） |
-
-### 数据库迁移
-
-P0 能力依赖以下迁移（在 [`apps/api/prisma/migrations`](./apps/api/prisma/migrations)）：
-
-| 迁移 | 内容 |
-|------|------|
-| `003_document_lifecycle` | `document.deleted_at`；`user_document_pref`（收藏、最近打开） |
-| `004_document_comment` | `document_comment`（块级评论线程） |
-| `007_workspace_members` | `workspace_member`；按 owner 合并历史 workspace；库级成员与权限 |
-
-升级或首次部署后执行：
-
-```bash
-pnpm --filter api prisma migrate deploy
-```
-
-## 为什么选择 Block[]，而不是 Tiptap JSON？
-
-与 [BlockNote](https://www.blocknotejs.org) 类似，对外文档类型是 **`Block[]`**；[Tiptap](https://tiptap.dev) / ProseMirror JSON 仅作为**内部编辑引擎表示**，不暴露给 Web 与 API 业务层。
+对外类型是 **`Block[]`**，不是 Tiptap / ProseMirror JSON。PM 树只在编辑器内部使用；业务与 API 通过 `blocksToPmDoc` / `pmDocToBlocks` 与 `BlockEditor` 门面交互。
 
 ```ts
 type Block = {
@@ -118,35 +182,32 @@ type Block = {
 }
 ```
 
-与原生 Tiptap JSON 相比，块模型的核心优势：
+| 维度 | Tiptap / PM JSON | 本仓库 `Block[]` |
+|------|------------------|------------------|
+| 产品语义 | 节点树（list → listItem → paragraph） | 每行一块，对齐 Notion / 飞书 |
+| 稳定 ID | 位置变、无业务 UUID | 每块 **UUID**，评论 / API / 拖拽可寻址 |
+| 服务端 | 需懂 schema | 纯 JSON，`editor-core` 在 Node 可读写 |
+| 持久化 | — | **Yjs** 存库；`Block[]` 为按需转换视图 |
 
-| 维度 | Tiptap / ProseMirror JSON | 本项目的 `Block[]` |
-|------|---------------------------|-------------------|
-| **产品语义** | 反映编辑器节点树（如 `bulletList` → `listItem` → `paragraph`） | 每个列表项、待办、标题都是**独立块**，与 Notion / 飞书一致 |
-| **稳定标识** | 节点位置随编辑变化，缺少业务级 ID | 每块有 **UUID**，便于拖拽、嵌套、API 寻址与后续块级能力扩展 |
-| **对外 API** | 深层嵌套、结构随 StarterKit 扩展变化 | 扁平、可预测的 JSON，**服务端无 React 也可读写**（`editor-core`） |
-| **嵌套与子块** | 需自行建模 | `children: Block[]` 一等支持，最大深度受控（`MAX_NEST_DEPTH`） |
-| **协作存储** | 常直接把 PM 树塞进 Yjs | Yjs 仍存 fragment `default`，对外通过 `BlockEditor.document` 读写块 |
-| **迁移与版本** | 结构升级困难 | `schemaVersion` 标记协作文档版本，便于后续演进 |
+深度说明：[`docs/interview/块模型与编辑器分层面试总结.md`](./docs/interview/块模型与编辑器分层面试总结.md) · [渲染流水线](./docs/interview/块编辑器渲染流水线面试题.md)
 
-**设计原则：** 块模型（参考 BlockNote）描述「产品里的文档长什么样」；Tiptap 负责「怎么高效编辑」。二者通过 `blocksToPmDoc` / `pmDocToBlocks` 双向转换，业务代码只依赖 `Block[]`。
+---
 
-## 架构概览
+## 技术架构
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  apps/web (Next.js 16)          Inkspace 工作区 / 广场 / 图谱   │
+│  apps/web (Next.js)     Inkspace 工作区 / 广场 / 图谱          │
 └────────────────────────────┬────────────────────────────────┘
                              │
          ┌───────────────────┼───────────────────┐
          ▼                   ▼                   ▼
  @xtai-notion/editor-shadcn  editor-react    @workspace/ui
- (默认 UI 主题)              (Provider/Hooks)
          │                   │
          └─────────┬─────────┘
                    ▼
          @xtai-notion/editor-core  ←── apps/api (NestJS + Prisma)
-         BlockEditor / Block[]         协作 · 持久化 · 文档 API
+         BlockEditor / Block[]       协作 · Yjs 持久化 · REST
                    │
                    ▼
          Tiptap 3 + ProseMirror + Yjs + Hocuspocus
@@ -156,21 +217,22 @@ type Block = {
 
 | 路径 | 职责 |
 |------|------|
-| [`apps/web`](./apps/web) | Next.js 前端：文档、广场、管理、编辑器集成 |
-| [`apps/api`](./apps/api) | NestJS API：文档 CRUD、Yjs 持久化、Hocuspocus 协作服务 |
-| [`packages/editor-core`](./packages/editor-core) | 块 schema、`BlockEditor`、Slash 命令、协作工具（**无 React**） |
-| [`packages/editor-react`](./packages/editor-react) | `EditorProvider`、协作 Hooks、`ComponentsContext` |
-| [`packages/editor-shadcn`](./packages/editor-shadcn) | 默认 shadcn UI：`DocumentEditor`、工具栏、块把手 |
-| [`packages/ui`](./packages/ui) | 应用级 shadcn 组件 |
-| [`packages/icons`](./packages/icons) | 统一图标出口 |
+| [`apps/web`](./apps/web) | Next.js 前端 |
+| [`apps/api`](./apps/api) | 文档 API、Yjs 持久化、Hocuspocus |
+| [`packages/editor-core`](./packages/editor-core) | 块模型、`api/` 块操纵、`BlockEditor`（**无 React**） |
+| [`packages/editor-react`](./packages/editor-react) | Provider、协作会话、Hooks |
+| [`packages/editor-shadcn`](./packages/editor-shadcn) | 默认 UI：`DocumentEditor`、工具栏、NodeView |
+| [`packages/ui`](./packages/ui) · [`packages/icons`](./packages/icons) | 应用 UI 与图标 |
 
-### 编辑器 SDK 分层
+---
 
-| 包 | 适用场景 |
-|----|----------|
-| **editor-core** | 服务端解析、快照导出、自定义 UI 壳层 |
+## 嵌入编辑器 SDK
+
+| 包 | 场景 |
+|----|------|
+| **editor-core** | 服务端 Markdown、快照、`core/api` 块操作 |
 | **editor-react** | React 集成、协作 Provider |
-| **editor-shadcn** | 快速接入完整编辑器 UI + `style.css` |
+| **editor-shadcn** | 开箱即用 UI + `style.css` |
 
 ```tsx
 import { createStarterBlocks } from "@xtai-notion/editor-core"
@@ -187,135 +249,151 @@ export function Page() {
 }
 ```
 
-变更规格与验收说明见 [`openspec/changes/open-source-editor-sdk/`](./openspec/changes/open-source-editor-sdk/)。
+规格与验收：[`openspec/changes/open-source-editor-sdk/`](./openspec/changes/open-source-editor-sdk/)  
+分包说明：[`packages/editor-core`](./packages/editor-core/README.md) · [`editor-react`](./packages/editor-react/README.md) · [`editor-shadcn`](./packages/editor-shadcn/README.md)
 
-## 快速开始
+---
 
-### 环境要求
+## 文档工作区
 
-- **Node.js** ≥ 20
-- **pnpm** 10.x（见根目录 `packageManager` 字段）
-- **PostgreSQL**（API 与协作持久化，推荐 [Neon](https://neon.tech) 或本地实例；本地 Docker 见 [`docs/local-database.md`](./docs/local-database.md)）
+对标飞书 / Notion / 语雀的日常闭环，已在侧边栏与工具栏落地。
 
-### 1. 安装依赖
+| 功能 | 入口 / 操作 | 说明 |
+|------|-------------|------|
+| 回收站 | 侧边栏 | 软删除 `deleted_at`，可恢复或永久删除 |
+| 收藏 & 最近 | 侧边栏 | `user_document_pref`，最近约 8 篇 |
+| 全文搜索 | 搜索 / **⌘K** | 标题、ID、正文摘要 |
+| Markdown 导入 | 侧边栏 | `markdownToBlocks` → 新文档 |
+| Markdown 导出 | 工具栏下载 | `blocksToMarkdown` |
+| 版本历史 | ⋯ → 版本历史 | Yjs 快照保存与回滚 |
+| 文档评论 | 工具栏「评论」 | 块锚点 `block_id`、嵌套回复 |
+| 知识库 & 成员 | 切换器 / `/workspaces` | `workspace_member`、邀请与角色 |
+
+<details>
+<summary><strong>相关 REST API（节选）</strong></summary>
+
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| `GET` · `POST` | `/workspaces` | 知识库列表 / 创建 |
+| `GET` · `POST` | `/workspaces/:id/documents` | 库内文档 |
+| `GET` | `/documents/search?q=` | 全文搜索 |
+| `GET` | `/documents/trash` | 回收站 |
+| `POST` | `/documents/import` | Markdown 导入 |
+| `GET` · `POST` | `/documents/:id/versions` | 版本列表 / 保存 |
+| `GET` · `POST` | `/documents/:id/comments` | 评论（可选 `?blockId=`） |
+
+</details>
+
+<details>
+<summary><strong>依赖的数据库迁移</strong></summary>
+
+| 迁移 | 内容 |
+|------|------|
+| `003_document_lifecycle` | `deleted_at`、`user_document_pref` |
+| `004_document_comment` | `document_comment` |
+| `007_workspace_members` | `workspace_member` |
+
+目录：[`apps/api/prisma/migrations`](./apps/api/prisma/migrations)。升级后执行 `pnpm --filter api prisma migrate deploy`。
+
+</details>
+
+---
+
+## Windows 桌面端
+
+**开发：** 配置好 Web 与 API 后执行 `pnpm dev:desktop`（或分别 `web dev` + `desktop start`），窗口加载 `http://localhost:3000`。关窗缩到托盘，托盘菜单退出才结束进程。
+
+**打包：** 在 `apps/desktop/.env` 设置 `XT_DESKTOP_APP_URL`（线上 `https`），再 `pnpm --filter desktop package` 或 `make`。默认 `pnpm dev` 不启动 Electron。产物在 `apps/desktop/release/`。打包前关闭所有 Electron 窗口；`EBUSY` 时结束进程并清理 `apps/desktop/out` 或 `release`。
+
+---
+
+## 开发与质量
+
+| 命令 | 说明 |
+|------|------|
+| `pnpm dev` | 开发模式（多应用） |
+| `pnpm build` | Turbo 全仓库构建 |
+| `pnpm lint` · `typecheck` · `test` | 质量检查 |
+| `pnpm check:editor-boundaries` | 校验 editor 三包依赖方向 |
+| `pnpm --filter @xtai-notion/editor-core build` | 构建 core（消费 dist 时） |
+| `pnpm test:e2e` | Playwright E2E |
+
+在 `packages/ui` 中为应用添加 shadcn 组件：
 
 ```bash
-pnpm install
+pnpm dlx shadcn@latest add button -c apps/web
 ```
 
-### 2. 配置 API 环境变量
-
-在 `apps/api/.env` 中创建：
-
-```env
-PORT=3100
-COLLABORATION_PORT=3101
-NODE_ENV=development
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
-
-# 可选：图片上传（腾讯云 COS）
-# COS_SECRET_ID=
-# COS_SECRET_KEY=
-# COS_BUCKET=
-# COS_REGION=
-# COS_PUBLIC_BASE_URL=
-
-# 可选：AI 助手
-# OPENAI_API_KEY=
-# OPENAI_BASE_URL=
-# OPENAI_MODEL=
+```tsx
+import { Button } from "@workspace/ui/components/button"
 ```
 
-初始化数据库：
+---
 
-```bash
-pnpm --filter api prisma migrate deploy
-# 本地开发亦可：pnpm --filter api prisma db push
+## 部署
+
+生产环境推荐 **Vercel + Render + Neon** 三分离：HTTP 与页面走 Vercel，实时协作协议单独跑在 Render，数据库两边共用 Neon。
+
+| 组件 | 推荐 | 说明 |
+|------|------|------|
+| **Web + REST API** | [Vercel](https://vercel.com)（[`docs/deploy-vercel.md`](./docs/deploy-vercel.md)） | **同一个 Vercel 项目**：Next.js 负责页面；Nest REST API **嵌入该站点**（`apps/web/api/nest.ts` → `apps/api` serverless handler），对外路径为 **`/api/*`**（如 `/api/documents`）。未配置 `NEXT_PUBLIC_API_URL` 时前端默认同域 `/api`。 |
+| **协作协议（WebSocket）** | [Render](https://render.com)（[`docs/deploy-render.md`](./docs/deploy-render.md)） | **单独部署**（如 `https://xxx.onrender.com`）：仅运行 Hocuspocus（`collab-main.ts` / `pnpm --filter api start:collab`），**不**承载 REST。前端通过 `NEXT_PUBLIC_COLLABORATION_URL=wss://…` 连接。 |
+| **数据库** | [Neon](https://neon.tech) | Vercel 上的 API 与 Render 上的协作服务共用 **`DATABASE_URL`**（Yjs 快照与业务表同一库）。 |
+
+```text
+Vercel（单项目）
+  ├─ Next.js  →  /documents、/square …
+  └─ Serverless → /api/*（嵌入式 Nest API，非独立 API 域名）
+Render        → wss://…（Hocuspocus 协作，与 API 进程分离）
+Neon          → PostgreSQL
 ```
 
-### 3. 配置 Web 环境变量
+本地开发时 API 与协作仍可在同一进程（`pnpm --filter api dev`：HTTP `3100` + WS `3101`）。**上述「Vercel + Render」拆分只是因为 Vercel Serverless 无法常驻 WebSocket**（嵌入 API 时会设 `VERCEL=1`，`CollaborationService` 不会监听协作端口）；与本地/自托管的完整 `main.ts` 不是同一运行模式。
 
-在 `apps/web/.env.local` 中创建：
+### 自托管（自有服务器 / VPS）
+
+若 **不** 使用 Vercel，而是把 Web 与 API 部署在自有服务器（或 Railway、Fly.io 等支持长连接的 Node 主机），可以 **不再单独部署 Render 协作服务**，运维模型与本地开发一致：
+
+| 对比 | Vercel + Render（托管推荐） | 自托管一台机 |
+|------|----------------------------|--------------|
+| 前端 | Next.js（Vercel） | `pnpm --filter web build` + `next start`（或 Docker / PM2） |
+| REST + 协作 | API 嵌 Serverless **无 WS**；协作另起 `collab-main.ts` | 常驻跑 **`apps/api/src/main.ts`**：同一 Nest 进程内 **REST（`PORT`）+ Hocuspocus（`COLLABORATION_PORT`）** |
+| 数据库 | Neon 等 | 自建 PostgreSQL 或 Docker（见 [`docs/local-database.md`](./docs/local-database.md)） |
+| 是否要 Render | **要**（或其它协作专线） | **不要**（除非你想把协作拆成独立进程做水平扩展） |
+
+```text
+自有服务器（示例）
+  ├─ next start          →  :3000  页面
+  ├─ main.ts（常驻 API） →  :3100  REST
+  │                      →  :3101  Hocuspocus WS
+  └─ PostgreSQL          →  本机 / 内网
+```
+
+构建与迁移：`pnpm install`、`pnpm build`，在 API 侧执行 `pnpm --filter api prisma migrate deploy`。生产环境 **勿** 设置 `VERCEL=1`。在 `apps/web` 配置例如：
 
 ```env
 NEXT_PUBLIC_API_URL=http://127.0.0.1:3100
 NEXT_PUBLIC_COLLABORATION_URL=ws://127.0.0.1:3101
 ```
 
-登录后访问 `/documents` 即可进入工作区。开发环境通过 Cookie / `x-dev-user-id` 识别用户身份。
+对外通常用 **Nginx / Caddy** 做 HTTPS 与 WebSocket 升级，把站点与 API、协作反代到同一域名（Cookie 会话更简单）。自托管暂未有单独运维文档，完整请求链路仍可参考 [部署架构与时序](./docs/部署架构与时序.md)（把「Vercel / Render」替换成你的反代与 `main.ts` 即可）。
 
-### 4. 启动开发服务
+时序与职责：[`docs/部署架构与时序.md`](./docs/部署架构与时序.md)
 
-**方式 A — 同时启动前后端（推荐）：**
-
-```bash
-pnpm dev
-```
-
-**方式 B — 分别启动：**
-
-```bash
-pnpm --filter api dev      # API + 协作 WebSocket，默认 3100 / 3101
-pnpm --filter web dev      # Next.js，默认 http://localhost:3000
-```
-
-仅体验编辑器 UI、无需数据库时，访问：
-
-```text
-http://localhost:3000/editor-playground
-```
-
-若 Next 缓存异常，可在 web 包内执行：
-
-```bash
-pnpm --filter web dev:clean
-```
-
-## 常用命令
-
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动全部应用的开发模式 |
-| `pnpm build` | Turbo 构建全仓库 |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | 质量检查 |
-| `pnpm check:editor-boundaries` | 校验 editor 三包依赖方向 |
-| `pnpm --filter @xtai-notion/editor-core build` | 构建编辑器内核（改 core 后 web 消费 dist 时需执行） |
-| `pnpm test:e2e` | Playwright 端到端测试 |
-
-## 添加 shadcn 组件
-
-应用 UI 组件位于 `packages/ui`。在 web 应用中添加组件：
-
-```bash
-pnpm dlx shadcn@latest add button -c apps/web
-```
-
-在代码中引用：
-
-```tsx
-import { Button } from "@workspace/ui/components/button"
-```
-
-## 部署
-
-| 组件 | 推荐平台 |
-|------|----------|
-| Web + REST API | [Vercel](https://vercel.com)（同项目，见 [`docs/deploy-vercel.md`](./docs/deploy-vercel.md)） |
-| 协作 WebSocket | [Render](https://render.com) 免费层（`collab-main.ts`） |
-| 数据库 | [Neon](https://neon.tech) |
-
-整体架构与各平台职责、打开文档时的请求时序见 [`docs/部署架构与时序.md`](./docs/部署架构与时序.md)。
-
-协作服务部署步骤见 [`docs/deploy-render.md`](./docs/deploy-render.md)。
+---
 
 ## 相关文档
 
-- 面试复习提纲：[`docs/interview/高频面试题总结.md`](./docs/interview/高频面试题总结.md)（专题见 `docs/interview/`）
-- 技术参考：[Tiptap](https://tiptap.dev) · [BlockNote](https://www.blocknotejs.org)
-- 块文档架构设计：[`docs/superpowers/specs/2026-08-28-block-document-architecture-design.md`](./docs/superpowers/specs/2026-08-28-block-document-architecture-design.md)
-- 编辑器 SDK 开源拆分：[`openspec/changes/open-source-editor-sdk/`](./openspec/changes/open-source-editor-sdk/)
-- 各包 README：[`packages/editor-core`](./packages/editor-core/README.md) · [`packages/editor-react`](./packages/editor-react/README.md) · [`packages/editor-shadcn`](./packages/editor-shadcn/README.md)
+| 主题 | 链接 |
+|------|------|
+| 面试 / 架构复习 | [`docs/interview/高频面试题总结.md`](./docs/interview/高频面试题总结.md) |
+| 块模型与渲染 | [`块模型分层`](./docs/interview/块模型与编辑器分层面试总结.md) · [`渲染流水线`](./docs/interview/块编辑器渲染流水线面试题.md) |
+| 块文档设计 spec | [`docs/superpowers/specs/2026-08-28-block-document-architecture-design.md`](./docs/superpowers/specs/2026-08-28-block-document-architecture-design.md) |
+| 本地数据库 | [`docs/local-database.md`](./docs/local-database.md) |
+| 外部参考 | [Tiptap](https://tiptap.dev) · [BlockNote](https://www.blocknotejs.org) |
+
+---
 
 ## 许可证
 
-编辑器 SDK（`@xtai-notion/editor-core` / `editor-react` / `editor-shadcn`）采用 **MIT**。应用与其它包的许可证以各 `package.json` 为准。
+编辑器 SDK（`@xtai-notion/editor-core` / `editor-react` / `editor-shadcn`）为 **MIT**。其它包以各自 `package.json` 为准。
